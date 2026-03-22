@@ -236,6 +236,122 @@ export default async function stepScaffold() {
     }
   }
 
+  // ── Generate project-specific README ──
+  ui.line('');
+  ui.line('Generating project README...');
+  const readmePath = join(projectDir, 'README.md');
+  const solutionDisplayName = stateGet('SOLUTION_DISPLAY_NAME', appName);
+  const publisherPrefix = stateGet('PUBLISHER_PREFIX', prefix);
+  const devEnv = stateGet('PP_ENV_DEV', '');
+  const testEnv = stateGet('PP_ENV_TEST', '');
+  const prodEnv = stateGet('PP_ENV_PROD', '');
+
+  const envTable = [
+    devEnv  ? `| Dev  | ${devEnv}  |` : '',
+    testEnv ? `| Test | ${testEnv} |` : '',
+    prodEnv ? `| Prod | ${prodEnv} |` : '',
+  ].filter(Boolean).join('\n');
+
+  const readmeContent = `# ${appName}
+
+A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeScript.
+
+## Tech Stack
+
+- **React 18** + **TypeScript**
+- **Fluent UI v9** — Microsoft's design system
+- **TanStack Query** — server state & caching
+- **Vite** — build tooling
+- **Power Platform connectors** via \`@microsoft/power-apps\` SDK
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- [PAC CLI](https://learn.microsoft.com/power-platform/developer/cli/introduction) (\`dotnet tool install -g Microsoft.PowerApps.CLI.Tool\`)
+- An authenticated PAC profile (\`pac auth list\` to verify)
+
+### Development
+
+\`\`\`bash
+npm install
+npm run dev          # Start local dev server (Vite)
+\`\`\`
+
+### Build & Deploy
+
+\`\`\`bash
+npm run build                     # Build to dist/
+~/.dotnet/tools/pac code push     # Deploy to Power Platform
+\`\`\`
+
+The app URL after deployment:
+\`https://apps.powerapps.com/play/e/{environmentId}/app/{appId}\`
+
+## Project Structure
+
+\`\`\`
+${appName.toLowerCase().replace(/\\s+/g, '-')}/
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── pages/             # Route-level pages
+│   ├── hooks/             # Custom React hooks
+│   ├── generated/         # Auto-generated connector SDK (do not edit)
+│   ├── services/          # Business logic & data layer
+│   └── App.tsx            # Root component
+├── .github/instructions/  # GitHub Copilot instruction files
+├── .power/                # Power Platform metadata
+├── power.config.json      # Code App configuration
+├── vite.config.ts         # Build configuration
+└── package.json
+\`\`\`
+
+## Power Platform
+
+| Property | Value |
+|----------|-------|
+| Solution | ${solutionDisplayName} |
+| Publisher Prefix | \`${publisherPrefix}\` |
+
+### Environments
+
+| Environment | URL |
+|-------------|-----|
+${envTable}
+
+### Connectors
+
+Data sources are managed via Power Platform connectors. To add a new data source:
+
+\`\`\`bash
+# Add a Dataverse table
+~/.dotnet/tools/pac code add-data-source -a dataverse -t ${publisherPrefix}_tablename
+
+# Regenerate TypeScript SDK
+~/.dotnet/tools/pac code generate
+\`\`\`
+
+> **Never edit files in \`src/generated/\`** — they are overwritten on every \`pac code generate\`.
+
+## GitHub Copilot Instructions
+
+This project includes \`.github/instructions/*.instructions.md\` files that guide GitHub Copilot to generate code following the team's standards. They cover scaffolding, connectors, components, deployment, testing, security, and Dataverse schema design.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| \`npm run dev\` | Start Vite dev server |
+| \`npm run build\` | Production build to \`dist/\` |
+| \`npm run preview\` | Preview production build locally |
+| \`npm run test\` | Run unit tests (Vitest) |
+| \`npm run lint\` | Lint with ESLint |
+`;
+
+  writeFileSync(readmePath, readmeContent, 'utf-8');
+  ui.ok('Project README generated');
+
   ui.line('');
   ui.line('Making initial commit...');
   run('git add -A', { cwd: projectDir });

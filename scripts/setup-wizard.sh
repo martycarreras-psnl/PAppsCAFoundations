@@ -1386,6 +1386,131 @@ GIEOF
     fi
   fi
 
+  # ── Generate project-specific README ──
+  echo ""
+  echo "  Generating project README..."
+  local readme_app_name
+  readme_app_name=$(state_get "APP_NAME")
+  local readme_sol_name
+  readme_sol_name=$(state_get "SOLUTION_DISPLAY_NAME" "$readme_app_name")
+  local readme_prefix
+  readme_prefix=$(state_get "PUBLISHER_PREFIX")
+  local readme_dev_env
+  readme_dev_env=$(state_get "PP_ENV_DEV" "")
+  local readme_test_env
+  readme_test_env=$(state_get "PP_ENV_TEST" "")
+  local readme_prod_env
+  readme_prod_env=$(state_get "PP_ENV_PROD" "")
+  local readme_slug
+  readme_slug=$(echo "$readme_app_name" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+
+  local env_table=""
+  [ -n "$readme_dev_env" ]  && env_table="${env_table}| Dev  | ${readme_dev_env}  |
+"
+  [ -n "$readme_test_env" ] && env_table="${env_table}| Test | ${readme_test_env} |
+"
+  [ -n "$readme_prod_env" ] && env_table="${env_table}| Prod | ${readme_prod_env} |
+"
+
+  cat > "$project_dir/README.md" <<READMEEOF
+# ${readme_app_name}
+
+A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeScript.
+
+## Tech Stack
+
+- **React 18** + **TypeScript**
+- **Fluent UI v9** — Microsoft's design system
+- **TanStack Query** — server state & caching
+- **Vite** — build tooling
+- **Power Platform connectors** via \`@microsoft/power-apps\` SDK
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- [PAC CLI](https://learn.microsoft.com/power-platform/developer/cli/introduction) (\`dotnet tool install -g Microsoft.PowerApps.CLI.Tool\`)
+- An authenticated PAC profile (\`pac auth list\` to verify)
+
+### Development
+
+\`\`\`bash
+npm install
+npm run dev          # Start local dev server (Vite)
+\`\`\`
+
+### Build & Deploy
+
+\`\`\`bash
+npm run build                     # Build to dist/
+~/.dotnet/tools/pac code push     # Deploy to Power Platform
+\`\`\`
+
+The app URL after deployment:
+\`https://apps.powerapps.com/play/e/{environmentId}/app/{appId}\`
+
+## Project Structure
+
+\`\`\`
+${readme_slug}/
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── pages/             # Route-level pages
+│   ├── hooks/             # Custom React hooks
+│   ├── generated/         # Auto-generated connector SDK (do not edit)
+│   ├── services/          # Business logic & data layer
+│   └── App.tsx            # Root component
+├── .github/instructions/  # GitHub Copilot instruction files
+├── .power/                # Power Platform metadata
+├── power.config.json      # Code App configuration
+├── vite.config.ts         # Build configuration
+└── package.json
+\`\`\`
+
+## Power Platform
+
+| Property | Value |
+|----------|-------|
+| Solution | ${readme_sol_name} |
+| Publisher Prefix | \`${readme_prefix}\` |
+
+### Environments
+
+| Environment | URL |
+|-------------|-----|
+${env_table}
+### Connectors
+
+Data sources are managed via Power Platform connectors. To add a new data source:
+
+\`\`\`bash
+# Add a Dataverse table
+~/.dotnet/tools/pac code add-data-source -a dataverse -t ${readme_prefix}_tablename
+
+# Regenerate TypeScript SDK
+~/.dotnet/tools/pac code generate
+\`\`\`
+
+> **Never edit files in \`src/generated/\`** — they are overwritten on every \`pac code generate\`.
+
+## GitHub Copilot Instructions
+
+This project includes \`.github/instructions/*.instructions.md\` files that guide GitHub Copilot to generate code following the team's standards. They cover scaffolding, connectors, components, deployment, testing, security, and Dataverse schema design.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| \`npm run dev\` | Start Vite dev server |
+| \`npm run build\` | Production build to \`dist/\` |
+| \`npm run preview\` | Preview production build locally |
+| \`npm run test\` | Run unit tests (Vitest) |
+| \`npm run lint\` | Lint with ESLint |
+READMEEOF
+
+  echo "  ✓ Project README generated"
+
   echo ""
   echo "  Making initial commit..."
   git add -A >/dev/null 2>&1
