@@ -11,7 +11,7 @@ export function banner() {
   console.log('  to create and deploy a Power Apps Code App.');
   console.log('');
   console.log('  You\'ll need:');
-  console.log('    • A browser (for portal steps)');
+  console.log('    • A browser (for Power Apps Maker Portal & Admin Center steps)');
   console.log('    • Your Azure AD credentials');
   console.log('    • Access to Power Platform admin center');
   console.log('');

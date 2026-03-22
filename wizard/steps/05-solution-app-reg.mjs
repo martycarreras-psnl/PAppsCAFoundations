@@ -16,13 +16,13 @@ export default async function stepSolutionAndAppReg() {
   const solDisplay = stateGet('SOLUTION_DISPLAY_NAME');
   const pubDisplay = stateGet('PUBLISHER_DISPLAY_NAME');
 
-  ui.line('Three things to do in the browser, then we automate the rest.');
+  ui.line('Three things to do in the Power Apps Maker Portal, Azure Portal, and Power Platform Admin Center.');
   ui.line('');
 
   // ── A. Create Solution ──
-  ui.line('── A. Create the Solution ──');
+  ui.line('── A. Create the Solution (Power Apps Maker Portal) ──');
   ui.line('');
-  ui.line('1. Open: https://make.powerapps.com');
+  ui.line('1. Open the Power Apps Maker Portal: https://make.powerapps.com');
   ui.line('2. Select your Dev environment (top-right)');
   ui.line('3. Click: Solutions (left nav) → + New Solution');
   ui.line('4. Fill in:');
@@ -33,7 +33,7 @@ export default async function stepSolutionAndAppReg() {
   ui.line('');
   const solDone = await confirm({ message: 'Done creating the solution?', default: true });
   if (!solDone) {
-    ui.line('Complete it in the browser and re-run the wizard.');
+    ui.line('Complete it in the Power Apps Maker Portal and re-run the wizard.');
     process.exit(0);
   }
 
@@ -43,9 +43,9 @@ export default async function stepSolutionAndAppReg() {
 
   // ── B. App Registration ──
   const appRegName = `PowerApps-CodeApps-${appName.replace(/ /g, '-')}`;
-  ui.line('── B. Create the Azure App Registration ──');
+  ui.line('── B. Create the Azure App Registration (Azure Portal) ──');
   ui.line('');
-  ui.line('1. Open: https://portal.azure.com');
+  ui.line('1. Open the Azure Portal: https://portal.azure.com');
   ui.line('2. Go to: Microsoft Entra ID → App registrations → + New');
   ui.line(`3. Name: ${appRegName}`);
   ui.line('4. Supported account types: Single tenant');
@@ -107,10 +107,10 @@ export default async function stepSolutionAndAppReg() {
   ui.line('');
 
   // ── C. Application User ──
-  ui.line('── C. Register as Application User ──');
+  ui.line('── C. Register as Application User (Power Platform Admin Center) ──');
   ui.line('');
   ui.line('For EACH environment, do this:');
-  ui.line('1. Open: https://admin.powerplatform.microsoft.com');
+  ui.line('1. Open the Power Platform Admin Center: https://admin.powerplatform.microsoft.com');
   ui.line('2. Select the environment → Settings');
   ui.line('3. Users + permissions → Application users');
   ui.line('4. + New app user → Add an app');

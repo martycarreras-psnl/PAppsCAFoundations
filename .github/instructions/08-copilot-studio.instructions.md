@@ -42,7 +42,7 @@ If found, copy the `connectionId` value.
 
 ### Create a new connection (if none exists)
 
-Connections for Copilot Studio must be created in the Power Apps maker portal — there is no CLI command to create one.
+Connections for Copilot Studio must be created in the Power Apps Maker Portal — there is no CLI command to create one.
 
 1. Open [make.powerapps.com](https://make.powerapps.com) → select the target environment
 2. Navigate to **Connections** → **+ New connection**
@@ -483,7 +483,7 @@ The agent's topics and knowledge must be configured to handle this input format 
 
 ### Connection not found
 
-- Create the connection in the maker portal (see Step 1)
+- Create the connection in the Power Apps Maker Portal (see Step 1)
 - Re-run `pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>`
 
 ### Generated service missing `ExecuteCopilotAsyncV2`

@@ -285,7 +285,7 @@ YourSolution/
 When your Code App needs a new table, column, or option set, always create it from within the solution:
 
 **Creating a new table:**
-1. Power Platform maker portal → Solutions → Your Solution
+1. Power Apps Maker Portal → Solutions → Your Solution
 2. Click "New" → "Table"
 3. Use your publisher prefix (e.g., `yourprefix_ProjectTask`)
 4. Add columns from within the table editor (still inside the solution context)
@@ -307,7 +307,7 @@ pac solution add-reference --component-name account --component-type Table
 pac solution add-reference --component-name account --component-type Table --include-metadata
 ```
 
-In the maker portal: Inside your solution → "Add existing" → "Table" → Select the table → Choose "Include all components" or "Select components" to pick specific columns/views.
+In the Power Apps Maker Portal: Inside your solution → "Add existing" → "Table" → Select the table → Choose "Include all components" or "Select components" to pick specific columns/views.
 
 **Critical:** When you add an existing table, only add the specific columns and views your app actually uses. Including "all components" of a large table like Account pulls in hundreds of columns you don't need, bloating your solution and increasing the chance of conflicts with other teams' solutions.
 
@@ -379,7 +379,7 @@ A connection reference is a solution component that says "this app uses the Offi
 
 **The flow:**
 1. Developer adds a connector via `pac data-source add` → PAC creates a connection reference inside the solution
-2. Before importing to any environment, an admin creates an actual connection in that environment (maker portal → Connections)
+2. Before importing to any environment, an admin creates an actual connection in that environment (Power Apps Maker Portal → Connections)
 3. At import time, a deployment settings file maps the connection reference logical name to the connection ID in that environment
 4. After import, the connection reference is bound — the app works without any user consent prompt
 
@@ -405,7 +405,7 @@ Logical names follow the pattern `yourprefix_connectorname`, e.g.:
 
 #### Step 2: Find the connection ID in each environment
 
-In each environment (dev, test, prod), the admin who created the connection can find its ID in the maker portal URL:
+In each environment (dev, test, prod), the admin who created the connection can find its ID in the Power Apps Maker Portal URL:
 
 ```
 https://make.powerapps.com/environments/<env-id>/connections/shared_office365users/<CONNECTION_ID>/details
@@ -468,7 +468,7 @@ File format:
 ```
 
 `LogicalName` → the connection reference name from Step 1
-`ConnectionId` → the ID from the maker portal URL (Step 2), specific to this environment
+`ConnectionId` → the ID from the Power Apps Maker Portal URL (Step 2), specific to this environment
 `ConnectorId` → the Power Platform internal connector ID (see table below)
 
 **Common connector IDs:**
@@ -522,7 +522,7 @@ Store environment-specific deployment settings files in the repo. Each GitHub en
 
 If you import a solution without a deployment settings file (or with a missing entry), the connection reference lands in the environment in an **unmapped** state. The app will:
 - Show an error when a user tries to use any feature that calls that connector
-- Require an admin to manually open the connection reference in the maker portal and bind it to a connection
+- Require an admin to manually open the connection reference in the Power Apps Maker Portal and bind it to a connection
 
 You can check for unmapped connection references after import:
 

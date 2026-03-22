@@ -4,7 +4,7 @@
 # This is the ONLY thing a new developer needs to run. It walks through:
 #   1. Machine prerequisites (Node, Git, PAC CLI, .NET)
 #   2. Project identity (publisher prefix, solution name, etc.)
-#   3. Portal guidance (publisher, environments, solution creation)
+#   3. Power Apps Maker Portal guidance (publisher, environments, solution creation)
 #   4. Environment URLs
 #   5. App Registration + Application User guidance
 #   6. Authentication setup (1Password or .env.local)
@@ -39,7 +39,7 @@ print_banner() {
   echo "  to create and deploy a Power Apps Code App."
   echo ""
   echo "  You'll need:"
-  echo "    • A browser (for portal steps)"
+  echo "    • A browser (for Power Apps Maker Portal & Admin Center steps)"
   echo "    • Your Azure AD credentials"
   echo "    • Access to Power Platform admin center"
   echo ""
@@ -439,7 +439,7 @@ step_project_identity() {
 }
 
 # ============================================================
-# Step 3: Portal — Create Publisher
+# Step 3: Power Apps Maker Portal — Create Publisher
 # ============================================================
 
 step_create_publisher() {
@@ -452,11 +452,11 @@ step_create_publisher() {
   local pub_name
   pub_name=$(state_get "PUBLISHER_NAME")
 
-  echo "  This step happens in your browser. The wizard can't do it"
+  echo "  This step happens in the Power Apps Maker Portal. The wizard can't do it"
   echo "  for you — but it tells you exactly what to click and type."
   echo ""
   print_divider
-  echo "  1. Open: https://make.powerapps.com"
+  echo "  1. Open the Power Apps Maker Portal: https://make.powerapps.com"
   echo "  2. Select your DEVELOPMENT environment (top-right dropdown)"
   echo "     (If you haven't created it yet, do that first — see Step 4)"
   echo "  3. Click: Solutions (left nav) → Publishers → + New Publisher"
@@ -490,7 +490,7 @@ step_create_publisher() {
   echo ""
   if ! ask_yes_no "Did you complete the publisher creation?" "Y"; then
     echo ""
-    echo "  No problem — complete it in the browser and re-run the wizard."
+    echo "  No problem — complete it in the Power Apps Maker Portal and re-run the wizard."
     echo "  Your progress is saved. Re-run: bash scripts/setup-wizard.sh"
     exit 0
   fi
@@ -513,7 +513,7 @@ step_environments() {
   echo ""
   print_divider
   echo "  If you haven't created environments yet:"
-  echo "  1. Open: https://admin.powerplatform.microsoft.com"
+  echo "  1. Open the Power Platform Admin Center: https://admin.powerplatform.microsoft.com"
   echo "  2. Click: Environments → + New"
   echo "  3. Name it: ${app_name} - Dev"
   echo "  4. Type: Developer or Sandbox"
@@ -583,7 +583,7 @@ step_environments() {
 }
 
 # ============================================================
-# Step 5: Portal — Solution + App Registration + Application User
+# Step 5: Power Apps Maker Portal + Azure Portal + Admin Center — Solution + App Registration + Application User
 # ============================================================
 
 step_solution_and_app_reg() {
@@ -598,13 +598,14 @@ step_solution_and_app_reg() {
   local dev_url
   dev_url=$(state_get "PP_ENV_DEV")
 
-  echo "  Three things to do in the browser, then we automate the rest."
+  echo "  Three things to do in the Power Apps Maker Portal, Azure Portal,"
+  echo "  and Power Platform Admin Center — then we automate the rest."
   echo ""
 
   # ── A. Create Solution ──
-  echo "  ── A. Create the Solution ──"
+  echo "  ── A. Create the Solution (Power Apps Maker Portal) ──"
   echo ""
-  echo "  1. Open: https://make.powerapps.com"
+  echo "  1. Open the Power Apps Maker Portal: https://make.powerapps.com"
   echo "  2. Select your Dev environment (top-right)"
   echo "  3. Click: Solutions (left nav) → + New Solution"
   echo "  4. Fill in:"
@@ -614,7 +615,7 @@ step_solution_and_app_reg() {
   echo "  5. Click Create"
   echo ""
   if ! ask_yes_no "Done creating the solution?" "Y"; then
-    echo "  Complete it in the browser and re-run the wizard."
+    echo "  Complete it in the Power Apps Maker Portal and re-run the wizard."
     exit 0
   fi
 
@@ -623,9 +624,9 @@ step_solution_and_app_reg() {
   echo ""
 
   # ── B. App Registration ──
-  echo "  ── B. Create the Azure App Registration ──"
+  echo "  ── B. Create the Azure App Registration (Azure Portal) ──"
   echo ""
-  echo "  1. Open: https://portal.azure.com"
+  echo "  1. Open the Azure Portal: https://portal.azure.com"
   echo "  2. Go to: Microsoft Entra ID → App registrations → + New"
   echo "  3. Name: PowerApps-CodeApps-${app_name// /-}"
   echo "  4. Supported account types: Single tenant"
@@ -689,10 +690,10 @@ step_solution_and_app_reg() {
   echo ""
 
   # ── C. Application User ──
-  echo "  ── C. Register as Application User ──"
+  echo "  ── C. Register as Application User (Power Platform Admin Center) ──"
   echo ""
   echo "  For EACH environment, do this:"
-  echo "  1. Open: https://admin.powerplatform.microsoft.com"
+  echo "  1. Open the Power Platform Admin Center: https://admin.powerplatform.microsoft.com"
   echo "  2. Select the environment → Settings"
   echo "  3. Users + permissions → Application users"
   echo "  4. + New app user → Add an app"

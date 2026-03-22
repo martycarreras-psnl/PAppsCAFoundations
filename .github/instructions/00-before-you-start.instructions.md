@@ -4,7 +4,7 @@ applyTo: "**"
 
 # Power Apps Code Apps — Before You Write a Single Line of Code
 
-This is the complete list of manual steps that must be done in the Power Platform admin center and maker portal before any script, scaffolding, or development work begins. Most of these are one-time team-level decisions. Skipping any of them causes downstream pain that is expensive to unwind.
+This is the complete list of manual steps that must be done in the Power Platform Admin Center and Power Apps Maker Portal before any script, scaffolding, or development work begins. Most of these are one-time team-level decisions. Skipping any of them causes downstream pain that is expensive to unwind.
 
 Work through these in order. Record every value in the table at the bottom of this file.
 
@@ -32,7 +32,7 @@ Every Copilot session that touches this repo will use the value in this file as 
 
 ## Step 2: Create the Solution Publisher
 
-This is done once per team in the Power Platform maker portal. The publisher owns the prefix.
+This is done once per team in the Power Apps Maker Portal. The publisher owns the prefix.
 
 1. Go to [make.powerapps.com](https://make.powerapps.com) → select your **development** environment
 2. Navigate to **Solutions** → **Publishers** → **New Publisher**
@@ -66,7 +66,7 @@ For each environment:
 
 ## Step 4: Create the Solution in Your Development Environment
 
-Do this in the maker portal — not via CLI — so the solution is linked to your publisher.
+Do this in the Power Apps Maker Portal — not via CLI — so the solution is linked to your publisher.
 
 1. Go to [make.powerapps.com](https://make.powerapps.com) → select your **dev** environment
 2. Navigate to **Solutions** → **New Solution**
@@ -169,7 +169,7 @@ PP_ENV_DEV=               # e.g. "https://contoso-dev.crm.dynamics.com"
 PP_ENV_TEST=              # e.g. "https://contoso-test.crm.dynamics.com"
 PP_ENV_PROD=              # e.g. "https://contoso.crm.dynamics.com"
 
-# Connection IDs per environment (get from maker portal URL — see Step 5)
+# Connection IDs per environment (get from Power Apps Maker Portal URL — see Step 5)
 # Format: one row per connector per environment
 
 # Dev environment connection IDs

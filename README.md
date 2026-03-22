@@ -37,11 +37,11 @@ PAppsCAFoundations/
 
 ## Interactive Guide
 
-Open [docs/guide.html](docs/guide.html) in your browser for a visual walkthrough of the entire setup process, tech stack, naming conventions, and portal links — all in one page.
+Open [docs/guide.html](docs/guide.html) in your browser for a visual walkthrough of the entire setup process, tech stack, naming conventions, and Power Apps Maker Portal links — all in one page.
 
 ## Quick Start
 
-Run one command. The wizard walks you through everything — tool checks, naming, portal steps, authentication, scaffolding, and your first deploy:
+Run one command. The wizard walks you through everything — tool checks, naming, Power Apps Maker Portal and Admin Center steps, authentication, scaffolding, and your first deploy:
 
 ```bash
 git clone https://github.com/macarrer_microsoft/PAppsCAFoundations.git my-code-app
@@ -55,9 +55,9 @@ node index.mjs
 The wizard:
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
 2. **Collects project identity** — publisher prefix, solution name, app name
-3. **Guides you through portal steps** — tells you exactly what to click and type in Power Platform admin center and maker portal, using the values you just entered
+3. **Guides you through Power Apps Maker Portal and Admin Center steps** — tells you exactly what to click and type, using the values you just entered
 4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
-5. **Walks through App Registration** — Azure portal steps with copy-paste-ready values
+5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
 7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards
 8. **Builds, verifies, and optionally deploys** — first `pac code push` to Power Platform
@@ -70,7 +70,7 @@ To start over: `node wizard/index.mjs --reset`
 
 ### Already set up? Manual path
 
-If you've already completed the portal steps and have credentials:
+If you've already completed the Power Apps Maker Portal and Admin Center steps and have credentials:
 
 ```bash
 cp .env.template .env.local   # Fill in credentials

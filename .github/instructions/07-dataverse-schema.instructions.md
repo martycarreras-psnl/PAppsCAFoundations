@@ -24,7 +24,7 @@ When creating a Choice column in Dataverse you have two options: a **global** op
 | Travels with solution | ✅ | Partial |
 | Scriptable via Web API | ✅ | ❌ |
 | Generates clean TypeScript type | ✅ | ❌ |
-| Appears in maker portal Choice library | ✅ | ❌ |
+| Appears in Power Apps Maker Portal Choice library | ✅ | ❌ |
 
 ### Naming convention — always use your publisher prefix
 
@@ -74,7 +74,7 @@ If a value is truly deprecated, rename it to `[Deprecated] OldName` rather than 
 
 ### Idempotent creation via setup script (recommended pattern)
 
-Do not create option sets manually through the maker portal for any option set that a Code App depends on. Instead, define them in a setup script that:
+Do not create option sets manually through the Power Apps Maker Portal for any option set that a Code App depends on. Instead, define them in a setup script that:
 
 1. Checks whether the option set already exists before creating it
 2. Adds individual values idempotently (checks before inserting)
@@ -345,7 +345,7 @@ For most Code App use cases, standard tables are correct.
 
 ### Create tables inside the solution — every time
 
-Never create a table from the "Tables" shortcut in the maker portal. Always navigate through your solution:
+Never create a table from the "Tables" shortcut in the Power Apps Maker Portal. Always navigate through your solution:
 
 ```
 make.powerapps.com → Solutions → [Your Solution] → New → Table

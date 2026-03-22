@@ -14,7 +14,7 @@ export default async function stepEnvironments() {
   ui.line('');
   ui.divider();
   ui.line('If you haven\'t created environments yet:');
-  ui.line('1. Open: https://admin.powerplatform.microsoft.com');
+  ui.line('1. Open the Power Platform Admin Center: https://admin.powerplatform.microsoft.com');
   ui.line('2. Click: Environments → + New');
   ui.line(`3. Name it: ${appName} - Dev`);
   ui.line('4. Type: Developer or Sandbox');

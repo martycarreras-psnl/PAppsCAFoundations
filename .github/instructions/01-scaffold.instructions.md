@@ -103,7 +103,7 @@ This is the single most important rule for team development. Every Code App must
 The solution comes first, before scaffolding, before `pac code init`. Here's why: `pac code init` registers your Code App in the currently active solution context. If you haven't created and selected a solution, the app lands in the default solution where it's effectively unmanageable.
 
 ```bash
-# 1. Create the solution in your dev environment (via Power Platform maker portal or CLI)
+# 1. Create the solution in your dev environment (via the Power Apps Maker Portal or CLI)
 pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
 
 # 2. Then proceed with Code App scaffolding (see Scaffolding section below)
@@ -113,10 +113,10 @@ See `04-deployment.instructions.md` for full solution lifecycle management, incl
 
 ### All Dataverse Artifacts Must Be Solution-Aware
 
-When you create a new Dataverse table, column, option set, or any other artifact that your Code App depends on, always create it inside the solution — never from the default Tables view in the maker portal.
+When you create a new Dataverse table, column, option set, or any other artifact that your Code App depends on, always create it inside the solution — never from the default Tables view in the Power Apps Maker Portal.
 
 **Correct approach:**
-1. Open the Power Platform maker portal
+1. Open the Power Apps Maker Portal
 2. Navigate to your solution
 3. Click "Add existing" or "New" from within the solution context
 4. Create the table/column/option set inside the solution
@@ -209,9 +209,9 @@ pac org who
 # 1. Verify authentication is working (should show org info — no browser popup)
 pac org who
 
-# 2. Create your solution FIRST (or verify it exists in the maker portal)
+# 2. Create your solution FIRST (or verify it exists in the Power Apps Maker Portal)
 #    This ensures every artifact is tracked from the start.
-#    If you prefer, create the solution in the Power Platform maker portal instead.
+#    If you prefer, create the solution in the Power Apps Maker Portal instead.
 pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
 
 # 3. Clone the starter template
@@ -239,14 +239,14 @@ pac code add-data-source
 pac code generate
 
 # 10. Verify your solution contains the Code App and connection references
-#     Open Power Platform maker portal → Solutions → YourSolution
+#     Open Power Apps Maker Portal → Solutions → YourSolution
 #     You should see: the Code App, connection reference(s), and any tables you've added
 
 # 11. Start development (Vite + PAC Code Run on port 3000)
 npm run dev
 ```
 
-**After scaffolding, immediately create any Dataverse tables your app needs from within the solution** (see the "All Dataverse Artifacts Must Be Solution-Aware" rule above). Do not create tables from the top-level Tables view in the maker portal.
+**After scaffolding, immediately create any Dataverse tables your app needs from within the solution** (see the "All Dataverse Artifacts Must Be Solution-Aware" rule above). Do not create tables from the top-level Tables view in the Power Apps Maker Portal.
 
 ## Package.json Scripts
 
