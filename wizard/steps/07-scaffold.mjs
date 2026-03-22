@@ -544,23 +544,53 @@ async function setupConnectors(pac, projectDir) {
       }
     }
 
-    // Add non-Dataverse connectors as data sources
+    // Add non-Dataverse connectors as data sources.
+    // Non-Dataverse connectors REQUIRE a Connection ID (-c flag).
+    // A connection ID comes from an actual connection created in the
+    // Maker Portal — it is NOT the same as a connection reference.
     const nonDvSelected = selected.filter((id) => id !== 'shared_commondataserviceforapps');
-    for (const apiId of nonDvSelected) {
-      const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
-      const ref = createdRefs.find((r) => r.apiId === apiId) ||
-        existingRefs.find((r) => r.connectorid.endsWith(`/${apiId}`));
-      const args = ['code', 'add-data-source', '-a', apiId];
-      if (ref) {
-        args.push('-cr', ref.connectionreferenceid || ref.connRefId);
-        args.push('-s', stateGet('SOLUTION_ID', ''));
-      }
-      ui.line(`  Running: pac ${args.join(' ')}`);
-      const ok = runSafeLive(pac, args, { cwd: projectDir });
-      if (ok) {
-        ui.ok(`${connector.name} — data source added`);
+    if (nonDvSelected.length > 0) {
+      ui.line('');
+      ui.line('Non-Dataverse connectors require a Connection ID to register');
+      ui.line('as data sources. A Connection ID comes from an actual connection');
+      ui.line('you create in the Power Apps Maker Portal:');
+      ui.line('  make.powerapps.com → your environment → Connections');
+      ui.line('  Click a connection → the ID is the GUID at the end of the browser URL.');
+      ui.line('');
+
+      const hasConnIds = await confirm({
+        message: 'Do you have Connection IDs ready for these connectors?',
+        default: false,
+      });
+
+      if (hasConnIds) {
+        for (const apiId of nonDvSelected) {
+          const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+          const connectionId = await input({
+            message: `Connection ID for ${connector.name} (blank to skip)`,
+            default: '',
+          });
+          if (!connectionId.trim()) {
+            ui.info(`${connector.name} — skipped`);
+            ui.line(`    Add later: pac code add-data-source -a ${apiId} -c <CONNECTION_ID>`);
+            continue;
+          }
+          const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
+          ui.line(`  Running: pac ${args.join(' ')}`);
+          const ok = runSafeLive(pac, args, { cwd: projectDir });
+          if (ok) {
+            ui.ok(`${connector.name} — data source added`);
+          } else {
+            ui.warn(`${connector.name} — failed. Try manually:`);
+            ui.line(`    pac code add-data-source -a ${apiId} -c ${connectionId.trim()}`);
+          }
+        }
       } else {
-        ui.warn(`${connector.name} — failed. Add manually later: pac code add-data-source -a ${apiId}`);
+        ui.line('No problem — add them any time after creating connections:');
+        for (const apiId of nonDvSelected) {
+          const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+          ui.line(`  pac code add-data-source -a ${apiId} -c <CONNECTION_ID>  # ${connector.name}`);
+        }
       }
     }
   } else {

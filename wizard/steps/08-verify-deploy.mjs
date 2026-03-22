@@ -158,6 +158,7 @@ export default async function stepVerifyAndDeploy() {
 
 const CODE_APPS_NOT_ENABLED_RE = /does not allow this operation for this Code app/i;
 const SPN_PERMISSION_RE = /does not have permission to access.*checkAccess/i;
+const PAC_CRASH_RE = /non-recoverable error|ArgumentOutOfRange|will need to terminate/i;
 
 /**
  * Attempt pac code push, detect known errors, and offer guided retry.
@@ -235,6 +236,24 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRet
       ui.line('');
       ui.line('Retrying push with user auth...');
       continue;
+    }
+
+    // ── PAC CLI internal crash ──
+    if (PAC_CRASH_RE.test(stderr)) {
+      ui.line('');
+      ui.warn('PAC CLI crashed with an internal error.');
+      ui.line('');
+      ui.line('  This can happen when data sources were partially registered.');
+      ui.line('  Try these steps:');
+      ui.line('  1. Delete the .power/ folder in your project directory.');
+      ui.line('  2. Re-run: pac code init --displayName "' + (stateGet('APP_NAME', 'YourApp')) + '"');
+      ui.line('  3. Re-add data sources with correct connection IDs.');
+      ui.line('  4. Rebuild: npm run build');
+      ui.line('  5. Retry: pac code push');
+      ui.line('');
+      ui.line('  PAC log file:');
+      ui.line('  ~/.dotnet/tools/.store/microsoft.powerapps.cli.tool/2.2.1/microsoft.powerapps.cli.tool/2.2.1/tools/net10.0/any/logs/pac-log.txt');
+      return false;
     }
 
     // ── Unknown error ──
