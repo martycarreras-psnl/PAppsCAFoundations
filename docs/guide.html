@@ -582,6 +582,9 @@
       </button>
 
       <div class="nav-group-label">Setup Wizard</div>
+      <button class="nav-item" data-target="enable-code-apps" onclick="navTo(this)">
+        <span class="nav-icon">🚨</span> Enable Code Apps
+      </button>
       <button class="nav-item" data-target="wizard-overview" onclick="navTo(this)">
         <span class="nav-icon">🧙</span> Wizard Overview
       </button>
@@ -739,6 +742,43 @@
     </section>
 
     <!-- Wizard Overview -->
+    <!-- Enable Code Apps -->
+    <section class="section" id="enable-code-apps">
+      <h2 class="section-title">⚠️ Enable Code Apps in Your Environment</h2>
+      <p class="section-subtitle">This is a prerequisite. Without it, <code>pac code push</code> will fail with "does not allow this operation for this Code app."</p>
+
+      <div class="callout callout-danger">
+        <span class="callout-icon">🚨</span>
+        <div>
+          <strong>You MUST do this before your first push.</strong> Code Apps are disabled by default in Power Platform environments.
+          If you skip this step, the first <code>pac code push</code> will fail even with correct auth.
+        </div>
+      </div>
+
+      <h4>Steps</h4>
+      <ol>
+        <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a></li>
+        <li>Select your <strong>development environment</strong></li>
+        <li>Go to <strong>Settings → Features</strong></li>
+        <li>Find <strong>"Code components for canvas apps"</strong> → toggle <strong>ON</strong></li>
+        <li>Find <strong>"Allow publishing of canvas apps with code components"</strong> → toggle <strong>ON</strong></li>
+        <li>Click <strong>Save</strong></li>
+        <li>Wait ~1 minute for the setting to propagate</li>
+      </ol>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <div>
+          <strong>Repeat for each environment</strong> (Dev, Test, Prod) where you want to deploy Code Apps.
+          You only need to do this once per environment — the setting persists.
+        </div>
+      </div>
+
+      <h4>First Push Auth Requirement</h4>
+      <p>The very first <code>pac code push</code> for a new app <strong>must use user (interactive) auth</strong>, not a service principal. This is because the app doesn't have an <code>appId</code> yet, and the BAP API's <code>checkAccess</code> endpoint rejects SPN tokens during app creation.</p>
+      <p>After the first push succeeds and <code>power.config.json</code> is populated with an <code>appId</code>, <strong>SPN auth works fine</strong> for all subsequent pushes (including CI/CD).</p>
+    </section>
+
     <section class="section" id="wizard-overview">
       <h2 class="section-title">The Setup Wizard</h2>
       <p class="section-subtitle">One command. Start to finish. No instruction files to read.</p>
@@ -878,6 +918,10 @@
               <li>Copy the <strong>Environment URL</strong> (e.g. <code>https://org-name.crm.dynamics.com</code>)</li>
             </ol>
             <p>The wizard collects and validates URLs for Dev (required), Test, and Prod.</p>
+            <div class="callout callout-danger">
+              <span class="callout-icon">🚨</span>
+              <div><strong>Don't forget to enable Code Apps!</strong> In the Admin Center → your environment → <strong>Settings → Features</strong> → turn on <strong>"Code components for canvas apps"</strong> and <strong>"Allow publishing of canvas apps with code components"</strong>. See the <a href="#enable-code-apps">Enable Code Apps</a> section for details.</div>
+            </div>
           </div></div>
         </div>
 
@@ -985,9 +1029,15 @@
             <p>The wizard runs:</p>
             <ol>
               <li><code>npm run build</code> — verifies <code>dist/index.html</code> exists</li>
-              <li><code>pac org who</code> — final auth check</li>
+              <li>Checks <code>power.config.json</code> for <code>appId</code> to determine first vs. subsequent push</li>
+              <li><strong>First push:</strong> Creates a user (interactive) auth profile via browser sign-in — SPN auth cannot create new apps</li>
+              <li><strong>Subsequent pushes:</strong> Uses whatever auth is active (SPN works fine)</li>
               <li><strong>Offers to deploy</strong> with <code>pac code push</code></li>
             </ol>
+            <div class="callout callout-warn">
+              <span class="callout-icon">⚠️</span>
+              <div>Make sure you've <a href="#enable-code-apps">enabled Code Apps</a> in the environment before your first push, or it will fail with "does not allow this operation for this Code app."</div>
+            </div>
             <p>Then displays a complete summary of everything that was set up and what to do next:</p>
             <pre>cd ../your-app
 npm run dev          ← start local dev server (port 3000)
@@ -1222,6 +1272,10 @@ export function useProjects() {
                                           Deploy to Test → Deploy to Prod</pre>
 
       <h4>Manual Deploy (Dev Only)</h4>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>First push requires user auth.</strong> The initial <code>pac code push</code> creates the app and needs interactive sign-in. After that, SPN auth works for CI/CD. See <a href="#enable-code-apps">Enable Code Apps</a>.</div>
+      </div>
       <pre>npm run build &amp;&amp; pac code push</pre>
 
       <h4>GitHub Secrets Required</h4>

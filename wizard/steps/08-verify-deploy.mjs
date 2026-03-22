@@ -50,7 +50,17 @@ export default async function stepVerifyAndDeploy() {
 
     if (isFirstPush) {
       ui.line('This is the first push — the app has not been registered yet.');
-      ui.line('The first push MUST use user (interactive) auth because');
+      ui.line('');
+      ui.warn('IMPORTANT: Before your first push, you must enable Code Apps');
+      ui.line('  in the Power Platform Admin Center:');
+      ui.line('');
+      ui.line('  1. Go to admin.powerplatform.microsoft.com');
+      ui.line('  2. Select your environment → Settings → Features');
+      ui.line('  3. Find "Code components for canvas apps" → toggle ON');
+      ui.line('  4. Find "Allow publishing of canvas apps with code components" → toggle ON');
+      ui.line('  5. Save and wait ~1 minute for it to propagate');
+      ui.line('');
+      ui.line('The first push also MUST use user (interactive) auth because');
       ui.line('the BAP checkAccess API rejects service principal tokens.');
       ui.line('');
       ui.line('After the first push succeeds, SPN auth will work for CI/CD.');
