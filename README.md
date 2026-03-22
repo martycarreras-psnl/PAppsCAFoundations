@@ -7,18 +7,23 @@ A template repository with opinionated, comprehensive GitHub Copilot instruction
 ```
 PAppsCAFoundations/
 ├── .github/
-│   └── instructions/                       # GitHub Copilot instruction files
+│   └── instructions/                              # GitHub Copilot instruction files
+│       ├── 00-before-you-start.instructions.md    # Publisher, environments, solution setup
 │       ├── 00-environment-setup.instructions.md   # App Registration, 1Password, headless auth
 │       ├── 01-scaffold.instructions.md            # Solution-first rules, project structure, tech stack
 │       ├── 02-connectors.instructions.md          # Data sources, Dataverse, SQL, O365, Custom APIs
 │       ├── 03-components.instructions.md          # React + Fluent UI v9 patterns, state management
 │       ├── 04-deployment.instructions.md          # CI/CD, pac code push, ALM, solution management
 │       ├── 05-testing.instructions.md             # Vitest, Playwright, MSW connector mocking
-│       └── 06-security.instructions.md            # Auth, secrets, DLP, input validation
+│       ├── 06-security.instructions.md            # Auth, secrets, DLP, input validation
+│       └── 07-dataverse-schema.instructions.md    # Tables, columns, option sets, relationships
+├── docs/
+│   └── guide.html                          # Interactive visual setup guide (Fluent UI design)
 ├── scripts/
+│   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
-│   └── op-pac.sh                           # 1Password wrapper for pac commands
-│   └── setup-wizard.sh                     # Guided local setup wizard for new developers
+│   └── setup-wizard.sh                     # Guided 8-step setup wizard for new developers
+├── solution/                               # Power Platform solution artifacts
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
 ├── .gitignore
