@@ -6,6 +6,14 @@ applyTo: "src/generated/**,src/hooks/**,src/services/**"
 
 This instruction file governs how developers add, configure, and work with Power Platform connectors in Code Apps. Connectors are the primary way Code Apps access data — treat them as a first-class architectural concern, not an afterthought.
 
+Connector registration is downstream of planning. If the user is still describing the business problem, still deciding core workflows, or still refining the conceptual data model, stop and complete the planning flow first:
+
+- `00a-business-problem-decomposition.instructions.md`
+- `00b-scope-refinement-and-solution-shaping.instructions.md`
+- `00c-solution-concept-to-dataverse-plan.instructions.md`
+
+If Dataverse tables are part of the solution, follow `07-dataverse-schema.instructions.md` before registering those tables as data sources.
+
 ## Supported Connectors
 
 These connectors have official support and documented patterns for Code Apps:
@@ -25,6 +33,8 @@ These connectors have official support and documented patterns for Code Apps:
 ## Adding a Data Source
 
 **Solution reminder:** Every connector you add creates a **connection reference** in your Power Platform solution. Make sure your Code App's solution is active before running these commands. If you're also creating Dataverse tables for the connector to use, create those tables from within the solution context. See `01-scaffold.instructions.md` for the full solution-first rules.
+
+**Planning reminder:** Do not use `pac code add-data-source` as a discovery tool for figuring out what your app should connect to. The connector strategy should follow a refined business scope and, for Dataverse, an approved schema plan.
 
 ### Via PAC CLI (preferred)
 

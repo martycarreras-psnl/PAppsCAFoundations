@@ -14,6 +14,14 @@ Dataverse work is not a single step. It is a sequence:
 
 `schema plan artifact -> option sets -> tables -> columns -> relationships -> security role -> publish -> register data sources -> generate SDK`
 
+If the app requirements still exist only as a rough narrative or brainstorming discussion, stop here and complete the upstream planning flow first:
+
+- `00a-business-problem-decomposition.instructions.md`
+- `00b-scope-refinement-and-solution-shaping.instructions.md`
+- `00c-solution-concept-to-dataverse-plan.instructions.md`
+
+This file assumes the business problem has already been decomposed, refined, and translated into a conceptual plan that is ready to become a Dataverse planning artifact.
+
 **Inputs required:**
 - Publisher prefix
 - Solution unique name
@@ -33,6 +41,8 @@ Dataverse work is not a single step. It is a sequence:
 ## Schema Planning Artifact — Required for Non-Trivial Apps
 
 For anything beyond a one-table prototype, persist the schema plan inside the app project before running provisioning.
+
+If the planning artifact does not yet exist because the user is still refining workflows, approvals, reporting, Teams scenarios, document outputs, or Copilot placement, do not improvise the schema. Return to the upstream planning instructions and stabilize the solution concept first.
 
 **Recommended path:**
 

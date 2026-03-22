@@ -204,6 +204,14 @@ pac org who
 # Expected: shows your org name and environment URL — no browser popup
 ```
 
+Before you add connectors, generate schema, or start building pages around assumed entities, complete the narrative-first planning flow if the business scope is still emerging:
+
+- `00a-business-problem-decomposition.instructions.md`
+- `00b-scope-refinement-and-solution-shaping.instructions.md`
+- `00c-solution-concept-to-dataverse-plan.instructions.md`
+
+Scaffolding is not the moment to lock in a premature data model. If the user is still describing the problem in freeform business language, stop and refine the scope before moving into connector registration or schema decisions.
+
 ## Scaffolding a New Project (Step by Step)
 
 ```bash
@@ -232,22 +240,26 @@ cp .env.template .env.local
 # 7. Initialize Code App metadata (registers the app in your active solution)
 pac code init
 
-# 8. Add your first data source (interactive — choose a connector)
-#    This creates a connection reference in your solution automatically
+# 8. If the app's business scope is still being defined, stop here and complete
+#    the planning flow before choosing connectors or Dataverse tables.
+
+# 9. After planning and schema decisions are stable, add your first data source
+#    (interactive — choose a connector). This creates a connection reference in
+#    your solution automatically.
 pac code add-data-source
 
-# 9. Generate typed services from the connector
+# 10. Generate typed services from the connector
 pac code generate
 
-# 10. Verify your solution contains the Code App and connection references
+# 11. Verify your solution contains the Code App and connection references
 #     Open Power Apps Maker Portal → Solutions → YourSolution
 #     You should see: the Code App, connection reference(s), and any tables you've added
 
-# 11. Start development (Vite + PAC Code Run on port 3000)
+# 12. Start development (Vite + PAC Code Run on port 3000)
 npm run dev
 ```
 
-**After scaffolding, immediately create any Dataverse tables your app needs from within the solution** (see the "All Dataverse Artifacts Must Be Solution-Aware" rule above). Do not create tables from the top-level Tables view in the Power Apps Maker Portal.
+**After scaffolding, do not create Dataverse tables or add connectors based on guesswork.** First refine the business scope and convert it into a conceptual plan. Once that is stable, create any Dataverse tables your app needs from within the solution (see the "All Dataverse Artifacts Must Be Solution-Aware" rule above). Do not create tables from the top-level Tables view in the Power Apps Maker Portal.
 
 ## Package.json Scripts
 

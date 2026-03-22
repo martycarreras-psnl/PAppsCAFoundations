@@ -53,6 +53,24 @@ Foundations is now evolving against an explicit 8-step robustness roadmap:
 
 The implementation is designed so each change is traceable to those steps and can be validated through scaffold, build, test, and sync workflows.
 
+## Narrative-First Planning Layer
+
+Foundations now includes a narrative-first planning layer for future app development work. This layer is designed for the stage where a user can describe the business problem in their own words, but the solution still needs to be decomposed, challenged, and refined before technical implementation begins.
+
+The planning flow is:
+
+1. **Decompose the business problem** — interpret the user's narrative, identify actors, workflows, outcomes, records, constraints, and key unknowns
+2. **Refine the solution scope** — challenge for approvals, automation, Teams and Microsoft 365 touchpoints, reporting, governance, and enterprise completeness
+3. **Convert to technical planning inputs** — derive candidate entities, relationships, ownership patterns, lifecycle states, and handoff inputs for Dataverse planning
+
+The new instruction files are:
+
+- `00a-business-problem-decomposition.instructions.md`
+- `00b-scope-refinement-and-solution-shaping.instructions.md`
+- `00c-solution-concept-to-dataverse-plan.instructions.md`
+
+These files are intentionally not questionnaire-first. They teach Copilot how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into connectors, schema execution, and UI implementation.
+
 ### What the wizard does
 
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
@@ -88,6 +106,9 @@ PAppsCAFoundations/
 │   └── instructions/                              # GitHub Copilot instruction files
 │       ├── 00-before-you-start.instructions.md    # Publisher, environments, solution setup
 │       ├── 00-environment-setup.instructions.md   # App Registration, 1Password, headless auth
+│       ├── 00a-business-problem-decomposition.instructions.md   # Decompose freeform business narratives
+│       ├── 00b-scope-refinement-and-solution-shaping.instructions.md # Refine scope, automation, Teams, reporting, governance
+│       ├── 00c-solution-concept-to-dataverse-plan.instructions.md    # Convert refined scope into Dataverse planning inputs
 │       ├── 01-scaffold.instructions.md            # Solution-first rules, project structure, tech stack
 │       ├── 02-connectors.instructions.md          # Data sources, Dataverse, SQL, O365, Custom APIs
 │       ├── 03-components.instructions.md          # React + Fluent UI v9 patterns, state management
@@ -127,13 +148,15 @@ PAppsCAFoundations/
 
 ## How It Works
 
-When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code that follows your team's exact standards — Fluent UI v9 components, TanStack Query hooks for connectors, solution-aware Dataverse patterns, and more.
+When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code and planning guidance that follows your team's standards — from narrative-first business discovery through Fluent UI v9 components, TanStack Query hooks, connector usage, and solution-aware Dataverse patterns.
 
-Each file has an `applyTo` scope so Copilot only loads the relevant instructions based on which files you're editing.
+Most files use `applyTo` scopes so Copilot only loads the relevant instructions based on which files you're editing. The narrative-first planning files also rely on rich `description` text so they can be discovered during planning conversations before implementation files even exist.
 
 ## Dataverse Helper Flow
 
 Foundations now includes a reusable Dataverse execution layer that sits between schema planning and connector generation:
+
+Before this technical flow begins for a non-trivial app, use the narrative-first planning instructions to refine the business scope and derive the conceptual model. The Dataverse helper flow assumes those planning decisions already exist.
 
 ```bash
 node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
