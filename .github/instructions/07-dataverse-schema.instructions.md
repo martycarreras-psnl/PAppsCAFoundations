@@ -10,6 +10,67 @@ Schema mistakes are the most expensive kind to fix after data has been collected
 
 ---
 
+## Schema Creation Order — The Golden Sequence
+
+Every schema bootstrap script must follow this exact order. Reversing any step causes dependency failures.
+
+```
+1. Global Option Sets (Choices)
+2. Tables (with HasActivities: false, primary name column defined)
+3. Simple Columns (String, Number, Boolean, DateTime, Currency)
+4. Picklist Columns (bound to global option sets created in step 1)
+5. Lookup Columns / Relationships (referencing tables created in step 2)
+6. PublishAllXml (makes ALL schema changes visible to the runtime)
+7. pac code add-data-source -a dataverse -t <table> (registers each table)
+8. pac code generate (generates TypeScript SDK from registered tables)
+```
+
+Skipping step 6 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pac code add-data-source` until published.
+
+---
+
+## Solution Context — CRITICAL for Every API Call
+
+**Every Dataverse Web API call that creates schema must include the `MSCRM.SolutionUniqueName` header.** Without it, artifacts are created in the Default Solution — they won't travel with your solution export/import and become orphans that are painful to move later.
+
+```bash
+# ── api_call helper — ALWAYS pass the solution header ──
+# This is the standard helper function used throughout all schema scripts.
+# Define this at the top of every setup script.
+
+SOLUTION_NAME="${SOLUTION_UNIQUE_NAME}"   # From your .env or wizard state
+
+api_call() {
+  local method="$1" path="$2" body="$3"
+  local url="${DATAVERSE_URL}/api/data/v9.2${path}"
+  local args=(
+    -s -S
+    -X "$method"
+    -H "Authorization: Bearer ${ACCESS_TOKEN}"
+    -H "OData-MaxVersion: 4.0"
+    -H "OData-Version: 4.0"
+    -H "Accept: application/json"
+    -H "Content-Type: application/json; charset=utf-8"
+    -H "Prefer: return=representation"
+    -H "MSCRM.SolutionUniqueName: ${SOLUTION_NAME}"
+  )
+  if [ -n "$body" ]; then
+    args+=(-d "$body")
+  fi
+  curl "${args[@]}" "$url"
+}
+```
+
+**If you forget the `MSCRM.SolutionUniqueName` header:**
+- The artifact is created in the Default Solution
+- It won't appear in your solution's component list
+- It won't be included when you export the solution
+- You'll have to manually "Add existing" from the Maker Portal to move it — and you'll miss dependencies
+
+The wizard stores the solution unique name in `SOLUTION_UNIQUE_NAME` state. The `wizard/lib/dataverse.mjs` helper supports this via the `{ solutionName }` option on `dvPost`.
+
+---
+
 ## Option Sets (Global Choices)
 
 ### Always use Global, never Inline
@@ -345,13 +406,97 @@ For most Code App use cases, standard tables are correct.
 
 ### Create tables inside the solution — every time
 
-Never create a table from the "Tables" shortcut in the Power Apps Maker Portal. Always navigate through your solution:
+Never create a table from the "Tables" shortcut in the Power Apps Maker Portal. Always navigate through your solution, or create via the Web API with the `MSCRM.SolutionUniqueName` header (which the `api_call` helper includes automatically).
 
 ```
 make.powerapps.com → Solutions → [Your Solution] → New → Table
 ```
 
 A table created outside a solution lands in the default solution. Moving it later requires manually adding it and all dependent components — and you will miss some.
+
+### Programmatic table creation via Web API
+
+When Copilot or a setup script creates tables, use this pattern. The `api_call` helper (defined in the Solution Context section above) automatically includes the `MSCRM.SolutionUniqueName` header.
+
+```bash
+# ---- Helper: Create table if it doesn't already exist ----
+create_table_if_missing() {
+  local logical_name="$1"       # e.g. "agtpo_agentidea" (all lowercase)
+  local schema_name="$2"        # e.g. "Agtpo_AgentIdea" (PascalCase with prefix)
+  local display_name="$3"       # e.g. "Agent Idea"
+  local display_name_plural="$4" # e.g. "Agent Ideas"
+  local primary_attr_name="$5"  # e.g. "agtpo_name" (the primary name column)
+  local primary_attr_label="$6" # e.g. "Name"
+  local description="$7"        # e.g. "Tracks ideas submitted by agents"
+
+  # Check if table already exists
+  local check
+  check=$(api_call GET "/EntityDefinitions(LogicalName='${logical_name}')?\\$select=LogicalName" 2>/dev/null || true)
+  if echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('LogicalName') else 1)" 2>/dev/null; then
+    echo "  [OK] Table already exists: ${logical_name}"
+    return
+  fi
+
+  payload=$(python3 - "$logical_name" "$schema_name" "$display_name" "$display_name_plural" "$primary_attr_name" "$primary_attr_label" "$description" <<'PY'
+import json, sys
+logical, schema, display, plural, pk_name, pk_label, desc = sys.argv[1:8]
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
+    "SchemaName": schema,
+    "LogicalName": logical,
+    "DisplayName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
+                    "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                                         "Label": display, "LanguageCode": 1033}]},
+    "DisplayCollectionName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
+                              "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                                                   "Label": plural, "LanguageCode": 1033}]},
+    "Description": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
+                     "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                                          "Label": desc, "LanguageCode": 1033}]},
+    "HasActivities": False,
+    "HasNotes": False,
+    "OwnershipType": "UserOwned",
+    "IsActivity": False,
+    "PrimaryNameAttribute": pk_name,
+    "Attributes": [{
+        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "SchemaName": pk_name[0].upper() + pk_name[1:] if '_' not in pk_name else
+                      '_'.join(p.capitalize() if i > 0 else p for i, p in enumerate(pk_name.split('_'))),
+        "LogicalName": pk_name,
+        "DisplayName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
+                        "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                                             "Label": pk_label, "LanguageCode": 1033}]},
+        "RequiredLevel": {"Value": "ApplicationRequired"},
+        "MaxLength": 200,
+        "IsPrimaryName": True
+    }]
+}))
+PY
+)
+  api_call POST "/EntityDefinitions" "$payload" >/dev/null
+  echo "  [OK] Created table: ${logical_name}"
+}
+
+# Usage:
+create_table_if_missing \
+  "agtpo_agentidea" \
+  "Agtpo_AgentIdea" \
+  "Agent Idea" \
+  "Agent Ideas" \
+  "agtpo_name" \
+  "Name" \
+  "Tracks ideas submitted by agents"
+```
+
+**Critical properties for table creation:**
+
+| Property | Value | Why |
+|---|---|---|
+| `HasActivities` | `false` | Must always be included. Omitting it can cause the API to use a default that adds unwanted activity relationships. |
+| `HasNotes` | `false` | Set `true` only if you need the Notes/Annotations timeline on records. |
+| `OwnershipType` | `"UserOwned"` | Standard for most tables. Use `"OrganizationOwned"` only for reference/config data. |
+| `IsActivity` | `false` | Only set `true` for activity-type tables (rare in Code Apps). |
+| `PrimaryNameAttribute` | Your primary name column | Appears in lookups and views — make it meaningful (not generic "Name"). |
 
 ---
 
@@ -391,6 +536,167 @@ Only mark a column as **Business Required** if the data truly cannot be absent f
 
 For UI-level "required" (you want to prompt the user), enforce that in your React component validation, not at the Dataverse column level.
 
+### Programmatic column creation via Web API
+
+The `api_call` helper passes `MSCRM.SolutionUniqueName` automatically. Create columns after the table exists.
+
+```bash
+# ---- Helper: Check if a column already exists on a table ----
+column_exists() {
+  local entity="$1" attribute="$2"
+  local check
+  check=$(api_call GET "/EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='${attribute}')?\\$select=LogicalName" 2>/dev/null || true)
+  echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('LogicalName') else 1)" 2>/dev/null
+}
+
+# ---- Helper: Create a string column ----
+create_string_column_if_missing() {
+  local entity="$1" attr_name="$2" display="$3" max_length="${4:-200}" required="${5:-None}"
+  if column_exists "$entity" "$attr_name"; then
+    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
+    return
+  fi
+  payload=$(python3 - "$attr_name" "$display" "$max_length" "$required" <<'PY'
+import json, sys
+name, display, max_len, req = sys.argv[1:5]
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+    "SchemaName": name,
+    "LogicalName": name,
+    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
+    "RequiredLevel": {"Value": req},
+    "MaxLength": int(max_len),
+    "FormatName": {"Value": "Text"}
+}))
+PY
+)
+  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
+  echo "  [OK] Created string column: ${attr_name} on ${entity}"
+}
+
+# ---- Helper: Create a memo (multi-line text) column ----
+create_memo_column_if_missing() {
+  local entity="$1" attr_name="$2" display="$3" max_length="${4:-10000}"
+  if column_exists "$entity" "$attr_name"; then
+    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
+    return
+  fi
+  payload=$(python3 - "$attr_name" "$display" "$max_length" <<'PY'
+import json, sys
+name, display, max_len = sys.argv[1:4]
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+    "SchemaName": name,
+    "LogicalName": name,
+    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
+    "RequiredLevel": {"Value": "None"},
+    "MaxLength": int(max_len),
+    "Format": "TextArea"
+}))
+PY
+)
+  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
+  echo "  [OK] Created memo column: ${attr_name} on ${entity}"
+}
+
+# ---- Helper: Create a boolean (Yes/No) column ----
+create_boolean_column_if_missing() {
+  local entity="$1" attr_name="$2" display="$3" default_val="${4:-false}"
+  if column_exists "$entity" "$attr_name"; then
+    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
+    return
+  fi
+  local default_int=0
+  [ "$default_val" = "true" ] && default_int=1
+  payload=$(python3 - "$attr_name" "$display" "$default_int" <<'PY'
+import json, sys
+name, display, default_val = sys.argv[1], sys.argv[2], int(sys.argv[3])
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+    "SchemaName": name,
+    "LogicalName": name,
+    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
+    "RequiredLevel": {"Value": "None"},
+    "DefaultValue": default_val == 1,
+    "OptionSet": {
+        "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+        "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}}
+    }
+}))
+PY
+)
+  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
+  echo "  [OK] Created boolean column: ${attr_name} on ${entity}"
+}
+
+# ---- Helper: Create a whole number column ----
+create_integer_column_if_missing() {
+  local entity="$1" attr_name="$2" display="$3" min_val="${4:-0}" max_val="${5:-2147483647}"
+  if column_exists "$entity" "$attr_name"; then
+    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
+    return
+  fi
+  payload=$(python3 - "$attr_name" "$display" "$min_val" "$max_val" <<'PY'
+import json, sys
+name, display, min_v, max_v = sys.argv[1:5]
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+    "SchemaName": name,
+    "LogicalName": name,
+    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
+    "RequiredLevel": {"Value": "None"},
+    "MinValue": int(min_v),
+    "MaxValue": int(max_v),
+    "Format": "None"
+}))
+PY
+)
+  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
+  echo "  [OK] Created integer column: ${attr_name} on ${entity}"
+}
+
+# ---- Helper: Create a date/time column ----
+create_datetime_column_if_missing() {
+  local entity="$1" attr_name="$2" display="$3" format="${4:-DateOnly}"
+  # format: "DateOnly" or "DateAndTime"
+  if column_exists "$entity" "$attr_name"; then
+    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
+    return
+  fi
+  payload=$(python3 - "$attr_name" "$display" "$format" <<'PY'
+import json, sys
+name, display, fmt = sys.argv[1:4]
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+    "SchemaName": name,
+    "LogicalName": name,
+    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
+    "RequiredLevel": {"Value": "None"},
+    "Format": fmt,
+    "DateTimeBehavior": {"Value": "UserLocal"}
+}))
+PY
+)
+  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
+  echo "  [OK] Created datetime column: ${attr_name} on ${entity}"
+}
+```
+
+**Usage examples (after table creation, before relationships):**
+
+```bash
+echo ">>> Creating columns on agtpo_agentidea"
+
+create_string_column_if_missing  "agtpo_agentidea" "agtpo_title"       "Title" 200 "ApplicationRequired"
+create_memo_column_if_missing    "agtpo_agentidea" "agtpo_description" "Description" 10000
+create_boolean_column_if_missing "agtpo_agentidea" "agtpo_isarchived"  "Is Archived" "false"
+create_integer_column_if_missing "agtpo_agentidea" "agtpo_votecount"   "Vote Count" 0 100000
+create_datetime_column_if_missing "agtpo_agentidea" "agtpo_submittedon" "Submitted On" "DateOnly"
+
+# Picklist columns (uses the existing create_picklist_column_if_missing helper):
+create_picklist_column_if_missing "agtpo_agentidea" "agtpo_status" "Status" "agtpo_ideastatus" "100000000"
+```
+
 ---
 
 ## Relationships
@@ -421,6 +727,102 @@ For most Code App relationships, these defaults are correct:
 
 Only change cascade delete to "Cascade All" if you explicitly want child records destroyed when a parent is deleted (e.g. a line item table that is meaningless without its header).
 
+### Programmatic relationship creation via Web API
+
+Lookup columns and relationships are created together as a single `OneToManyRelationship` POST. The `api_call` helper passes `MSCRM.SolutionUniqueName` automatically.
+
+```bash
+# ---- Helper: Create a One-to-Many relationship (adds a lookup column on the child) ----
+create_relationship_if_missing() {
+  local relationship_name="$1"     # e.g. "agtpo_project_agentidea"
+  local parent_entity="$2"         # e.g. "agtpo_project" (the "one" side)
+  local child_entity="$3"          # e.g. "agtpo_agentidea" (the "many" side)
+  local lookup_attr_name="$4"      # e.g. "agtpo_projectid" (lookup column on child)
+  local lookup_display_name="$5"   # e.g. "Project"
+
+  # Check if relationship already exists
+  local check
+  check=$(api_call GET "/RelationshipDefinitions(SchemaName='${relationship_name}')?\\$select=SchemaName" 2>/dev/null || true)
+  if echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('SchemaName') else 1)" 2>/dev/null; then
+    echo "  [OK] Relationship already exists: ${relationship_name}"
+    return
+  fi
+
+  payload=$(python3 - "$relationship_name" "$parent_entity" "$child_entity" "$lookup_attr_name" "$lookup_display_name" <<'PY'
+import json, sys
+rel_name, parent, child, lookup_name, lookup_display = sys.argv[1:6]
+# Build SchemaName for the lookup attribute (PascalCase)
+parts = lookup_name.split('_')
+schema = '_'.join(p.capitalize() if i > 0 else p for i, p in enumerate(parts))
+print(json.dumps({
+    "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
+    "SchemaName": rel_name,
+    "ReferencedEntity": parent,
+    "ReferencingEntity": child,
+    "CascadeConfiguration": {
+        "Assign": "NoCascade",
+        "Delete": "Restrict",
+        "Merge": "NoCascade",
+        "Reparent": "NoCascade",
+        "Share": "NoCascade",
+        "Unshare": "NoCascade",
+        "RollupView": "NoCascade"
+    },
+    "Lookup": {
+        "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
+        "SchemaName": schema,
+        "LogicalName": lookup_name,
+        "DisplayName": {"LocalizedLabels": [{"Label": lookup_display, "LanguageCode": 1033}]},
+        "RequiredLevel": {"Value": "None"}
+    }
+}))
+PY
+)
+  api_call POST "/RelationshipDefinitions" "$payload" >/dev/null
+  echo "  [OK] Created relationship: ${relationship_name} (${parent_entity} → ${child_entity})"
+}
+
+# Usage:
+create_relationship_if_missing \
+  "agtpo_project_agentidea" \
+  "agtpo_project" \
+  "agtpo_agentidea" \
+  "agtpo_projectid" \
+  "Project"
+```
+
+**Relationship creation order:** Both the parent and child tables must exist before creating the relationship. This is why the Golden Sequence places relationships after tables and columns.
+
+### Lookup field usage in TypeScript
+
+Lookup fields behave differently for reads vs writes:
+
+```typescript
+// ── READING a lookup value ──
+// The GUID is in the navigation property prefixed with underscore and suffixed with _value
+const projectId = record._agtpo_projectid_value;  // GUID string
+// The display name (if expanded) is in @OData.Community.Display.V1.FormattedValue
+const projectName = record["_agtpo_projectid_value@OData.Community.Display.V1.FormattedValue"];
+
+// ── WRITING / SETTING a lookup value ──
+// Use @odata.bind with the entity set name (plural) and the target record GUID
+const updatePayload = {
+  "agtpo_ProjectId@odata.bind": `/agtpo_projects(${targetProjectGuid})`
+};
+
+// ── CLEARING a lookup value ──
+// Set the navigation property to null
+const clearPayload = {
+  "agtpo_ProjectId@odata.bind": null
+};
+```
+
+**Key rules for lookups:**
+- Read GUIDs from `_<field>_value` (lowercase, underscore prefix)
+- Write relationships with `<SchemaName>@odata.bind` (PascalCase, no underscore prefix)
+- The `@odata.bind` value uses the **entity set name** (plural logical name), not the entity logical name
+- Never try to write directly to `_<field>_value` — it's read-only
+
 ---
 
 ## Solution Layering and Import Order
@@ -429,6 +831,7 @@ If your schema spans multiple solutions (e.g. a base solution with shared option
 
 1. Import the base solution (which defines the shared option sets) first
 2. Import the dependent solution second
+3. **Publish customizations** after import (`PublishAllXml`)
 
 If you import out of order, the dependent solution will fail with a "missing dependency" error. Document the import order in your `README.md` and encode it in your CI/CD pipeline's deploy step.
 
@@ -440,15 +843,136 @@ pac solution check --path ./solution/solution.zip --outputDirectory ./solution-c
 
 ---
 
+## Publishing and Registration
+
+Schema changes created via the Web API are **not visible** to apps, connectors, or `pac code add-data-source` until they're published. This is the most commonly missed step.
+
+### Step 1: Publish all customizations
+
+After all option sets, tables, columns, and relationships have been created:
+
+```bash
+# Publish all customizations in the environment
+api_call POST "/PublishAllXml" '{}'
+echo "[OK] Published all customizations"
+```
+
+If you want to publish only specific entities (faster for large orgs):
+
+```bash
+# Publish only the entities you changed
+api_call POST "/PublishXml" '{"ParameterXml": "<importexportxml><entities><entity>agtpo_project</entity><entity>agtpo_agentidea</entity></entities></importexportxml>"}'
+```
+
+**Always use `PublishAllXml` in setup scripts** — it's safer and the extra time is negligible for initial schema creation.
+
+### Step 2: Register tables as data sources
+
+After publishing, register each table with your Code App so the TypeScript SDK is generated:
+
+```bash
+# For each table your app needs:
+~/.dotnet/tools/pac code add-data-source -a dataverse -t agtpo_project
+~/.dotnet/tools/pac code add-data-source -a dataverse -t agtpo_agentidea
+# ... one command per table
+
+# Then regenerate the TypeScript SDK
+~/.dotnet/tools/pac code generate
+```
+
+This creates/updates:
+- `src/generated/services/<Table>Service.ts` — CRUD operations
+- `src/generated/models/<Table>Model.ts` — TypeScript interfaces
+- `.power/schemas/` — schema metadata
+
+**Never edit files in `src/generated/`** — they're regenerated on every `pac code generate`.
+
+### Step 3: Install/update the SDK package
+
+```bash
+npm install @microsoft/power-apps@^1.0.3
+```
+
+### Complete bootstrap sequence
+
+Here's the full end-to-end script pattern for a schema bootstrap:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── 1. Configuration (from .env / wizard output) ──
+DATAVERSE_URL="${DATAVERSE_URL:?Set DATAVERSE_URL}"
+TENANT_ID="${TENANT_ID:?Set TENANT_ID}"
+SOLUTION_NAME="${PP_SOLUTION_NAME:?Set PP_SOLUTION_NAME}"
+PREFIX="${PP_PUBLISHER_PREFIX:?Set PP_PUBLISHER_PREFIX}"
+
+# ── 2. Auth token ──
+TOKEN=$(az account get-access-token --resource "$DATAVERSE_URL" --tenant "$TENANT_ID" --query accessToken -o tsv)
+
+# ── 3. api_call helper (includes MSCRM.SolutionUniqueName on every call) ──
+api_call() { ... }  # (defined above in Solution Context section)
+
+# ── 4. Create global option sets ──
+# ... option set creation calls ...
+
+# ── 5. Create tables ──
+# ... create_table_if_missing calls ...
+
+# ── 6. Create simple columns ──
+# ... column creation calls (string, integer, boolean, memo, datetime) ...
+
+# ── 7. Create picklist columns (referencing option sets from step 4) ──
+# ... picklist column creation calls ...
+
+# ── 8. Create relationships (lookup columns) ──
+# ... create_relationship_if_missing calls ...
+
+# ── 9. Publish ──
+api_call POST "/PublishAllXml" '{}'
+echo "[DONE] Schema created and published."
+
+# ── 10. Register data sources (run from the Code App project directory) ──
+echo ""
+echo "Now run these commands in your project directory:"
+echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_project"
+echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_agentidea"
+echo "  ~/.dotnet/tools/pac code generate"
+echo "  npm install @microsoft/power-apps@^1.0.3"
+```
+
+---
+
 ## Pre-Schema Checklist
 
 Before writing any setup script or creating any schema manually, answer these questions:
 
+**Solution & Publisher:**
 - [ ] Have you confirmed the solution publisher prefix you'll use for this project?
-- [ ] Is every option set you need defined as a global choice (not inline)?
-- [ ] Are option set integer values starting at 100000000?
 - [ ] Are all schema artifacts (tables, option sets, columns, relationships) created inside the solution?
-- [ ] Does your setup script create option sets before the columns that reference them?
+- [ ] Does every API call include the `MSCRM.SolutionUniqueName` header (via the `api_call` helper)?
+
+**Option Sets:**
+- [ ] Is every option set you need defined as a global choice (not inline)?
+- [ ] Are option set integer values starting at your publisher's choice value prefix (e.g. 100000000)?
+- [ ] Are raw integer literals absent from your React component code (use named constants/enums instead)?
+
+**Tables:**
+- [ ] Does every `EntityDefinitions` POST include `HasActivities: false` and `HasNotes: false`?
+- [ ] Is `OwnershipType` set to `"UserOwned"` (or `"Organization"` if appropriate)?
+- [ ] Is the primary name attribute specified with your publisher prefix?
+
+**Columns:**
+- [ ] Does your setup script create option sets before the picklist columns that reference them?
+- [ ] Are simple columns (string, integer, boolean) created before lookup columns (relationships)?
+
+**Relationships:**
+- [ ] Do both parent and child tables exist before creating the relationship?
+- [ ] Is cascade delete set to `"Restrict"` (safe default)?
+
+**Publishing & Registration:**
+- [ ] Does the script call `PublishAllXml` after all schema changes?
+- [ ] Is `pac code add-data-source -a dataverse -t <table>` run for every table the app needs?
+- [ ] Is `pac code generate` run after adding data sources?
 - [ ] Is the setup script idempotent (safe to re-run on an environment that already has the schema)?
-- [ ] Are generated TypeScript types regenerated after any schema change (`pac data-source add`)?
-- [ ] Are raw integer literals absent from your React component code?
+- [ ] Are generated TypeScript types regenerated after any schema change?
