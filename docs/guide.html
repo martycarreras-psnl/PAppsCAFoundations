@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power Apps Code Apps — Setup Guide</title>
+<style>
+  /* ============================================================
+     Fluent UI Design Tokens (CSS Variables)
+     Ref: https://developer.microsoft.com/en-us/fluentui#/styles/web
+     ============================================================ */
+  :root {
+    /* Brand / Theme */
+    --themePrimary: #0078d4;
+    --themeDarker: #004578;
+    --themeDark: #005a9e;
+    --themeDarkAlt: #106ebe;
+    --themeSecondary: #2b88d8;
+    --themeTertiary: #71afe5;
+    --themeLight: #c7e0f4;
+    --themeLighter: #deecf9;
+    --themeLighterAlt: #eff6fc;
+
+    /* Neutrals */
+    --black: #000000;
+    --neutralDark: #201f1e;
+    --neutralPrimary: #323130;
+    --neutralPrimaryAlt: #3b3a39;
+    --neutralSecondary: #605e5c;
+    --neutralTertiary: #a19f9d;
+    --neutralTertiaryAlt: #c8c6c4;
+    --neutralQuaternary: #d2d0ce;
+    --neutralQuaternaryAlt: #e1dfdd;
+    --neutralLight: #edebe9;
+    --neutralLighter: #f3f2f1;
+    --neutralLighterAlt: #faf9f8;
+    --white: #ffffff;
+
+    /* Shared / Accent */
+    --green: #107c10;
+    --greenLight: #bad80a;
+    --orange: #d83b01;
+    --orangeLight: #ea4300;
+    --red: #d13438;
+    --yellow: #ffb900;
+    --blue: #0078d4;
+    --purple: #5c2d91;
+    --teal: #008272;
+
+    /* Elevation */
+    --depth4: 0 1.6px 3.6px 0 rgba(0,0,0,.132), 0 0.3px 0.9px 0 rgba(0,0,0,.108);
+    --depth8: 0 3.2px 7.2px 0 rgba(0,0,0,.132), 0 0.6px 1.8px 0 rgba(0,0,0,.108);
+    --depth16: 0 6.4px 14.4px 0 rgba(0,0,0,.132), 0 1.2px 3.6px 0 rgba(0,0,0,.108);
+    --depth64: 0 25.6px 57.6px 0 rgba(0,0,0,.22), 0 4.8px 14.4px 0 rgba(0,0,0,.18);
+
+    /* Spacing (4px grid) */
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px;
+    --s6: 24px; --s7: 28px; --s8: 32px; --s10: 40px; --s12: 48px;
+
+    /* Border radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+
+    /* Transitions / Motion */
+    --motion-duration: 167ms;
+    --motion-ease: cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+
+  /* ============================================================
+     Base / Reset
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--neutralPrimary);
+    background: var(--neutralLighterAlt);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--themePrimary); text-decoration: none; }
+  a:hover { color: var(--themeDark); text-decoration: underline; }
+
+  code, pre {
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+  }
+
+  pre {
+    background: var(--neutralDark);
+    color: #d4d4d4;
+    padding: var(--s4);
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+
+  code:not(pre code) {
+    background: var(--neutralLighter);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12.5px;
+    color: var(--themeDarker);
+  }
+
+  /* ============================================================
+     Layout
+     ============================================================ */
+  .page { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--white);
+    border-right: 1px solid var(--neutralLight);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-brand {
+    padding: var(--s5) var(--s5);
+    border-bottom: 1px solid var(--neutralLight);
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+  }
+
+  .sidebar-brand svg { flex-shrink: 0; }
+
+  .sidebar-brand h1 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 22px;
+    color: var(--neutralDark);
+  }
+
+  .sidebar-brand span {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--neutralSecondary);
+    display: block;
+  }
+
+  .sidebar-nav { flex: 1; padding: var(--s3) 0; }
+
+  .nav-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--neutralTertiary);
+    padding: var(--s3) var(--s5) var(--s1);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    padding: var(--s2) var(--s5);
+    cursor: pointer;
+    transition: background var(--motion-duration) var(--motion-ease);
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--neutralPrimary);
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    border-left: 3px solid transparent;
+  }
+
+  .nav-item:hover { background: var(--neutralLighterAlt); }
+  .nav-item.active {
+    background: var(--themeLighterAlt);
+    color: var(--themeDark);
+    border-left-color: var(--themePrimary);
+    font-weight: 600;
+  }
+
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .main {
+    margin-left: 280px;
+    flex: 1;
+    padding: var(--s8) var(--s10);
+    max-width: 960px;
+  }
+
+  /* ============================================================
+     Hero
+     ============================================================ */
+  .hero {
+    background: linear-gradient(135deg, var(--themeDarker) 0%, var(--themePrimary) 60%, var(--themeSecondary) 100%);
+    color: var(--white);
+    padding: var(--s12) var(--s10);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--s8);
+    box-shadow: var(--depth8);
+  }
+
+  .hero h1 { font-size: 32px; font-weight: 600; line-height: 40px; margin-bottom: var(--s2); }
+  .hero p { font-size: 16px; line-height: 24px; opacity: 0.92; max-width: 640px; }
+
+  .hero-actions { display: flex; gap: var(--s3); margin-top: var(--s5); flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s2);
+    padding: var(--s2) var(--s4);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--motion-duration) var(--motion-ease);
+  }
+
+  .btn-primary {
+    background: var(--white);
+    color: var(--themeDarker);
+  }
+  .btn-primary:hover { background: var(--neutralLighterAlt); text-decoration: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--white);
+    border-color: rgba(255,255,255,.5);
+  }
+  .btn-outline:hover { background: rgba(255,255,255,.12); text-decoration: none; }
+
+  /* ============================================================
+     Section
+     ============================================================ */
+  .section { margin-bottom: var(--s10); scroll-margin-top: var(--s5); }
+
+  .section-title {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 32px;
+    color: var(--neutralDark);
+    margin-bottom: var(--s1);
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--neutralSecondary);
+    margin-bottom: var(--s5);
+  }
+
+  /* ============================================================
+     Cards
+     ============================================================ */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--neutralLight);
+    border-radius: var(--radius-md);
+    box-shadow: var(--depth4);
+    transition: box-shadow var(--motion-duration) var(--motion-ease);
+    overflow: hidden;
+  }
+
+  .card:hover { box-shadow: var(--depth8); }
+
+  .card-body { padding: var(--s4) var(--s5); }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--s4);
+    margin-bottom: var(--s5);
+  }
+
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: var(--s3);
+  }
+
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 22px;
+    color: var(--neutralDark);
+    margin-bottom: var(--s1);
+  }
+
+  .card p {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--neutralSecondary);
+  }
+
+  /* ============================================================
+     Accordion (collapsible sections)
+     ============================================================ */
+  .accordion { margin-bottom: var(--s4); }
+
+  .accordion-item {
+    background: var(--white);
+    border: 1px solid var(--neutralLight);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--s2);
+    overflow: hidden;
+    box-shadow: var(--depth4);
+  }
+
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    padding: var(--s4) var(--s5);
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    transition: background var(--motion-duration) var(--motion-ease);
+  }
+
+  .accordion-header:hover { background: var(--neutralLighterAlt); }
+
+  .accordion-chevron {
+    font-size: 12px;
+    transition: transform var(--motion-duration) var(--motion-ease);
+    color: var(--neutralSecondary);
+    flex-shrink: 0;
+  }
+
+  .accordion-item.open .accordion-chevron { transform: rotate(90deg); }
+
+  .accordion-step {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--themePrimary);
+    color: var(--white);
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .accordion-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--neutralDark);
+  }
+
+  .accordion-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .tag-manual { background: #fff4ce; color: #835c00; }
+  .tag-automated { background: #dff6dd; color: #0b6a0b; }
+  .tag-guided { background: var(--themeLighter); color: var(--themeDarker); }
+
+  .accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 300ms var(--motion-ease), padding 200ms var(--motion-ease);
+  }
+
+  .accordion-item.open .accordion-body { max-height: 3000px; }
+
+  .accordion-content {
+    padding: 0 var(--s5) var(--s5);
+    font-size: 14px;
+    line-height: 22px;
+  }
+
+  .accordion-content p { margin-bottom: var(--s3); }
+  .accordion-content ul, .accordion-content ol { margin-left: var(--s5); margin-bottom: var(--s3); }
+  .accordion-content li { margin-bottom: var(--s1); }
+  .accordion-content h4 {
+    font-size: 14px; font-weight: 600;
+    margin-top: var(--s4); margin-bottom: var(--s2);
+    color: var(--neutralDark);
+  }
+
+  /* ============================================================
+     Portal link cards
+     ============================================================ */
+  .portal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s2);
+    background: var(--themeLighterAlt);
+    border: 1px solid var(--themeLight);
+    padding: var(--s2) var(--s3);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--themeDark);
+    transition: all var(--motion-duration) var(--motion-ease);
+    margin-bottom: var(--s2);
+    margin-right: var(--s2);
+  }
+
+  .portal-link:hover {
+    background: var(--themeLight);
+    text-decoration: none;
+    box-shadow: var(--depth4);
+  }
+
+  /* ============================================================
+     Info box / callout
+     ============================================================ */
+  .callout {
+    padding: var(--s3) var(--s4);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 20px;
+    margin-bottom: var(--s4);
+    display: flex;
+    gap: var(--s3);
+    align-items: flex-start;
+  }
+
+  .callout-icon { font-size: 16px; flex-shrink: 0; line-height: 20px; }
+
+  .callout-info { background: var(--themeLighterAlt); border-left: 3px solid var(--themePrimary); }
+  .callout-warn { background: #fff4ce; border-left: 3px solid var(--yellow); }
+  .callout-success { background: #dff6dd; border-left: 3px solid var(--green); }
+  .callout-danger { background: #fde7e9; border-left: 3px solid var(--red); }
+
+  /* ============================================================
+     Table
+     ============================================================ */
+  .table-wrap { overflow-x: auto; margin-bottom: var(--s4); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  th {
+    text-align: left;
+    font-weight: 600;
+    padding: var(--s2) var(--s3);
+    background: var(--neutralLighterAlt);
+    border-bottom: 2px solid var(--neutralLight);
+    color: var(--neutralDark);
+  }
+
+  td {
+    padding: var(--s2) var(--s3);
+    border-bottom: 1px solid var(--neutralLight);
+    color: var(--neutralPrimary);
+  }
+
+  tr:hover td { background: var(--neutralLighterAlt); }
+
+  /* ============================================================
+     Tech stack pills
+     ============================================================ */
+  .pill-row { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s4); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s1);
+    padding: var(--s1) var(--s3);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--neutralLighter);
+    color: var(--neutralPrimary);
+    border: 1px solid var(--neutralQuaternaryAlt);
+  }
+
+  /* ============================================================
+     File tree
+     ============================================================ */
+  .file-tree {
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    background: var(--neutralDark);
+    color: #cccccc;
+    padding: var(--s4);
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    margin-bottom: var(--s4);
+  }
+
+  .file-tree .folder { color: #4ec9b0; }
+  .file-tree .file { color: #9cdcfe; }
+  .file-tree .comment { color: #6a9955; }
+
+  /* ============================================================
+     Responsive
+     ============================================================ */
+  .mobile-toggle {
+    display: none;
+    position: fixed;
+    top: var(--s3);
+    left: var(--s3);
+    z-index: 200;
+    background: var(--white);
+    border: 1px solid var(--neutralLight);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--depth8);
+    padding: var(--s2) var(--s3);
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  @media (max-width: 800px) {
+    .sidebar { transform: translateX(-100%); transition: transform 250ms var(--motion-ease); }
+    .sidebar.open { transform: translateX(0); box-shadow: var(--depth64); }
+    .main { margin-left: 0; padding: var(--s5) var(--s4); padding-top: 56px; }
+    .mobile-toggle { display: block; }
+    .hero { padding: var(--s8) var(--s5); }
+    .hero h1 { font-size: 24px; line-height: 32px; }
+    .card-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Mobile menu toggle -->
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
+
+<div class="page">
+  <!-- ============================================================
+       Sidebar Navigation
+       ============================================================ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="15" height="15" rx="2" fill="#0078d4"/><rect x="17" y="0" width="15" height="15" rx="2" fill="#50e6ff"/><rect x="0" y="17" width="15" height="15" rx="2" fill="#0078d4" opacity=".6"/><rect x="17" y="17" width="15" height="15" rx="2" fill="#50e6ff" opacity=".6"/></svg>
+      <div>
+        <h1>Code Apps</h1>
+        <span>Foundations Guide</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">Overview</div>
+      <button class="nav-item active" data-target="hero-section" onclick="navTo(this)">
+        <span class="nav-icon">🏠</span> Getting Started
+      </button>
+      <button class="nav-item" data-target="whats-inside" onclick="navTo(this)">
+        <span class="nav-icon">📁</span> What's Inside
+      </button>
+      <button class="nav-item" data-target="tech-stack" onclick="navTo(this)">
+        <span class="nav-icon">⚡</span> Tech Stack
+      </button>
+
+      <div class="nav-group-label">Setup Wizard</div>
+      <button class="nav-item" data-target="wizard-overview" onclick="navTo(this)">
+        <span class="nav-icon">🧙</span> Wizard Overview
+      </button>
+      <button class="nav-item" data-target="wizard-steps" onclick="navTo(this)">
+        <span class="nav-icon">📋</span> All 8 Steps
+      </button>
+
+      <div class="nav-group-label">Portal Quick Links</div>
+      <button class="nav-item" data-target="portal-links" onclick="navTo(this)">
+        <span class="nav-icon">🔗</span> Portal Links
+      </button>
+
+      <div class="nav-group-label">Reference</div>
+      <button class="nav-item" data-target="ref-connectors" onclick="navTo(this)">
+        <span class="nav-icon">🔌</span> Connectors
+      </button>
+      <button class="nav-item" data-target="ref-components" onclick="navTo(this)">
+        <span class="nav-icon">🧩</span> Components
+      </button>
+      <button class="nav-item" data-target="ref-deployment" onclick="navTo(this)">
+        <span class="nav-icon">🚀</span> Deployment
+      </button>
+      <button class="nav-item" data-target="ref-testing" onclick="navTo(this)">
+        <span class="nav-icon">🧪</span> Testing
+      </button>
+      <button class="nav-item" data-target="ref-security" onclick="navTo(this)">
+        <span class="nav-icon">🔒</span> Security
+      </button>
+      <button class="nav-item" data-target="ref-dataverse" onclick="navTo(this)">
+        <span class="nav-icon">🗄️</span> Dataverse Schema
+      </button>
+
+      <div class="nav-group-label">Resources</div>
+      <button class="nav-item" data-target="naming-rules" onclick="navTo(this)">
+        <span class="nav-icon">📐</span> Naming Rules
+      </button>
+      <button class="nav-item" data-target="connector-ids" onclick="navTo(this)">
+        <span class="nav-icon">📇</span> Connector IDs
+      </button>
+    </nav>
+  </aside>
+
+  <!-- ============================================================
+       Main Content
+       ============================================================ -->
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="hero" id="hero-section">
+      <h1>Power Apps Code Apps</h1>
+      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. One wizard command takes you from zero to deployed.</p>
+      <div class="hero-actions">
+        <a href="#wizard-overview" class="btn btn-primary">🧙 Run the Wizard</a>
+        <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
+        <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations" class="btn btn-outline" target="_blank" rel="noopener">↗ GitHub</a>
+      </div>
+    </section>
+
+    <!-- What's Inside -->
+    <section class="section" id="whats-inside">
+      <h2 class="section-title">What's Inside</h2>
+      <p class="section-subtitle">The repo contains instruction files, helper scripts, and a setup wizard that work together.</p>
+
+      <div class="file-tree"><span class="folder">PAppsCAFoundations/</span>
+├── <span class="folder">.github/instructions/</span>          <span class="comment"># Copilot instruction files</span>
+│   ├── <span class="file">00-before-you-start</span>          <span class="comment"># Publisher, environments, solution</span>
+│   ├── <span class="file">00-environment-setup</span>         <span class="comment"># App Registration, auth, 1Password</span>
+│   ├── <span class="file">01-scaffold</span>                  <span class="comment"># Project structure, tech stack</span>
+│   ├── <span class="file">02-connectors</span>                <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
+│   ├── <span class="file">03-components</span>                <span class="comment"># React + Fluent UI v9 patterns</span>
+│   ├── <span class="file">04-deployment</span>                <span class="comment"># CI/CD, pac code push, ALM</span>
+│   ├── <span class="file">05-testing</span>                   <span class="comment"># Vitest, Playwright, MSW</span>
+│   ├── <span class="file">06-security</span>                  <span class="comment"># Auth, secrets, DLP, validation</span>
+│   └── <span class="file">07-dataverse-schema</span>          <span class="comment"># Tables, columns, option sets</span>
+├── <span class="folder">scripts/</span>
+│   ├── <span class="file">setup-wizard.sh</span>              <span class="comment"># ← THE MAIN EVENT (8-step wizard)</span>
+│   ├── <span class="file">setup-auth.sh</span>                <span class="comment"># Auth profile creation</span>
+│   └── <span class="file">op-pac.sh</span>                    <span class="comment"># 1Password wrapper for pac</span>
+├── <span class="file">.env</span>                             <span class="comment"># 1Password references (safe to commit)</span>
+├── <span class="file">.env.template</span>                    <span class="comment"># Template for non-1Password teams</span>
+└── <span class="file">README.md</span></div>
+
+      <div class="card-grid">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📋</div>
+          <h3>9 Instruction Files</h3>
+          <p>Copilot reads these automatically. They encode every team standard — naming, patterns, security, testing — so AI-generated code is consistent from day one.</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
+          <h3>Setup Wizard</h3>
+          <p>One script, 8 steps, zero guesswork. Walks a complete novice through portal setup, auth, scaffolding, and first deploy.</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔐</div>
+          <h3>Auth Scripts</h3>
+          <p>1Password integration or .env.local fallback. Service Principal auth means no browser popups — locally or in CI/CD.</p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="section" id="tech-stack">
+      <h2 class="section-title">Required Tech Stack</h2>
+      <p class="section-subtitle">Every Code App uses this exact stack. No substitutions without team lead approval.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Version</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Language</td><td>TypeScript</td><td>5.x</td><td>Type safety across codebase + connector models</td></tr>
+            <tr><td>UI Framework</td><td>React</td><td>18.x</td><td>Microsoft-recommended; all official samples target React</td></tr>
+            <tr><td>Design System</td><td>Fluent UI v9</td><td><code>@fluentui/react-components</code></td><td>Native Microsoft look; matches Power Platform chrome</td></tr>
+            <tr><td>Bundler</td><td>Vite</td><td>5.x</td><td>Fast HMR; official templates use Vite</td></tr>
+            <tr><td>Server State</td><td>TanStack Query</td><td>v5</td><td>Caching, deduplication, background refresh for connectors</td></tr>
+            <tr><td>Routing</td><td>React Router</td><td>v6</td><td>Nested layouts, data loaders</td></tr>
+            <tr><td>Power Apps SDK</td><td><code>@microsoft/power-apps</code></td><td>^1.0.3</td><td>Connector access, auth context</td></tr>
+            <tr><td>CLI</td><td>PAC CLI</td><td>latest (not 2.3.2)</td><td>Scaffold, add data sources, deploy</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pill-row">
+        <span class="pill">TypeScript 5</span>
+        <span class="pill">React 18</span>
+        <span class="pill">Fluent UI v9</span>
+        <span class="pill">Vite 5</span>
+        <span class="pill">TanStack Query v5</span>
+        <span class="pill">React Router v6</span>
+        <span class="pill">Vitest</span>
+        <span class="pill">Playwright</span>
+        <span class="pill">MSW</span>
+      </div>
+    </section>
+
+    <!-- Wizard Overview -->
+    <section class="section" id="wizard-overview">
+      <h2 class="section-title">The Setup Wizard</h2>
+      <p class="section-subtitle">One command. Start to finish. No instruction files to read.</p>
+
+      <div class="callout callout-success">
+        <span class="callout-icon">✅</span>
+        <div>
+          <strong>This is the only thing you need to run.</strong> Clone the repo, then:
+          <pre style="margin-top:8px; display:inline-block;">bash scripts/setup-wizard.sh</pre>
+          <p style="margin-top:8px;">The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+        </div>
+      </div>
+
+      <div class="card-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🔍</div>
+          <h3 style="font-size:13px;">Steps 1–2</h3>
+          <p>Check tools &amp; name your project</p>
+        </div></div>
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🌐</div>
+          <h3 style="font-size:13px;">Steps 3–5</h3>
+          <p>Portal setup with guided instructions</p>
+        </div></div>
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🔐</div>
+          <h3 style="font-size:13px;">Step 6</h3>
+          <p>Auth setup — fully automated</p>
+        </div></div>
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🚀</div>
+          <h3 style="font-size:13px;">Steps 7–8</h3>
+          <p>Scaffold, build &amp; deploy</p>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- All 8 Steps -->
+    <section class="section" id="wizard-steps">
+      <h2 class="section-title">All 8 Wizard Steps</h2>
+      <p class="section-subtitle">Expand each step to see what happens and what you'll need.</p>
+
+      <div class="accordion">
+
+        <!-- Step 1 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">1</span>
+            <span class="accordion-title">Check Your Machine</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard checks for required tools and offers to install missing ones:</p>
+            <ul>
+              <li><strong>Node.js 20+</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener">Install</a></li>
+              <li><strong>Git</strong> — <a href="https://git-scm.com/" target="_blank" rel="noopener">Install</a></li>
+              <li><strong>.NET SDK</strong> — <a href="https://dotnet.microsoft.com/download" target="_blank" rel="noopener">Install</a></li>
+              <li><strong>PAC CLI</strong> — Installed via <code>dotnet tool install -g Microsoft.PowerApps.CLI.Tool</code></li>
+              <li><strong>1Password CLI</strong> (optional) — <a href="https://developer.1password.com/docs/cli/get-started" target="_blank" rel="noopener">Install</a></li>
+            </ul>
+            <div class="callout callout-warn">
+              <span class="callout-icon">⚠️</span>
+              <div>PAC CLI version <strong>2.3.2</strong> has a known bug that breaks <code>pac code push</code>. The wizard detects this and helps you downgrade.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">2</span>
+            <span class="accordion-title">Name Your Project</span>
+            <span class="accordion-tag tag-guided">You Decide</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard prompts you for these values and validates them:</p>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Value</th><th>Example</th><th>Rules</th></tr></thead>
+              <tbody>
+                <tr><td>App name</td><td>My Brain</td><td>Display name, any chars</td></tr>
+                <tr><td><strong>Publisher prefix</strong></td><td>mybrn</td><td>2–8 lowercase letters only. <strong>Cannot change later.</strong></td></tr>
+                <tr><td>Publisher display name</td><td>My Brain Engineering</td><td>Human-readable</td></tr>
+                <tr><td>Publisher internal name</td><td>mybrainengineering</td><td>Lowercase, no spaces</td></tr>
+                <tr><td>Solution display name</td><td>My Brain</td><td>Shown in Power Platform portal</td></tr>
+                <tr><td>Solution unique name</td><td>MyBrain</td><td>No spaces. Used in CLI commands.</td></tr>
+              </tbody>
+            </table></div>
+            <div class="callout callout-danger">
+              <span class="callout-icon">🚨</span>
+              <div>The <strong>publisher prefix</strong> is the most consequential naming decision. It prefixes every Dataverse table, column, option set, environment variable, and security role. It <em>cannot</em> be changed after data exists.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">3</span>
+            <span class="accordion-title">Create Publisher in Portal</span>
+            <span class="accordion-tag tag-manual">Manual (Browser)</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard displays the exact values to enter. You do this in your browser:</p>
+            <ol>
+              <li>Open <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a></li>
+              <li>Select your <strong>development environment</strong> (top-right dropdown)</li>
+              <li>Navigate to <strong>Solutions → Publishers → + New Publisher</strong></li>
+              <li>Fill in the Display name, Name, and Prefix using values from Step 2</li>
+              <li>Note the <strong>Choice value prefix</strong> number that auto-populates</li>
+              <li>Click <strong>Save</strong></li>
+            </ol>
+            <p>The wizard then asks you for the Choice value prefix number and records it.</p>
+          </div></div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">4</span>
+            <span class="accordion-title">Set Up Environments</span>
+            <span class="accordion-tag tag-manual">Manual (Browser)</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>Create at least a <strong>Development</strong> environment. Test and Production are optional to start.</p>
+            <ol>
+              <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a></li>
+              <li>Click <strong>Environments → + New</strong></li>
+              <li>Name: <em>Your App - Dev</em></li>
+              <li>Type: Developer or Sandbox</li>
+              <li><strong>Toggle "Add Dataverse" to YES</strong> (required!)</li>
+              <li>Click Save, wait for provisioning</li>
+              <li>Copy the <strong>Environment URL</strong> (e.g. <code>https://org-name.crm.dynamics.com</code>)</li>
+            </ol>
+            <p>The wizard collects and validates URLs for Dev (required), Test, and Prod.</p>
+          </div></div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">5</span>
+            <span class="accordion-title">Solution + App Registration + Application User</span>
+            <span class="accordion-tag tag-manual">Manual (Browser)</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <h4>A. Create the Solution</h4>
+            <ol>
+              <li>Open <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a></li>
+              <li>Select Dev environment → <strong>Solutions → + New Solution</strong></li>
+              <li>Set Display name, select your Publisher, set Version to <code>1.0.0.0</code></li>
+            </ol>
+
+            <h4>B. Create Azure App Registration</h4>
+            <ol>
+              <li>Open <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener" class="portal-link">↗ Azure Portal — App registrations</a></li>
+              <li>Click <strong>+ New registration</strong></li>
+              <li>Name: <code>PowerApps-CodeApps-YourApp</code>, Single tenant</li>
+              <li>Copy <strong>Application (client) ID</strong> and <strong>Directory (tenant) ID</strong></li>
+              <li>Go to <strong>Certificates &amp; secrets → + New client secret</strong></li>
+              <li><strong>Copy the secret value immediately</strong> — shown only once!</li>
+              <li>Go to <strong>API permissions → + Add → Dataverse → user_impersonation</strong></li>
+              <li>Click <strong>Grant admin consent</strong></li>
+            </ol>
+
+            <h4>C. Register as Application User</h4>
+            <ol>
+              <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a></li>
+              <li>Select environment → <strong>Settings → Users + permissions → Application users</strong></li>
+              <li><strong>+ New app user</strong> → search for your App Registration → assign <strong>System Administrator</strong> role</li>
+            </ol>
+
+            <div class="callout callout-info">
+              <span class="callout-icon">ℹ️</span>
+              <div>The wizard collects your Tenant ID, Client ID, and Client Secret (masked input) during this step. The secret is held in memory only — never written to disk in plain text.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">6</span>
+            <span class="accordion-title">Authentication Setup</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard handles everything from here:</p>
+            <ul>
+              <li>Choose <strong>1Password</strong> or <strong>.env.local</strong></li>
+              <li>Writes credential files (op:// references or raw values)</li>
+              <li>Ensures <code>.env.local</code> is in <code>.gitignore</code></li>
+              <li>Creates PAC auth profiles for each environment: <code>pac auth create --name "Dev" ...</code></li>
+              <li>Runs <code>pac org who</code> to verify — should show your App Registration name, not a human user</li>
+              <li>Checks <code>pac solution list</code> for your solution</li>
+            </ul>
+            <div class="callout callout-success">
+              <span class="callout-icon">✅</span>
+              <div>After this step, <code>pac code push</code> works without any browser popup.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">7</span>
+            <span class="accordion-title">Scaffold Your Code App</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard creates a complete, ready-to-develop project:</p>
+            <ul>
+              <li>Downloads the official starter template (or creates a minimal fallback)</li>
+              <li>Installs all required dependencies</li>
+              <li>Writes <code>tsconfig.json</code> with <code>moduleResolution: "bundler"</code></li>
+              <li>Writes <code>vite.config.ts</code> with port 3000 and <code>@/</code> path alias</li>
+              <li>Creates the full folder structure (components, pages, hooks, utils, tests, etc.)</li>
+              <li>Writes starter files: <code>main.tsx</code>, <code>App.tsx</code> with Fluent UI + TanStack Query providers</li>
+              <li>Copies all instruction files from the foundations repo</li>
+              <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
+              <li>Optionally adds data sources via <code>pac code add-data-source</code></li>
+              <li>Initializes Git repo with optional remote and initial commit</li>
+            </ul>
+          </div></div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">8</span>
+            <span class="accordion-title">Build, Verify & Deploy</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard runs:</p>
+            <ol>
+              <li><code>npm run build</code> — verifies <code>dist/index.html</code> exists</li>
+              <li><code>pac org who</code> — final auth check</li>
+              <li><strong>Offers to deploy</strong> with <code>pac code push</code></li>
+            </ol>
+            <p>Then displays a complete summary of everything that was set up and what to do next:</p>
+            <pre>cd ../your-app
+npm run dev          ← start local dev server (port 3000)
+pac code push        ← deploy changes to Power Platform</pre>
+          </div></div>
+        </div>
+
+      </div><!-- /accordion -->
+    </section>
+
+    <!-- Portal Quick Links -->
+    <section class="section" id="portal-links">
+      <h2 class="section-title">Portal Quick Links</h2>
+      <p class="section-subtitle">All the places you'll need to visit during manual setup steps.</p>
+
+      <div class="card-grid">
+        <div class="card"><div class="card-body">
+          <h3>Power Platform Maker Portal</h3>
+          <p>Create publishers, solutions, tables, and connections.</p>
+          <div style="margin-top:12px;">
+            <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a>
+          </div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <h3>Power Platform Admin Center</h3>
+          <p>Create environments, register Application Users, manage settings.</p>
+          <div style="margin-top:12px;">
+            <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a>
+          </div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <h3>Azure Portal — App Registrations</h3>
+          <p>Create Service Principal, client secrets, API permissions.</p>
+          <div style="margin-top:12px;">
+            <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener" class="portal-link">↗ Azure App Registrations</a>
+          </div>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <h3>Azure Portal — Entra ID</h3>
+          <p>Manage tenant, users, enterprise applications, admin consent.</p>
+          <div style="margin-top:12px;">
+            <a href="https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview" target="_blank" rel="noopener" class="portal-link">↗ Entra ID (Azure AD)</a>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- Reference: Connectors -->
+    <section class="section" id="ref-connectors">
+      <h2 class="section-title">Connectors</h2>
+      <p class="section-subtitle">Code Apps cannot make direct HTTP calls. All data access goes through Power Platform connectors.</p>
+
+      <div class="callout callout-danger">
+        <span class="callout-icon">🚨</span>
+        <div><strong>No fetch(). No axios(). No direct HTTP.</strong> Code Apps run in a sandbox with <code>connect-src 'none'</code>. If a connector exists for the service, use it — no exceptions.</div>
+      </div>
+
+      <h4>Adding a Data Source</h4>
+      <pre>pac code add-data-source          # Interactive connector picker
+pac code generate                 # Generates TypeScript SDK in src/generated/</pre>
+
+      <h4>Wrapping Generated Code with TanStack Query</h4>
+      <pre>// src/hooks/useProjects.ts
+import { useQuery } from '@tanstack/react-query';
+import { SqlService } from '@/generated/services/SqlService';
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: () => SqlService.getProjects(),
+    staleTime: 5 * 60 * 1000,  // Connector calls aren't free
+  });
+}</pre>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>Never edit files in <code>src/generated/</code>.</strong> They're auto-generated by the PAC CLI. If you need to extend a type, create a wrapper in <code>src/types/</code>.</div>
+      </div>
+
+      <p>See <code>.github/instructions/02-connectors.instructions.md</code> for full patterns including Dataverse OData queries, pagination, and error handling.</p>
+    </section>
+
+    <!-- Reference: Components -->
+    <section class="section" id="ref-components">
+      <h2 class="section-title">Components</h2>
+      <p class="section-subtitle">React + Fluent UI v9 patterns for consistent, accessible UI.</p>
+
+      <h4>Key Principles</h4>
+      <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li>Functional components only (no class components)</li>
+        <li>Single responsibility — files under ~150 lines</li>
+        <li>Fluent UI v9 (<code>@fluentui/react-components</code>) for all controls</li>
+        <li>Style with <code>makeStyles</code> + design tokens — never raw CSS values</li>
+        <li><strong>Local state</strong> (<code>useState</code>) for UI; <strong>Server state</strong> (TanStack Query) for data</li>
+        <li>Colocate tests: <code>ProjectCard/ProjectCard.tsx</code> + <code>ProjectCard.test.tsx</code></li>
+      </ul>
+
+      <h4>Provider Stack (main.tsx)</h4>
+      <pre>&lt;QueryClientProvider&gt;
+  &lt;FluentProvider theme={webLightTheme}&gt;
+    &lt;BrowserRouter&gt;
+      &lt;App /&gt;
+    &lt;/BrowserRouter&gt;
+  &lt;/FluentProvider&gt;
+&lt;/QueryClientProvider&gt;</pre>
+
+      <p>See <code>.github/instructions/03-components.instructions.md</code> for layout patterns, data tables, error boundaries, and accessibility guidance.</p>
+    </section>
+
+    <!-- Reference: Deployment -->
+    <section class="section" id="ref-deployment">
+      <h2 class="section-title">Deployment & CI/CD</h2>
+      <p class="section-subtitle">From local dev to production with GitHub Actions.</p>
+
+      <h4>Flow</h4>
+      <pre>Feature Branch → PR → CI (lint + test + build) → Merge → Deploy to Dev
+                                                              ↓
+                                          Deploy to Test → Deploy to Prod</pre>
+
+      <h4>Manual Deploy (Dev Only)</h4>
+      <pre>npm run build &amp;&amp; pac code push</pre>
+
+      <h4>GitHub Secrets Required</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Secret</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>PP_APP_ID</code></td><td>Application (client) ID</td></tr>
+          <tr><td><code>PP_CLIENT_SECRET</code></td><td>Client secret value</td></tr>
+          <tr><td><code>PP_TENANT_ID</code></td><td>Directory (tenant) ID</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Per-Environment Variable</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>POWER_PLATFORM_URL</code></td><td>Environment URL (e.g. <code>https://org-dev.crm.dynamics.com</code>)</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>See <code>.github/instructions/04-deployment.instructions.md</code> for CI/CD workflow YAML, solution management, and deployment settings files.</p>
+    </section>
+
+    <!-- Reference: Testing -->
+    <section class="section" id="ref-testing">
+      <h2 class="section-title">Testing</h2>
+      <p class="section-subtitle">Vitest for units, Playwright for E2E, MSW for connector mocking.</p>
+
+      <div class="pill-row">
+        <span class="pill">Vitest + React Testing Library</span>
+        <span class="pill">Playwright</span>
+        <span class="pill">MSW (Mock Service Worker)</span>
+        <span class="pill">v8 coverage (70% threshold)</span>
+      </div>
+
+      <h4>What to Test</h4>
+      <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li>✅ Component rendering with different states</li>
+        <li>✅ User interactions (clicks, form submissions)</li>
+        <li>✅ Custom hooks wrapping connectors</li>
+        <li>✅ Utility functions with business logic</li>
+        <li>❌ Generated files (<code>src/generated/</code>)</li>
+        <li>❌ Fluent UI internals</li>
+      </ul>
+
+      <p>See <code>.github/instructions/05-testing.instructions.md</code> for config files, MSW handler patterns, and CI integration.</p>
+    </section>
+
+    <!-- Reference: Security -->
+    <section class="section" id="ref-security">
+      <h2 class="section-title">Security</h2>
+      <p class="section-subtitle">Auth is automatic. Your job: don't leak secrets, validate inputs, sanitize output.</p>
+
+      <div class="callout callout-danger">
+        <span class="callout-icon">🔒</span>
+        <div><strong>Never hardcode:</strong> API keys, tokens, client secrets, connection strings, passwords, or certificates. Use 1Password or <code>.env.local</code>.</div>
+      </div>
+
+      <h4>Required .gitignore Entries</h4>
+      <pre>.env.local
+.env.*.local
+.pac/
+auth.json
+node_modules/
+dist/
+coverage/
+.wizard-state.json</pre>
+
+      <h4>Input Validation</h4>
+      <pre>// Always validate user inputs
+if (/&lt;script/i.test(name)) return 'Invalid characters';
+if (name.length > 200) return 'Max 200 characters';
+
+// Never use dangerouslySetInnerHTML with user data
+&lt;Text&gt;{project.description}&lt;/Text&gt;  // Safe — React escapes</pre>
+
+      <p>See <code>.github/instructions/06-security.instructions.md</code> for error message guidelines, DLP handling, and code review checklist.</p>
+    </section>
+
+    <!-- Reference: Dataverse Schema -->
+    <section class="section" id="ref-dataverse">
+      <h2 class="section-title">Dataverse Schema</h2>
+      <p class="section-subtitle">Tables, columns, option sets — and the rules that prevent expensive mistakes.</p>
+
+      <h4>Golden Rules</h4>
+      <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li><strong>Always global option sets</strong> — never inline choices</li>
+        <li><strong>Always use publisher prefix</strong> — <code>mybrn_ideastatus</code>, not <code>ideastatus</code></li>
+        <li><strong>Option values start at 100000000</strong> — never 0 or 1</li>
+        <li><strong>Add, don't delete</strong> — removing a live option value breaks existing records silently</li>
+        <li><strong>Create inside the solution</strong> — never from the top-level Tables view</li>
+      </ul>
+
+      <h4>Naming Convention</h4>
+      <pre>✅  mybrn_ideastatus          (prefix + descriptive, all lowercase)
+✅  mybrn_complexitylevel
+❌  IdeaStatus                (no prefix — collides)
+❌  mybrn_IdeaStatus          (camelCase — use all lowercase)</pre>
+
+      <p>See <code>.github/instructions/07-dataverse-schema.instructions.md</code> for idempotent setup scripts, column creation patterns, and relationship modeling.</p>
+    </section>
+
+    <!-- Naming Rules -->
+    <section class="section" id="naming-rules">
+      <h2 class="section-title">Naming Conventions</h2>
+      <p class="section-subtitle">Quick reference for file, component, and Dataverse naming.</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Type</th><th>Convention</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td>Components</td><td>PascalCase folder + file</td><td><code>components/ProjectCard/ProjectCard.tsx</code></td></tr>
+          <tr><td>Hooks</td><td>camelCase + <code>use</code> prefix</td><td><code>hooks/useProjects.ts</code></td></tr>
+          <tr><td>Utils</td><td>camelCase</td><td><code>utils/formatDate.ts</code></td></tr>
+          <tr><td>Types</td><td>PascalCase</td><td><code>types/ProjectExtended.ts</code></td></tr>
+          <tr><td>Constants</td><td>SCREAMING_SNAKE in file</td><td><code>constants/routes.ts</code></td></tr>
+          <tr><td>Tests</td><td>Same name + <code>.test</code></td><td><code>ProjectCard.test.tsx</code></td></tr>
+          <tr><td>Dataverse tables</td><td><code>prefix_tablename</code></td><td><code>mybrn_project</code></td></tr>
+          <tr><td>Option sets</td><td><code>prefix_descriptivename</code></td><td><code>mybrn_ideastatus</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- Connector IDs -->
+    <section class="section" id="connector-ids">
+      <h2 class="section-title">Common Connector IDs</h2>
+      <p class="section-subtitle">Use these when creating deployment settings files or connection references.</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Connector</th><th>Internal Name</th><th>ConnectorId</th></tr></thead>
+        <tbody>
+          <tr><td>Office 365 Users</td><td><code>shared_office365users</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_office365users</code></td></tr>
+          <tr><td>Office 365 Outlook</td><td><code>shared_office365</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_office365</code></td></tr>
+          <tr><td>SharePoint</td><td><code>shared_sharepointonline</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_sharepointonline</code></td></tr>
+          <tr><td>Microsoft Dataverse</td><td><code>shared_commondataserviceforapps</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps</code></td></tr>
+          <tr><td>SQL Server</td><td><code>shared_sql</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_sql</code></td></tr>
+          <tr><td>Microsoft Teams</td><td><code>shared_teams</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_teams</code></td></tr>
+          <tr><td>Azure Blob Storage</td><td><code>shared_azureblob</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_azureblob</code></td></tr>
+          <tr><td>HTTP with Entra ID</td><td><code>shared_webcontents</code></td><td><code>/providers/Microsoft.PowerApps/apis/shared_webcontents</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <p>To find Connection IDs in the maker portal, look at the URL after creating a connection:</p>
+      <pre>https://make.powerapps.com/environments/xxx/connections/shared_office365users/<strong>CONNECTION_ID</strong>/details</pre>
+    </section>
+
+    <!-- Footer -->
+    <footer style="padding: var(--s8) 0 var(--s5); border-top: 1px solid var(--neutralLight); margin-top: var(--s10); font-size: 12px; color: var(--neutralTertiary);">
+      Power Apps Code Apps Foundations &middot; Built with <a href="https://developer.microsoft.com/en-us/fluentui" target="_blank" rel="noopener">Fluent UI</a> design language
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Accordion toggle
+  function toggleAccordion(btn) {
+    const item = btn.parentElement;
+    item.classList.toggle('open');
+  }
+
+  // Sidebar navigation
+  function navTo(btn) {
+    const target = btn.dataset.target;
+    const el = document.getElementById(target);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Update active state
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Close mobile sidebar
+    document.getElementById('sidebar').classList.remove('open');
+  }
+
+  // Track scroll position and update active nav item
+  const sections = [];
+  document.querySelectorAll('.nav-item[data-target]').forEach(btn => {
+    const id = btn.dataset.target;
+    const el = document.getElementById(id);
+    if (el) sections.push({ el, btn });
+  });
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY + 100;
+        let current = sections[0];
+        for (const s of sections) {
+          if (s.el.offsetTop <= scrollY) current = s;
+        }
+        if (current) {
+          document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+          current.btn.classList.add('active');
+        }
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+</script>
+
+</body>
+</html>

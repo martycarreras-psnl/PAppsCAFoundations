@@ -25,6 +25,10 @@ PAppsCAFoundations/
 └── README.md
 ```
 
+## Interactive Guide
+
+Open [docs/guide.html](docs/guide.html) in your browser for a visual walkthrough of the entire setup process, tech stack, naming conventions, and portal links — all in one page.
+
 ## Quick Start
 
 Run one command. The wizard walks you through everything — tool checks, naming, portal steps, authentication, scaffolding, and your first deploy:
