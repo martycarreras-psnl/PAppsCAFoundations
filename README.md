@@ -38,6 +38,21 @@ That's it. The wizard walks you through everything — tool checks, naming, Powe
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
 
+## Execution Roadmap
+
+Foundations is now evolving against an explicit 8-step robustness roadmap:
+
+1. Execution contracts across the lifecycle
+2. Schema-plan artifact workflow
+3. Reusable Dataverse helper scripts
+4. Stricter three-layer architecture rules
+5. Testing as a deployment gate
+6. Discovery helpers for human-in-the-loop tasks
+7. Separate npm CLI migration evaluation
+8. Foundations version traceability for downstream repos
+
+The implementation is designed so each change is traceable to those steps and can be validated through scaffold, build, test, and sync workflows.
+
 ### What the wizard does
 
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
@@ -86,6 +101,9 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
+│   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
+│   ├── schema-plan.example.json            # Starter Dataverse planning artifact
+│   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
 │   └── setup-wizard.sh                     # Guided 8-step setup wizard (bash, legacy)
 ├── wizard/                                 # Cross-platform Node.js setup wizard
@@ -95,6 +113,7 @@ PAppsCAFoundations/
 ├── solution/                               # Power Platform solution artifacts
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
+├── .foundations-version.json               # Bundle/version metadata for downstream syncs
 ├── .gitignore
 └── README.md
 ```
@@ -117,5 +136,7 @@ npm run sync:foundations -- --dry-run   # Preview only, no changes
 **What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/guide.html`, `.env.template`
 
 **What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
+
+Each scaffolded project also gets a `.foundations-version.json` file so downstream repos can see which bundle version they currently have before syncing.
 
 The script fetches the latest template via `degit`, shows a diff of what changed, and asks for confirmation before applying. Changes are committed as a single `chore: sync foundations` commit.

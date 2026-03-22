@@ -6,6 +6,36 @@ applyTo: "src/**,src/hooks/**,src/components/**,src/services/**"
 
 This instruction file governs how Code Apps connect to and interact with Microsoft Copilot Studio custom agents. When a user asks to add a conversational AI agent, chatbot, or Copilot Studio integration to their Code App, follow this file exactly.
 
+## Phase Contract — Human-in-the-Loop Discovery First
+
+Copilot Studio integration has mandatory discovery steps that cannot be guessed.
+
+**Inputs required before code changes:**
+- A published Copilot Studio agent
+- A valid Copilot Studio connector connection in the target environment
+- The exact `agentName`
+
+**Mandatory outputs:**
+- Resolved `connectionId`
+- Confirmed `agentName`
+- Generated `CopilotStudioService`
+- Working invocation code that uses `ExecuteCopilotAsyncV2`
+
+**Stop conditions:**
+- If the agent is unpublished, stop
+- If the connector connection does not exist, stop and prompt the user to create it
+- If the agent name has not been provided by the user, stop and ask for it
+
+## Human Intervention Protocol
+
+Some Copilot Studio steps require direct user action. Whenever the workflow reaches one of these steps, clearly tell the user:
+
+1. What they must do
+2. Where they must do it
+3. Which value to bring back
+
+Do not guess, assume, or skip human-intervention steps.
+
 ## When This Applies
 
 Use this guidance when the user wants to:
@@ -29,6 +59,27 @@ If any prerequisite is missing, guide the user to complete it before writing cod
 ## Step 1: Ensure a Copilot Studio Connection Exists
 
 The Copilot Studio connector requires a connection in the target environment, just like any other connector.
+
+### Preferred discovery flow
+
+Use the scripted discovery helper first:
+
+```bash
+bash scripts/discover-copilot-connection.sh
+```
+
+Behavior:
+- **0 connections found** — prints Maker Portal steps, waits, retries
+- **1 connection found** — selects automatically
+- **2+ connections found** — prompts the user to choose one
+
+The final stdout line is machine-readable:
+
+```text
+COPILOT_CONNECTION_ID=<connectionId>
+```
+
+If the script exits non-zero, stop and surface the error before proceeding.
 
 ### Check for an existing connection
 
@@ -72,6 +123,17 @@ After adding the data source, verify the generated files exist:
 - Associated model files in `src/generated/models/`
 
 **Do not edit generated files.** If you need to extend types, create wrappers in `src/types/`.
+
+### Discovery Part 2 — Collect the agent name from the user
+
+After connection discovery, ask the user for the exact agent name from Copilot Studio:
+
+1. Open [copilotstudio.microsoft.com](https://copilotstudio.microsoft.com)
+2. Open the published agent
+3. Go to **Channels → Web app**
+4. Copy the `{AGENT_NAME}` segment from the connection URL
+
+The name is case-sensitive and usually includes the publisher prefix.
 
 ## Step 3: Invoke the Agent
 
@@ -501,6 +563,15 @@ Response properties may use different casing (`conversationId` vs `ConversationI
 - **Validate agent responses before rendering.** Use React's default JSX escaping — never use `dangerouslySetInnerHTML` with agent output.
 - **Rate-limit user input.** Copilot Studio calls have throttling limits. Debounce the send button or add a cooldown.
 - **Sanitize structured input.** If you serialize user input to JSON for the agent, validate it first — don't pass raw user strings into JSON.stringify without checking for injection patterns.
+
+## Output Contract
+
+When this phase is complete, return:
+
+1. **Actions** — connection discovery, data-source registration, invocation wiring
+2. **Artifacts** — `power.config.json`, generated Copilot service file, hook/component code
+3. **Validation** — build result and confirmation that `ExecuteCopilotAsyncV2` is used
+4. **Next phase** — test the Copilot flow before deployment
 
 ## Reference
 

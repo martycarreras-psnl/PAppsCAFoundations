@@ -6,6 +6,41 @@ applyTo: "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts"
 
 This instruction file defines how Code Apps are tested — from unit tests through end-to-end tests. Every Code App ships with tests. Untested code does not merge.
 
+## Phase Contract — Testing Gate Before Deploy
+
+Testing is a hard gate between implementation and deployment.
+
+**Inputs required:**
+- Feature implementation is complete enough to exercise the core user flow
+- The app builds and runs locally
+- Required schema and generated services exist for the feature under test
+
+**Mandatory outputs:**
+- Unit test evidence for component / hook logic where applicable
+- End-to-end coverage of the primary user workflow
+- A short record of what was tested, what passed, and what failed
+
+**Stop conditions:**
+- If the app does not build, stop and fix build errors before continuing to E2E
+- If the required connector or schema pieces are missing, stop and complete those phases first
+- If test evidence is missing, deployment is blocked
+
+## Production Validation vs Mocked Local Testing
+
+Foundations supports two complementary test modes:
+
+1. **Mocked local validation** — Vite + Vitest + Playwright against local mocks for fast, deterministic feedback
+2. **Code App production-path validation** — validate the real Power Apps experience using the local-play URL exposed by the Code Apps runtime
+
+Use mocked tests for repeatable CI checks. Use the Power Apps local-play flow before deployment when the feature depends on real runtime behavior, connector wiring, or Power Platform authentication.
+
+### Power Apps local-play rule
+
+When validating the real Code App experience:
+- Start with `npm run dev`
+- Use the **Power Apps local-play URL** emitted by the runtime, not bare `http://localhost:*`
+- If Microsoft login is required, stop and ask the user to complete sign-in manually before proceeding
+
 ## Testing Stack
 
 | Layer | Tool | Purpose |
@@ -330,6 +365,17 @@ describe('isOverdue', () => {
 
 ## E2E Test Patterns
 
+### Required CRUD Coverage
+
+For primary business entities, test the full CRUD cycle unless the feature is intentionally read-only:
+
+- **Create** — submit the form and verify the new row appears
+- **Read** — open the detail view or row presentation and verify key fields
+- **Update** — edit a field and verify the change persists
+- **Delete** — remove the row and verify it disappears
+
+Also cover navigation, empty-state behavior, and the most important filter/status transitions for the feature.
+
 ### Page Navigation
 
 ```typescript
@@ -445,3 +491,22 @@ Tests run automatically on every PR. The CI pipeline fails if:
 - ESLint reports errors
 
 Tests in CI use mock data (`VITE_USE_MOCK=true`) so they don't require real Power Platform connections.
+
+## Test Evidence Template
+
+At the end of testing, record:
+
+```text
+Test scope:
+- Feature / page:
+- Environment / mode: mocked local | Power Apps local-play | CI
+
+Results:
+- Unit tests:
+- CRUD flow:
+- Navigation / filters:
+- Edge cases / authorization:
+
+Failures / follow-up:
+-
+```

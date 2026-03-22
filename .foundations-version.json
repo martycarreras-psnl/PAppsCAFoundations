@@ -1,0 +1,15 @@
+{
+  "version": "2026.03.22.1",
+  "releasedAt": "2026-03-22",
+  "capabilities": [
+    "execution-contracts",
+    "encrypted-local-secret-storage",
+    "foundation-sync-script",
+    "schema-plan-template",
+    "copilot-discovery-helper"
+  ],
+  "notes": [
+    "Use this file to compare a downstream project against the current Foundations bundle.",
+    "Run npm run sync:foundations to pull newer instruction and helper-script bundles into downstream repos."
+  ]
+}

@@ -6,6 +6,41 @@ applyTo: ".github/workflows/**,power.config.json,vite.config.ts"
 
 This instruction file defines how Code Apps are built, deployed, promoted across environments, and managed through their lifecycle. Every deployment follows these patterns — no manual deployments to production.
 
+## Phase Contract — Build, Validate, Deploy
+
+Deployment is the final phase in the delivery sequence:
+
+`scaffold -> schema plan -> schema provision -> connector generation -> architecture/UI -> testing -> deploy`
+
+**Inputs required:**
+- App builds locally with no TypeScript errors
+- Target environment is known and authenticated
+- Test evidence exists for the current build
+
+**Mandatory outputs:**
+- Build artifact in `dist/`
+- Deployment result with app URL
+- Handoff notes including environment, app URL, tests run, and follow-up actions
+
+**Hard gate:** no test evidence, no deploy.
+
+If testing is incomplete, stop and complete `05-testing.instructions.md` first.
+
+## CLI Strategy — Current Default vs Evaluation Track
+
+Foundations currently uses **PAC CLI** as the default execution path because it aligns with the repo's existing wizard, user memory, and service-principal auth setup:
+
+- `pac code init`
+- `pac code add-data-source`
+- `pac code push`
+
+The npm CLI (`npx power-apps`) is a valid evaluation track and may replace parts of the PAC workflow later, but it is **not** the default in Foundations yet.
+
+When documenting or implementing new automation:
+- Keep PAC CLI as the default unless a repo-wide migration decision has been made
+- If you mention `npx power-apps`, label it as an evaluation or future migration path
+- Do not mix PAC and npm CLI commands in the same canonical flow without explaining why
+
 ## Deployment Model Overview
 
 Code Apps deploy through the Power Platform CLI (`pac code push`), which packages your built web app and publishes it to a Dataverse environment. The app runs on Power Platform infrastructure with Microsoft Entra ID authentication handled automatically.
@@ -47,6 +82,17 @@ npm run build
 ```
 
 The build must produce a clean `dist/` folder with no TypeScript errors. The CI pipeline enforces this.
+
+## Required Deployment Evidence
+
+Before any deployment, record all of the following:
+
+1. Build result: `npm run build` passed
+2. Test result: unit tests and the required E2E / production validation checks passed
+3. Environment confirmation: `pac org who` or equivalent environment check matches the target
+4. Scope summary: what changed in schema, connectors, or UI
+
+If any item is missing, do not deploy.
 
 ## Manual Deployment (Dev Environment Only)
 
@@ -628,6 +674,24 @@ Before deploying to test or production, verify:
 - [ ] Security roles assigned to users/groups in target environment
 - [ ] Power Apps Premium licenses assigned to target users
 - [ ] DLP policies in target environment allow all connectors used by the app
+- [ ] Test evidence for this build is recorded and attached to the handoff
+- [ ] App URL will be shared with `?hideNavBar=true` appended
+- [ ] Handoff notes list schema/connectors touched and open risks
+
+## Deployment Handoff Template
+
+Use this template for every deployment summary:
+
+```text
+Environment:
+
+App name / URL: https://apps.powerapps.com/...?...&hideNavBar=true
+App version:
+Dataverse table(s) / connector changes:
+Tests run and result:
+Open risks / next steps:
+Deployment timestamp:
+```
 
 ## Licensing
 

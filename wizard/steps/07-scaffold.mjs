@@ -107,6 +107,7 @@ export default async function stepScaffold() {
   const dirs = [
     'src/components', 'src/pages', 'src/hooks', 'src/generated',
     'src/utils', 'src/types', 'src/constants', 'src/mockData',
+    'dataverse',
     'tests/e2e', 'tests/setup', 'tests/fixtures',
     '.github/instructions', '.github/workflows', 'solution',
   ];
@@ -135,11 +136,17 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh']) {
+    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'discover-copilot-connection.sh', 'schema-plan.example.json', 'validate-schema-plan.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
     ui.ok('Helper scripts copied');
+  }
+
+  const versionFile = join(ROOT, '.foundations-version.json');
+  if (existsSync(versionFile)) {
+    copyFileSync(versionFile, join(projectDir, '.foundations-version.json'));
+    ui.ok('.foundations-version.json copied');
   }
 
   // ── Copy credential files ──
@@ -347,6 +354,7 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run preview\` | Preview production build locally |
 | \`npm run test\` | Run unit tests (Vitest) |
 | \`npm run lint\` | Lint with ESLint |
+| \`npm run validate:schema-plan\` | Validate the Dataverse planning artifact before provisioning |
 | \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
 
 ## Staying Updated
@@ -359,6 +367,10 @@ npm run sync:foundations -- --dry-run  # Preview only, no changes
 \`\`\`
 
 This syncs foundation files (\`.github/instructions/\`, \`wizard/\`, \`scripts/\`, \`docs/\`) without touching your project code (\`src/\`, \`package.json\`, \`power.config.json\`). Changes are shown as a diff before applying.
+
+## Foundations Version
+
+This project includes a \`.foundations-version.json\` file copied from the template so you can track which bundle version of instructions, wizard logic, and helper scripts the project was scaffolded from.
 `;
 
   writeFileSync(readmePath, readmeContent, 'utf-8');
@@ -597,6 +609,7 @@ function createMinimalProject(dir, appName) {
       'test:watch': 'vitest',
       'test:e2e': 'playwright test',
       deploy: 'npm run build && pac code push',
+      'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
       'sync:foundations': 'bash scripts/sync-foundations.sh',
     },
   }, null, 2) + '\n');

@@ -8,6 +8,75 @@ This file covers how to define, create, and maintain Dataverse schema artifacts 
 
 Schema mistakes are the most expensive kind to fix after data has been collected. Read this before creating a single table or option set.
 
+## Phase Contract — Plan First, Then Provision
+
+Dataverse work is not a single step. It is a sequence:
+
+`schema plan artifact -> option sets -> tables -> columns -> relationships -> security role -> publish -> register data sources -> generate SDK`
+
+**Inputs required:**
+- Publisher prefix
+- Solution unique name
+- Target environment URL
+- Approved schema plan artifact for the app
+
+**Mandatory outputs:**
+- A persisted schema plan JSON file in the app project
+- Re-runnable provisioning commands or scripts
+- Published metadata
+- Registered data sources and generated SDK files
+
+**Stop conditions:**
+- If the schema plan does not exist, stop and create it before provisioning
+- If a change would delete or repurpose live values, stop and plan an additive migration instead
+
+## Schema Planning Artifact — Required for Non-Trivial Apps
+
+For anything beyond a one-table prototype, persist the schema plan inside the app project before running provisioning.
+
+**Recommended path:**
+
+```text
+dataverse/planning-payload.json
+```
+
+Use the scaffolded template file:
+
+```text
+scripts/schema-plan.example.json
+```
+
+The plan file is the handoff between planning and execution. It should define:
+
+1. `domains` — business areas / language used by the app
+2. `tables` — table metadata, logical names, and attributes
+3. `relationships` — lookup relationships and lookup column names
+4. `provisioningPlansJson` — executable payload shape for future orchestration scripts
+
+### Required naming data in the schema plan
+
+Each planned table should capture all of the following explicitly:
+
+- `schemaName`
+- `displayName`
+- `displayCollectionName`
+- `logicalSingularName`
+- `entitySetName`
+- `tableLogicalName` when needed by provisioning scripts
+
+Do not rely on informal pluralization during implementation. Write the naming decisions down once in the plan.
+
+### Reserved-name rule
+
+Avoid general-purpose column names that collide with Dataverse system concepts:
+
+- `status`
+- `owner`
+- `statecode`
+- `statuscode`
+
+Prefer specific names such as `project_status`, `request_owner`, or `task_stage`.
+
 ---
 
 ## Schema Creation Order — The Golden Sequence
@@ -1149,6 +1218,15 @@ echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_agent
 echo "  ~/.dotnet/tools/pac code generate"
 echo "  npm install @microsoft/power-apps@^1.0.3"
 ```
+
+## Validation and Output Contract
+
+After completing the schema phase, return all of the following:
+
+1. **Actions performed** — option sets, tables, columns, relationships, roles, publish, data-source registration
+2. **Artifacts updated** — schema plan file, setup scripts, generated SDK files
+3. **Validation result** — publish succeeded, `pac code add-data-source` succeeded, `pac code generate` succeeded
+4. **Next phase recommendation** — connector integration or UI implementation
 
 ---
 

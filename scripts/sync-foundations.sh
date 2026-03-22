@@ -89,6 +89,7 @@ SYNC_DIRS=(
 
 SYNC_FILES=(
   ".env.template"
+  ".foundations-version.json"
 )
 
 # ── Compare and collect changes ──
