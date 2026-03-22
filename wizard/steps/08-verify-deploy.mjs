@@ -3,7 +3,7 @@ import { confirm, input } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
 import { pacPath, runLive, runSafe, runSafeLive, runSafeCapture, run } from '../lib/shell.mjs';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export default async function stepVerifyAndDeploy() {
@@ -159,6 +159,7 @@ export default async function stepVerifyAndDeploy() {
 const CODE_APPS_NOT_ENABLED_RE = /does not allow this operation for this Code app/i;
 const SPN_PERMISSION_RE = /does not have permission to access.*checkAccess/i;
 const PAC_CRASH_RE = /non-recoverable error|ArgumentOutOfRange|will need to terminate/i;
+const DUPLICATE_APP_RE = /already created an application with this name.*Existing App:\s*'([0-9a-f-]+)'/i;
 
 /**
  * Attempt pac code push, detect known errors, and offer guided retry.
@@ -166,11 +167,51 @@ const PAC_CRASH_RE = /non-recoverable error|ArgumentOutOfRange|will need to term
  */
 async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const { ok, stderr } = runSafeCapture(pac, ['code', 'push'], { cwd: projectDir });
+    const { ok, stdout, stderr } = runSafeCapture(pac, ['code', 'push'], { cwd: projectDir });
+    const combined = `${stdout}\n${stderr}`;
+    if (stdout) process.stdout.write(stdout);
     if (ok) return true;
 
+    // ── Duplicate app name (check BEFORE crash — crash is a side effect) ──
+    const dupMatch = DUPLICATE_APP_RE.exec(combined);
+    if (dupMatch) {
+      const existingId = dupMatch[1];
+      ui.line('');
+      ui.warn(`An app named "${stateGet('APP_NAME', 'this app')}" already exists in the environment.`);
+      ui.line(`  Existing appId: ${existingId}`);
+      ui.line('');
+
+      const adopt = await confirm({
+        message: 'Adopt the existing app and update it instead?',
+        default: true,
+      });
+
+      if (adopt) {
+        // Write the existing appId into power.config.json
+        const configPath = join(projectDir, 'power.config.json');
+        try {
+          const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+          config.appId = existingId;
+          writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+          ui.ok(`power.config.json updated with appId: ${existingId}`);
+          ui.line('  Retrying push as an update...');
+          continue;
+        } catch (e) {
+          ui.warn(`Could not update power.config.json: ${e.message}`);
+          ui.line(`  Manually set "appId": "${existingId}" in power.config.json, then retry.`);
+          return false;
+        }
+      } else {
+        ui.line('  Options:');
+        ui.line('  1. Delete the existing app in Power Apps Maker Portal, then retry.');
+        ui.line('  2. Change appDisplayName in power.config.json to a unique name.');
+        ui.line(`  3. Set "appId": "${existingId}" in power.config.json to update the existing app.`);
+        return false;
+      }
+    }
+
     // ── Code Apps not enabled in environment ──
-    if (CODE_APPS_NOT_ENABLED_RE.test(stderr)) {
+    if (CODE_APPS_NOT_ENABLED_RE.test(combined)) {
       ui.line('');
       ui.warn('Code Apps are not enabled in this environment.');
       ui.line('');
@@ -219,7 +260,7 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRet
     }
 
     // ── SPN permission error (needs user auth) ──
-    if (SPN_PERMISSION_RE.test(stderr)) {
+    if (SPN_PERMISSION_RE.test(combined)) {
       ui.line('');
       ui.warn('Push failed — service principal does not have permission.');
       ui.line('  The first push for a new app requires user (interactive) auth.');
@@ -239,7 +280,7 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRet
     }
 
     // ── PAC CLI internal crash ──
-    if (PAC_CRASH_RE.test(stderr)) {
+    if (PAC_CRASH_RE.test(combined)) {
       ui.line('');
       ui.warn('PAC CLI crashed with an internal error.');
       ui.line('');
@@ -259,9 +300,9 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRet
     // ── Unknown error ──
     ui.line('');
     ui.warn('Deploy failed.');
-    if (stderr) {
-      // Show the last meaningful line from stderr
-      const lines = stderr.split('\n').filter((l) => l.trim());
+    if (combined.trim()) {
+      // Show the last meaningful line from output
+      const lines = combined.split('\n').filter((l) => l.trim());
       const errorLine = lines.find((l) => /^Error:/i.test(l)) || lines[lines.length - 1] || '';
       if (errorLine) ui.line(`  ${errorLine.trim()}`);
     }

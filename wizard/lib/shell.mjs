@@ -75,10 +75,10 @@ export function runSafeLive(file, args, opts = {}) {
  */
 export function runSafeCapture(file, args, opts = {}) {
   try {
-    execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'inherit', 'pipe'], ...opts });
-    return { ok: true, stderr: '' };
+    const stdout = execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts });
+    return { ok: true, stdout: stdout || '', stderr: '' };
   } catch (err) {
-    return { ok: false, stderr: err.stderr || err.message || '' };
+    return { ok: false, stdout: err.stdout || '', stderr: err.stderr || err.message || '' };
   }
 }
 
