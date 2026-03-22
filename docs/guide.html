@@ -596,8 +596,11 @@
       </button>
 
       <div class="nav-group-label">Portal Quick Links</div>
+      <button class="nav-item" data-target="create-connections" onclick="navTo(this)">
+        <span class="nav-icon">🔗</span> Creating Connections
+      </button>
       <button class="nav-item" data-target="portal-links" onclick="navTo(this)">
-        <span class="nav-icon">🔗</span> Portal Links
+        <span class="nav-icon">🌐</span> Portal Links
       </button>
 
       <div class="nav-group-label">Development</div>
@@ -960,8 +963,28 @@
             <span class="accordion-tag tag-manual">Manual (Browser)</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
-            <p>This is the one step where you need to work in the browser. The wizard tells you exactly what to do and collects the results.</p>
+            <p>This step collects your Azure App Registration credentials. <strong>If you use 1Password, the wizard detects it and tries to pull credentials automatically.</strong></p>
 
+            <h4>1Password Users (fastest path)</h4>
+            <p>If the <code>op</code> CLI is detected, the wizard asks for your vault and item name, then reads <strong>tenant-id</strong>, <strong>app-id</strong>, and <strong>client-secret</strong> directly from 1Password. If all three are found, you skip all manual entry.</p>
+            <div class="callout callout-success">
+              <span class="callout-icon">✅</span>
+              <div>
+                <strong>Expected 1Password item fields:</strong>
+                <ul style="margin:6px 0 0 16px; line-height:1.8;">
+                  <li><code>tenant-id</code> (Text) — your Azure Directory ID</li>
+                  <li><code>app-id</code> (Text) — your App Registration Client ID</li>
+                  <li><code>client-secret</code> (Password) — your App Registration secret</li>
+                  <li><code>env-dev</code> (Text) — your Dev environment URL</li>
+                  <li><code>env-test</code> (Text, optional) — Test environment URL</li>
+                  <li><code>env-prod</code> (Text, optional) — Prod environment URL</li>
+                </ul>
+                <p style="margin-top:8px;">If the item doesn't exist yet, the wizard will collect values manually and <strong>offer to create the 1Password item for you</strong>.</p>
+              </div>
+            </div>
+
+            <h4>Manual Path (no 1Password, or partial credentials)</h4>
+            <p>If 1Password isn't available, or some fields are missing, the wizard guides you through creating the App Registration:</p>
             <h4>A. Create Azure App Registration</h4>
             <ol>
               <li>Open <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener" class="portal-link">↗ Azure Portal — App registrations</a></li>
@@ -983,7 +1006,7 @@
 
             <div class="callout callout-info">
               <span class="callout-icon">ℹ️</span>
-              <div>The wizard collects your Tenant ID, Client ID, and Client Secret (masked input). The secret is held in memory only — never written to disk in plain text.</div>
+              <div>The secret is held in memory only — never written to disk in plain text. If you entered values manually and use 1Password, the wizard offers to save them to your vault before proceeding.</div>
             </div>
           </div></div>
         </div>
@@ -999,16 +1022,17 @@
           <div class="accordion-body"><div class="accordion-content">
             <p>The wizard takes the credentials from Step 3 and handles everything:</p>
             <ul>
-              <li>Choose <strong>1Password</strong> or <strong>.env.local</strong> for secret storage</li>
-              <li>Writes credential files (op:// references or raw values)</li>
+              <li>If you chose 1Password in Step 3, the storage mode and vault/item are already set — <strong>no repeated questions</strong></li>
+              <li>Otherwise, choose <strong>1Password</strong> or <strong>.env.local</strong> for secret storage</li>
+              <li>Writes credential files (<code>op://</code> references or encrypted values)</li>
               <li>Ensures <code>.env.local</code> is in <code>.gitignore</code></li>
               <li>Creates PAC auth profiles for each environment: <code>pac auth create --name "Dev" ...</code></li>
               <li>Runs <code>pac org who</code> to verify — should show your App Registration name, not a human user</li>
-              <li>Checks <code>pac solution list</code> to verify connectivity</li>
+              <li>Installs a pre-commit hook to prevent accidental secret leaks</li>
             </ul>
             <div class="callout callout-success">
               <span class="callout-icon">✅</span>
-              <div>After this step, all <code>pac</code> commands work without any browser popup.</div>
+              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD. <strong>However, <code>pac code</code> commands (push, add-data-source) require user auth</strong> — the wizard handles this switch automatically in Step 7.</div>
             </div>
           </div></div>
         </div>
@@ -1095,6 +1119,20 @@
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
+
+            <h4>Connector &amp; Data Source Setup</h4>
+            <p>The wizard presents a checklist of common connectors. For each non-Dataverse connector (Office 365 Users, SharePoint, Teams, etc.), you need a <strong>Connection ID</strong> — a GUID that identifies an actual authenticated connection instance.</p>
+            <div class="callout callout-danger">
+              <span class="callout-icon">🚨</span>
+              <div>
+                <strong>All <code>pac code</code> commands require user (interactive) auth.</strong> The BAP checkAccess API rejects SPN tokens. The wizard detects SPN auth and automatically switches to a user profile before running <code>pac code add-data-source</code>.
+                <p style="margin-top:8px;">If you don't have Connection IDs ready, the wizard skips non-Dataverse connectors with copy-paste commands for later. You can always re-run this step: <code>node wizard/index.mjs --from 7</code></p>
+              </div>
+            </div>
+
+            <h4 style="margin-top:16px;">How to Get Connection IDs</h4>
+            <p>You must create connections <strong>before</strong> adding them as data sources. See the <a href="#create-connections">Creating Connections</a> section below for step-by-step instructions.</p>
+
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
               <div>If your app concept is still evolving, do not treat Step 7 as permission to guess at tables, workflows, or connectors. The planning layer exists to help Copilot elaborate the business problem first.</div>
@@ -1131,6 +1169,63 @@ pac code push        ← deploy changes to Power Platform</pre>
         </div>
 
       </div><!-- /accordion -->
+    </section>
+
+    <!-- Creating Connections -->
+    <section class="section" id="create-connections">
+      <h2 class="section-title">Creating Connections</h2>
+      <p class="section-subtitle">Before adding connectors as data sources in Step 7, you must create the actual connection instances in the Maker Portal.</p>
+
+      <p>A <strong>connection reference</strong> (created by the wizard in your solution) is a pointer that says "this app uses the Office 365 Users connector." The <strong>connection</strong> is the authenticated instance — the actual credential that makes it work. You need both.</p>
+
+      <h4>Step-by-Step: Create a Connection</h4>
+      <ol style="margin-left:20px; line-height:2.2;">
+        <li>Go to <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a> and select your <strong>development environment</strong></li>
+        <li>In the left nav, click <strong>Connections</strong> (under Data, or directly at <code>make.powerapps.com/environments/&lt;env-id&gt;/connections</code>)</li>
+        <li>Click <strong>+ New connection</strong></li>
+        <li>Search for the connector (e.g. <strong>Office 365 Users</strong>) and click it</li>
+        <li>Click <strong>Create</strong> and authenticate when prompted</li>
+        <li>Once created, click the connection to open its details</li>
+        <li>Copy the <strong>Connection ID</strong> from the browser URL — it's the GUID at the end:
+          <pre style="margin:8px 0;">https://make.powerapps.com/environments/xxx/connections/shared_office365users/<strong>160ffdfd-aff5-4740-86a8-47209c1c608c</strong>/details</pre>
+        </li>
+      </ol>
+
+      <h4 style="margin-top:16px;">Common Connectors</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Connector</th><th>API ID (for pac CLI)</th></tr></thead>
+        <tbody>
+          <tr><td>Dataverse</td><td><code>dataverse</code> (uses <code>-t &lt;table&gt;</code> instead of <code>-c</code>)</td></tr>
+          <tr><td>Office 365 Users</td><td><code>shared_office365users</code></td></tr>
+          <tr><td>SharePoint</td><td><code>shared_sharepointonline</code></td></tr>
+          <tr><td>Office 365 Outlook</td><td><code>shared_office365</code></td></tr>
+          <tr><td>Microsoft Teams</td><td><code>shared_teams</code></td></tr>
+          <tr><td>SQL Server</td><td><code>shared_sql</code></td></tr>
+          <tr><td>Azure Blob Storage</td><td><code>shared_azureblob</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
+      <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
+pac code add-data-source -a dataverse -t myprefix_project
+
+<em># Non-Dataverse connectors (connection ID required):</em>
+pac code add-data-source -a shared_office365users -c 160ffdfd-aff5-4740-86a8-47209c1c608c
+pac code add-data-source -a shared_sharepointonline -c &lt;YOUR_CONNECTION_ID&gt;</pre>
+
+      <div class="callout callout-danger">
+        <span class="callout-icon">🚨</span>
+        <div>
+          <strong>Must use user (interactive) auth.</strong> All <code>pac code</code> commands are rejected when using service principal auth. Switch to a user profile first:
+          <pre style="margin-top:8px;">pac auth create --name MyAppUser --environment https://org-dev.crm.dynamics.com
+pac auth select --name MyAppUser</pre>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <div><strong>Connections are environment-specific.</strong> You need a separate connection (and Connection ID) for dev, test, and prod. Create them in each environment before deploying your solution there.</div>
+      </div>
     </section>
 
     <!-- Portal Quick Links -->
@@ -1297,8 +1392,15 @@ export default defineConfig(({ command }) =&gt; ({
       </div>
 
       <h4>Adding a Data Source</h4>
-      <pre>pac code add-data-source          # Interactive connector picker
-pac code generate                 # Generates TypeScript SDK in src/generated/</pre>
+      <pre><em># Dataverse (no connection ID needed):</em>
+pac code add-data-source -a dataverse -t myprefix_project
+
+<em># Non-Dataverse connectors (connection ID required — see <a href="#create-connections">Creating Connections</a>):</em>
+pac code add-data-source -a shared_office365users -c &lt;CONNECTION_ID&gt;</pre>
+      <div class="callout callout-danger">
+        <span class="callout-icon">🚨</span>
+        <div><strong>All <code>pac code</code> commands require user (interactive) auth.</strong> SPN auth is rejected by the BAP checkAccess API. Switch auth profiles: <code>pac auth select --name MyAppUser</code></div>
+      </div>
 
       <h4>Wrapping Generated Code with TanStack Query</h4>
       <pre>// src/hooks/useProjects.ts
