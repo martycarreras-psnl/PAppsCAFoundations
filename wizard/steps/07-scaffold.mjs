@@ -58,6 +58,22 @@ export default async function stepScaffold() {
     ui.ok('Minimal structure created');
   }
 
+  // ── Ensure vite-env.d.ts exists (declares SVG/asset imports for TypeScript) ──
+  const viteEnvPath = join(projectDir, 'src', 'vite-env.d.ts');
+  if (!existsSync(viteEnvPath)) {
+    mkdirSync(join(projectDir, 'src'), { recursive: true });
+    writeFileSync(viteEnvPath, [
+      '/// <reference types="vite/client" />',
+      '',
+      'declare module "*.svg" {',
+      '  const src: string;',
+      '  export default src;',
+      '}',
+      '',
+    ].join('\n'));
+    ui.ok('vite-env.d.ts created (SVG + asset type declarations)');
+  }
+
   // ── npm install ──
   ui.line('');
   ui.line('Installing dependencies...');

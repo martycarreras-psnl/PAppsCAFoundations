@@ -66,7 +66,7 @@ export default async function stepVerifyAndDeploy() {
         }
       } else {
         ui.warn('Could not establish interactive auth. Deploy manually:');
-        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --interactive`);
+        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --deviceCode`);
         ui.line(`  ${pac} auth select --name ${profileName}`);
         ui.line(`  cd ${projectDir} && ${pac} code push`);
       }
@@ -127,59 +127,64 @@ export default async function stepVerifyAndDeploy() {
  * Returns true if an interactive profile is selected and verified.
  */
 async function ensureInteractiveAuth(pac, profileName, envUrl) {
-  // Check if current auth is already interactive (non-SPN)
-  const whoOutput = runSafe(pac, ['org', 'who']);
-
-  // List existing auth profiles to see what's available
+  // List existing auth profiles to find a usable interactive one
   const authListOutput = runSafe(pac, ['auth', 'list']);
 
-  // Try to find and select an existing interactive profile
   if (authListOutput) {
-    // Look for a profile that matches our environment and is not SPN
-    // pac auth list shows profiles with [*] for active, includes environment URL
     const lines = authListOutput.split('\n');
-    let interactiveProfileFound = false;
 
-    for (const line of lines) {
-      // Interactive profiles typically show "Public" or user email, not "ApplicationUser"
-      if (line.includes(envUrl) && !line.toLowerCase().includes('applicationuser')) {
-        interactiveProfileFound = true;
-        break;
+    // First: try selecting our named profile directly
+    const selectByName = runSafe(pac, ['auth', 'select', '--name', profileName]);
+    if (selectByName !== null) {
+      // Verify it's not an SPN profile
+      const whoCheck = runSafe(pac, ['org', 'who']);
+      if (whoCheck && !whoCheck.toLowerCase().includes('applicationuser')) {
+        ui.ok(`Interactive auth profile "${profileName}" selected`);
+        return true;
       }
     }
 
-    if (interactiveProfileFound) {
-      ui.line('Found existing interactive auth profile.');
-      // Try selecting by name
-      const selectOk = runSafe(pac, ['auth', 'select', '--name', profileName]);
+    // Second: scan for any interactive profile matching the environment
+    for (const line of lines) {
+      // Match lines with an index like [1], [2], etc.
+      const indexMatch = line.match(/^\[(\d+)\]/);
+      if (!indexMatch) continue;
+      // Skip SPN / application user profiles
+      if (line.toLowerCase().includes('applicationuser') || line.toLowerCase().includes('admin_spn')) continue;
+      // Check if this profile targets our environment
+      if (!line.includes(envUrl)) continue;
+
+      const idx = indexMatch[1];
+      const selectOk = runSafe(pac, ['auth', 'select', '--index', idx]);
       if (selectOk !== null) {
-        ui.ok(`Auth profile "${profileName}" selected`);
+        ui.ok(`Selected existing interactive auth profile (index ${idx})`);
         return true;
       }
     }
   }
 
-  // No suitable interactive profile — create one
+  // No suitable interactive profile found — create one via device code flow
   ui.line('');
-  ui.line('An interactive (browser) sign-in is required to push Code Apps.');
-  ui.line('This will open your browser — sign in with a user who has');
-  ui.line('System Administrator or System Customizer role in the environment.');
+  ui.line('A device-code sign-in is required to push Code Apps.');
+  ui.line('You will get a URL and code to enter in your browser.');
+  ui.line('Sign in with a user who has System Administrator or');
+  ui.line('System Customizer role in the target environment.');
   ui.line('');
 
   const proceed = await confirm({ message: 'Create interactive auth profile now?', default: true });
   if (!proceed) return false;
 
   ui.line('');
-  ui.line('Opening browser for sign-in...');
+  ui.line('Starting device-code sign-in...');
   const createOk = runSafeLive(pac, [
     'auth', 'create',
     '--name', profileName,
     '--environment', envUrl,
-    '--interactive',
+    '--deviceCode',
   ]);
 
   if (!createOk) {
-    ui.warn('Interactive auth creation failed.');
+    ui.warn('Auth creation failed.');
     return false;
   }
 
