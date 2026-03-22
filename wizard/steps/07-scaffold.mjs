@@ -3,7 +3,7 @@ import { input, confirm } from '@inquirer/prompts';
 import {
   writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync,
 } from 'node:fs';
-import { join, resolve, dirname, basename } from 'node:path';
+import { join, resolve } from 'node:path';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
 import { pacPath, runLive, run, runSafeLive, runSafe, IS_WIN } from '../lib/shell.mjs';
@@ -14,14 +14,14 @@ export default async function stepScaffold() {
   const ROOT = getRootDir();
   const appName = stateGet('APP_NAME');
   const prefix = stateGet('PUBLISHER_PREFIX');
-  const kebab = appName.toLowerCase().replace(/ /g, '-');
-  const defaultDir = resolve(ROOT, '..', kebab);
 
   ui.line('Where should the app project live?');
-  ui.line(`Default: ${defaultDir} (sibling to this foundations repo)`);
+  ui.line('');
+  ui.line(`Default: ${ROOT} (this repo — scaffold in-place)`);
+  ui.line('If you want a separate directory, enter an absolute path.');
   ui.line('');
 
-  let projectDir = await input({ message: 'Project path', default: defaultDir });
+  let projectDir = await input({ message: 'Project path', default: ROOT });
   projectDir = resolve(projectDir);
   stateSet('PROJECT_DIR', projectDir);
 
