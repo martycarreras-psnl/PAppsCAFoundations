@@ -91,6 +91,47 @@ async function promptYesNo(message, defaultYes = false) {
   return answer === 'y' || answer === 'yes';
 }
 
+/**
+ * Merge Foundations-required scripts into the project's package.json.
+ * Preserves any existing scripts the user added; overwrites only the
+ * keys that Foundations manages (prebuild, deploy, setup:auth, etc.).
+ */
+function mergeRequiredScripts() {
+  const pkgPath = path.resolve('package.json');
+  if (!fs.existsSync(pkgPath)) return;
+
+  let pkg;
+  try { pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')); } catch { return; }
+
+  const isWin = process.platform === 'win32';
+  const devLocal = isWin
+    ? 'set VITE_USE_MOCK=true && vite --port 3000'
+    : 'VITE_USE_MOCK=true vite --port 3000';
+
+  const required = {
+    dev: 'concurrently "vite --port 3000" "pac code run"',
+    'dev:local': devLocal,
+    typecheck: 'tsc --noEmit',
+    prebuild: 'node scripts/patch-datasources-info.mjs',
+    build: 'npm run typecheck && vite build',
+    deploy: 'npm run build && pac code push',
+    'setup:auth': 'node scripts/setup-auth.mjs',
+    pac: 'node scripts/op-pac.mjs',
+    'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
+    'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
+    'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
+    'sync:foundations': 'node scripts/sync-foundations.mjs',
+  };
+
+  const before = JSON.stringify(pkg.scripts || {});
+  pkg.scripts = { ...(pkg.scripts || {}), ...required };
+
+  if (JSON.stringify(pkg.scripts) !== before) {
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log('Merged required scripts into package.json (prebuild, deploy, etc.)');
+  }
+}
+
 console.log('');
 console.log('================================================');
 console.log('  Sync Foundations - Pull latest from template');
@@ -219,6 +260,9 @@ try {
     fs.copyFileSync(path.join(tempRoot, file), destination);
   }
   console.log(`Applied ${total} file update(s)`);
+
+  // ── Merge required scripts into package.json ──
+  mergeRequiredScripts();
 
   const commit = await promptYesNo('Commit the updates?', true);
   if (!commit) {

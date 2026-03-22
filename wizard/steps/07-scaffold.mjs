@@ -102,6 +102,9 @@ export default async function stepScaffold() {
   // ── Config files ──
   writeConfig(projectDir, appName);
 
+  // ── Merge required scripts into package.json ──
+  mergePackageJsonScripts(projectDir, appName);
+
   // ── Folder structure ──
   ui.line('Creating folder structure...');
   const dirs = [
@@ -837,6 +840,54 @@ export default defineConfig(({ command }) => ({
   // .prettierrc
   writeFileSync(join(dir, '.prettierrc'), '{ "singleQuote": true, "trailingComma": "all", "printWidth": 100 }\n');
   ui.ok('.prettierrc');
+}
+
+/**
+ * Read the existing package.json (from degit template or createMinimalProject),
+ * merge in the required Foundations scripts, and write it back.
+ * This ensures prebuild, deploy, setup:auth, etc. are always present
+ * regardless of how the template was sourced.
+ */
+function mergePackageJsonScripts(dir, appName) {
+  const pkgPath = join(dir, 'package.json');
+  let pkg = {};
+  if (existsSync(pkgPath)) {
+    try { pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')); } catch { /* start fresh */ }
+  }
+
+  const crossPlatformDevLocal = IS_WIN
+    ? 'set VITE_USE_MOCK=true && vite --port 3000'
+    : 'VITE_USE_MOCK=true vite --port 3000';
+
+  // Scripts that Foundations requires — merges over template defaults
+  const requiredScripts = {
+    dev: 'concurrently "vite --port 3000" "pac code run"',
+    'dev:local': crossPlatformDevLocal,
+    typecheck: 'tsc --noEmit',
+    prebuild: 'node scripts/patch-datasources-info.mjs',
+    build: 'npm run typecheck && vite build',
+    preview: 'vite preview',
+    lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
+    format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
+    test: 'vitest run',
+    'test:watch': 'vitest',
+    'test:e2e': 'playwright test',
+    'setup:auth': 'node scripts/setup-auth.mjs',
+    pac: 'node scripts/op-pac.mjs',
+    deploy: 'npm run build && pac code push',
+    'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
+    'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
+    'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
+    'sync:foundations': 'node scripts/sync-foundations.mjs',
+  };
+
+  pkg.scripts = { ...(pkg.scripts || {}), ...requiredScripts };
+
+  // Ensure type: module
+  if (!pkg.type) pkg.type = 'module';
+
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  ui.ok('package.json scripts merged (prebuild, deploy, dev, etc.)');
 }
 
 function writeStarterFiles(dir, appName) {
