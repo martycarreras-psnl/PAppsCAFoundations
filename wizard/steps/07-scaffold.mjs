@@ -136,9 +136,15 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'discover-copilot-connection.sh', 'schema-plan.example.json', 'validate-schema-plan.mjs']) {
+    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'discover-copilot-connection.sh', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
+    }
+    const schemaPlanExample = join(scriptsDir, 'schema-plan.example.json');
+    const planningPayload = join(projectDir, 'dataverse', 'planning-payload.json');
+    if (existsSync(schemaPlanExample) && !existsSync(planningPayload)) {
+      copyFileSync(schemaPlanExample, planningPayload);
+      ui.ok('dataverse/planning-payload.json seeded from schema plan example');
     }
     ui.ok('Helper scripts copied');
   }
@@ -355,6 +361,8 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run test\` | Run unit tests (Vitest) |
 | \`npm run lint\` | Lint with ESLint |
 | \`npm run validate:schema-plan\` | Validate the Dataverse planning artifact before provisioning |
+| \`npm run generate:dataverse-plan\` | Generate normalized Dataverse execution plans from the planning artifact |
+| \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and regenerate the SDK |
 | \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
 
 ## Staying Updated
@@ -610,6 +618,8 @@ function createMinimalProject(dir, appName) {
       'test:e2e': 'playwright test',
       deploy: 'npm run build && pac code push',
       'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
+      'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
+      'register:dataverse': 'bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json',
       'sync:foundations': 'bash scripts/sync-foundations.sh',
     },
   }, null, 2) + '\n');

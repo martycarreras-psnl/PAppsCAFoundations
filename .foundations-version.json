@@ -1,15 +1,18 @@
 {
-  "version": "2026.03.22.1",
+  "version": "2026.03.22.2",
   "releasedAt": "2026-03-22",
   "capabilities": [
     "execution-contracts",
     "encrypted-local-secret-storage",
     "foundation-sync-script",
     "schema-plan-template",
+    "schema-plan-generator",
+    "dataverse-data-source-registration",
     "copilot-discovery-helper"
   ],
   "notes": [
     "Use this file to compare a downstream project against the current Foundations bundle.",
-    "Run npm run sync:foundations to pull newer instruction and helper-script bundles into downstream repos."
+    "Run npm run sync:foundations to pull newer instruction and helper-script bundles into downstream repos.",
+    "Version 2026.03.22.2 completes the reusable Dataverse helper-script layer by generating plan artifacts and registering planned tables through PAC."
   ]
 }

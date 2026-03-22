@@ -82,6 +82,10 @@
     {
       "path": "dataverse/provision-relationships.plan.json",
       "purpose": "Apply relationship changes after table provisioning"
+    },
+    {
+      "path": "dataverse/register-datasources.plan.json",
+      "purpose": "Register Dataverse tables with pac code add-data-source and regenerate the SDK"
     }
   ]
 }

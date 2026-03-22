@@ -102,6 +102,8 @@ PAppsCAFoundations/
 │   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
 │   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
+│   ├── generate-dataverse-plan.mjs         # Expand planning payloads into execution plans
+│   ├── register-dataverse-data-sources.sh  # Register planned tables with pac and regenerate SDK
 │   ├── schema-plan.example.json            # Starter Dataverse planning artifact
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
@@ -123,6 +125,18 @@ PAppsCAFoundations/
 When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code that follows your team's exact standards — Fluent UI v9 components, TanStack Query hooks for connectors, solution-aware Dataverse patterns, and more.
 
 Each file has an `applyTo` scope so Copilot only loads the relevant instructions based on which files you're editing.
+
+## Dataverse Helper Flow
+
+Foundations now includes a reusable Dataverse execution layer that sits between schema planning and connector generation:
+
+```bash
+node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
+node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
+bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json
+```
+
+This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
 
 ## Staying Updated
 

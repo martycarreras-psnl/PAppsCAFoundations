@@ -53,6 +53,22 @@ The plan file is the handoff between planning and execution. It should define:
 3. `relationships` — lookup relationships and lookup column names
 4. `provisioningPlansJson` — executable payload shape for future orchestration scripts
 
+### Foundation helper workflow
+
+Foundations now provides a reusable script chain for this handoff:
+
+```bash
+node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
+node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
+bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json
+```
+
+- `validate-schema-plan.mjs` checks the planning artifact before any provisioning work starts
+- `generate-dataverse-plan.mjs` emits normalized execution plans for tables, relationships, and connector registration
+- `register-dataverse-data-sources.sh` consumes the generated registration plan and runs `pac code add-data-source` in order, followed by `pac code generate`
+
+Use these helpers as the default execution path in downstream repos. If you replace them, the alternative must still preserve the same ordered contract and re-runnable plan artifacts.
+
 ### Required naming data in the schema plan
 
 Each planned table should capture all of the following explicitly:
@@ -1226,6 +1242,7 @@ After completing the schema phase, return all of the following:
 1. **Actions performed** — option sets, tables, columns, relationships, roles, publish, data-source registration
 2. **Artifacts updated** — schema plan file, setup scripts, generated SDK files
 3. **Validation result** — publish succeeded, `pac code add-data-source` succeeded, `pac code generate` succeeded
+4. **Generated plan artifacts** — `provision-tables.plan.json`, `provision-relationships.plan.json`, and `register-datasources.plan.json` are current for the checked-in planning payload
 4. **Next phase recommendation** — connector integration or UI implementation
 
 ---

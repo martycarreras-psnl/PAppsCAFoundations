@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const DEFAULT_PLAN_PATH = 'dataverse/planning-payload.json';
 const RESERVED_NAMES = new Set([
@@ -69,7 +70,7 @@ function requireArrayFromKeys(object, keys, context) {
   fail(`${context} must include one of: ${keys.join(', ')}`);
 }
 
-function readPlan(planPath) {
+export function loadSchemaPlan(planPath) {
   const resolvedPath = path.resolve(planPath || DEFAULT_PLAN_PATH);
   if (!fs.existsSync(resolvedPath)) {
     fail(`file not found at ${resolvedPath}`);
@@ -156,16 +157,22 @@ function validateProvisioning(plan) {
   });
 }
 
-function main() {
-  const planPath = process.argv[2] || DEFAULT_PLAN_PATH;
-  const { resolvedPath, plan } = readPlan(planPath);
-
+export function validateSchemaPlan(plan) {
   validateDomains(plan);
   validateTables(plan);
   validateRelationships(plan);
   validateProvisioning(plan);
+}
+
+function main() {
+  const planPath = process.argv[2] || DEFAULT_PLAN_PATH;
+  const { resolvedPath, plan } = loadSchemaPlan(planPath);
+
+  validateSchemaPlan(plan);
 
   console.log(`Schema plan valid: ${resolvedPath}`);
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
