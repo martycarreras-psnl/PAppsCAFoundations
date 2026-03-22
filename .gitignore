@@ -28,6 +28,9 @@ Thumbs.db
 # Solution exports (binary zips — unpack to solution-source/ for source control)
 solution/*.zip
 
+# Wizard state (machine-specific, no secrets)
+.wizard-state.json
+
 # Temporary files
 *.tmp
 *.log

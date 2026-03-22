@@ -27,43 +27,39 @@ PAppsCAFoundations/
 
 ## Quick Start
 
-### 1. Clone and install
+Run one command. The wizard walks you through everything — tool checks, naming, portal steps, authentication, scaffolding, and your first deploy:
 
 ```bash
 git clone https://github.com/macarrer_microsoft/PAppsCAFoundations.git my-code-app
 cd my-code-app
-npm install
-```
-
-### 2. Set up authentication
-
-**If using 1Password (recommended):**
-- Ensure you have access to the team's shared 1Password vault
-- Update `.env` with your vault/item/field names
-- Run `npm run setup:auth`
-
-**If using .env.local:**
-- Copy `.env.template` to `.env.local`
-- Fill in credentials from your team lead
-- Run `npm run setup:auth`
-
-### Optional: use the local setup wizard (recommended for first-time users)
-
-```bash
 bash scripts/setup-wizard.sh
 ```
 
-The wizard walks you through tool checks, dependency install, and auth setup with simple prompts.
+The wizard:
+1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
+2. **Collects project identity** — publisher prefix, solution name, app name
+3. **Guides you through portal steps** — tells you exactly what to click and type in Power Platform admin center and maker portal, using the values you just entered
+4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
+5. **Walks through App Registration** — Azure portal steps with copy-paste-ready values
+6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
+7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards
+8. **Builds, verifies, and optionally deploys** — first `pac code push` to Power Platform
 
-### 3. Verify (no browser popup)
+You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off.
+
+To start over: `bash scripts/setup-wizard.sh --reset`
+
+### Already set up? Manual path
+
+If you've already completed the portal steps and have credentials:
 
 ```bash
-pac org who
+cp .env.template .env.local   # Fill in credentials
+bash scripts/setup-auth.sh    # Create PAC auth profiles
+pac org who                   # Verify (no browser popup)
 ```
 
-### 4. Start building
-
-See `00-environment-setup.instructions.md` for full setup details, then `01-scaffold.instructions.md` for project scaffolding.
+See `00-environment-setup.instructions.md` for details.
 
 ## How It Works
 
