@@ -135,7 +135,7 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'op-pac.sh']) {
+    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
@@ -347,6 +347,18 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run preview\` | Preview production build locally |
 | \`npm run test\` | Run unit tests (Vitest) |
 | \`npm run lint\` | Lint with ESLint |
+| \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
+
+## Staying Updated
+
+This project was created from the **PAppsCAFoundations** template. As the template improves (new instruction files, wizard fixes, security updates), you can pull those updates:
+
+\`\`\`bash
+npm run sync:foundations          # Preview + apply updates
+npm run sync:foundations -- --dry-run  # Preview only, no changes
+\`\`\`
+
+This syncs foundation files (\`.github/instructions/\`, \`wizard/\`, \`scripts/\`, \`docs/\`) without touching your project code (\`src/\`, \`package.json\`, \`power.config.json\`). Changes are shown as a diff before applying.
 `;
 
   writeFileSync(readmePath, readmeContent, 'utf-8');
@@ -585,6 +597,7 @@ function createMinimalProject(dir, appName) {
       'test:watch': 'vitest',
       'test:e2e': 'playwright test',
       deploy: 'npm run build && pac code push',
+      'sync:foundations': 'bash scripts/sync-foundations.sh',
     },
   }, null, 2) + '\n');
 }

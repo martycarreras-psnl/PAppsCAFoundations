@@ -86,6 +86,7 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
+│   ├── sync-foundations.sh                 # Pull latest updates from the template repo
 │   └── setup-wizard.sh                     # Guided 8-step setup wizard (bash, legacy)
 ├── wizard/                                 # Cross-platform Node.js setup wizard
 │   ├── index.mjs                           # Entry point + step orchestrator
@@ -103,3 +104,18 @@ PAppsCAFoundations/
 When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code that follows your team's exact standards — Fluent UI v9 components, TanStack Query hooks for connectors, solution-aware Dataverse patterns, and more.
 
 Each file has an `applyTo` scope so Copilot only loads the relevant instructions based on which files you're editing.
+
+## Staying Updated
+
+Projects created from this template can pull improvements (new instruction files, wizard fixes, security updates) without affecting project-specific code:
+
+```bash
+npm run sync:foundations            # Preview changes + apply
+npm run sync:foundations -- --dry-run   # Preview only, no changes
+```
+
+**What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/guide.html`, `.env.template`
+
+**What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
+
+The script fetches the latest template via `degit`, shows a diff of what changed, and asks for confirmation before applying. Changes are committed as a single `chore: sync foundations` commit.
