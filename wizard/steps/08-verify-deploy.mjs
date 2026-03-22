@@ -33,7 +33,7 @@ export default async function stepVerifyAndDeploy() {
   }
 
   // ── Deploy ──
-  if (distExists && pac) {
+  if (buildOk && distExists && pac) {
     ui.line('');
     ui.divider();
     ui.line('');
@@ -111,9 +111,9 @@ export default async function stepVerifyAndDeploy() {
       }
       ui.line(`  cd ${projectDir} && ${pac} code push`);
     }
-  } else if (!distExists) {
+  } else if (!buildOk || !distExists) {
     ui.line('');
-    ui.line('Skipping deploy — no dist/index.html. Build first, then push:');
+    ui.line('Skipping deploy — build did not succeed. Fix errors, then:');
     ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);
   }
 
