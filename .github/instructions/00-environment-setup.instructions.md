@@ -79,20 +79,75 @@ Developers need the App Registration credentials to authenticate locally without
 
 **Step 2a: Team lead stores credentials in 1Password**
 
-After creating the App Registration (Step 1), store the credentials in a 1Password vault shared with your team:
+After creating the App Registration (Step 1), store the credentials in a 1Password vault shared with your team. The field labels you create here must exactly match the field names used in the `op://` references in your `.env` file — including case, spelling, and hyphens.
 
-1. Open 1Password → Your shared team vault (e.g., "Engineering" or "Power Platform")
-2. Create a new item:
-   - Type: **API Credential** (or **Login**)
-   - Title: `PowerApps CodeApps - <ProjectName>` (e.g., `PowerApps CodeApps - ProjectTracker`)
-   - Add these fields:
-     - `tenant-id` → Your Directory (tenant) ID
-     - `app-id` → Your Application (client) ID
-     - `client-secret` → Your client secret value
-     - `env-dev` → `https://your-org-dev.crm.dynamics.com`
-     - `env-test` → `https://your-org-test.crm.dynamics.com`
-     - `env-prod` → `https://your-org-prod.crm.dynamics.com`
-3. Share the vault with the development team
+**Option A1: Create the item via the 1Password desktop app (UI)**
+
+1. Open 1Password desktop app → navigate to your shared team vault (e.g., "Engineering" or "Power Platform")
+2. Click the **+** button → choose **"API Credential"** as the item type (if not available, use **"Login"** or **"Secure Note"** — any type works since we'll be adding custom fields)
+3. Set the **Title** to: `PowerApps CodeApps - <ProjectName>` (e.g., `PowerApps CodeApps - ProjectTracker`)
+   — The title must match exactly what appears in your `op://` URI. No trailing spaces.
+4. **Add custom fields** (this is the step most people miss):
+   - Click **"Add more"** at the bottom of the item editor (or the **"+"** icon near the fields section)
+   - For each field below, choose the field type first, then enter the label and value:
+
+   | Field label | Field type | Value |
+   |---|---|---|
+   | `tenant-id` | Text | Your Directory (tenant) ID (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
+   | `app-id` | Text | Your Application (client) ID (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) |
+   | `client-secret` | **Password** | Your client secret value (the one shown only once in Azure) |
+   | `env-dev` | Text | `https://your-org-dev.crm.dynamics.com` |
+   | `env-test` | Text | `https://your-org-test.crm.dynamics.com` |
+   | `env-prod` | Text | `https://your-org-prod.crm.dynamics.com` |
+
+   > Use **Password** type for `client-secret` so 1Password treats it as a secret (masked by default, not included in clipboard history). Use **Text** for IDs and URLs.
+
+   > **Critical:** The field label (not the field "placeholder") is what the `op://` URI references. After clicking "Add more", there are two things to fill in — the label on the left and the value on the right. The label must be exactly `tenant-id`, `app-id`, `client-secret`, etc.
+
+5. Click **Save**
+
+**Option A2: Create the item via the 1Password CLI (more reliable field naming)**
+
+If you want to guarantee the field names are correct, use the CLI. This avoids any UI confusion about labels vs placeholders:
+
+```bash
+# Sign in first if needed
+op signin
+
+# Create the item with all fields in one command
+op item create \
+  --vault "Engineering" \
+  --category "API Credential" \
+  --title "PowerApps CodeApps - ProjectTracker" \
+  "tenant-id[text]=YOUR_TENANT_ID" \
+  "app-id[text]=YOUR_APP_ID" \
+  "client-secret[password]=YOUR_CLIENT_SECRET" \
+  "env-dev[text]=https://your-org-dev.crm.dynamics.com" \
+  "env-test[text]=https://your-org-test.crm.dynamics.com" \
+  "env-prod[text]=https://your-org-prod.crm.dynamics.com"
+```
+
+Replace `YOUR_TENANT_ID`, `YOUR_APP_ID`, `YOUR_CLIENT_SECRET`, and the environment URLs with real values from Step 1.
+
+**Verify the item was created correctly:**
+
+```bash
+# List the item and its fields — confirm labels match exactly
+op item get "PowerApps CodeApps - ProjectTracker" --vault "Engineering" --format json \
+  | jq '.fields[] | {label: .label, type: .type}'
+
+# Quick smoke test — confirm op can resolve each reference
+op read "op://Engineering/PowerApps CodeApps - ProjectTracker/tenant-id"
+op read "op://Engineering/PowerApps CodeApps - ProjectTracker/app-id"
+op read "op://Engineering/PowerApps CodeApps - ProjectTracker/client-secret"
+op read "op://Engineering/PowerApps CodeApps - ProjectTracker/env-dev"
+```
+
+Each `op read` command should print the actual value without error. If any return "item not found" or "field not found", the label in 1Password doesn't match the reference — edit the item and correct the field label.
+
+**Share the vault with the development team:**
+
+In the 1Password desktop app: Vaults → select your vault → Manage → Invite People (or add the vault to a Group your team belongs to). In 1Password Teams/Business, you can also manage this via the admin console at `<yourteam>.1password.com`.
 
 **Step 2b: Create a `.env` file with 1Password secret references**
 
@@ -114,6 +169,26 @@ PP_ENV_PROD=op://Engineering/PowerApps CodeApps - ProjectTracker/env-prod
 ```
 
 The `op://` URI format is: `op://<vault-name>/<item-name>/<field-name>`. Adjust the vault and item names to match what you created in step 2a.
+
+**Step 2b-verify: Confirm `.env` references resolve before committing**
+
+Before committing `.env` to Git, verify that every `op://` reference resolves correctly on your machine:
+
+```bash
+# This injects all op:// references and prints the resolved env vars
+# (secrets are visible here — run in a private terminal, don't pipe to logs)
+op run --env-file=.env -- env | grep "^PP_"
+
+# Expected output (values will be your real credentials):
+# PP_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+# PP_APP_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+# PP_CLIENT_SECRET=<your-secret>
+# PP_ENV_DEV=https://your-org-dev.crm.dynamics.com
+# PP_ENV_TEST=https://your-org-test.crm.dynamics.com
+# PP_ENV_PROD=https://your-org-prod.crm.dynamics.com
+```
+
+If any variable shows up empty or the command errors, fix the corresponding `op://` path in `.env` before committing. The vault name, item title, and field label must all match exactly — including case and spaces.
 
 **Step 2c: How developers use it**
 
