@@ -38,8 +38,6 @@ That's it. The wizard walks you through everything — tool checks, naming, Powe
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
 
-> **Prefer bash?** The original shell wizard is still available: `bash scripts/setup-wizard.sh` (macOS/Linux only).
-
 ### What the wizard does
 
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI

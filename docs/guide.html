@@ -697,7 +697,7 @@
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
           <h3>Setup Wizard</h3>
-          <p>One script, 8 steps, zero guesswork. Walks a complete novice through Power Apps Maker Portal and Admin Center setup, auth, scaffolding, and first deploy.</p>
+          <p>One script, 8 steps, zero guesswork. Creates publisher and solution via API, sets up auth, scaffolds your app, and deploys — all from the terminal.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔐</div>
@@ -793,8 +793,7 @@
           </ul>
           <strong>Step 2 — Run the wizard:</strong>
           <pre style="margin-top:8px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
-          <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux — no bash required.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
-          <p style="margin-top:4px; font-size:13px; color:#605e5c;">Prefer bash? The legacy shell wizard is still available: <code>bash scripts/setup-wizard.sh</code> (macOS/Linux only)</p>
+          <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
           <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
         </div>
       </div>
@@ -803,17 +802,17 @@
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🔍</div>
           <h3 style="font-size:13px;">Steps 1–2</h3>
-          <p>Check tools &amp; name your project</p>
-        </div></div>
-        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
-          <div style="font-size:28px; margin-bottom:8px;">🌐</div>
-          <h3 style="font-size:13px;">Steps 3–5</h3>
-          <p>Maker Portal &amp; Admin Center setup</p>
+          <p>Check tools, name project &amp; environments</p>
         </div></div>
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🔐</div>
-          <h3 style="font-size:13px;">Step 6</h3>
-          <p>Auth setup — fully automated</p>
+          <h3 style="font-size:13px;">Steps 3–4</h3>
+          <p>App Registration &amp; auth setup</p>
+        </div></div>
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🌐</div>
+          <h3 style="font-size:13px;">Steps 5–6</h3>
+          <p>Publisher &amp; solution (auto via API)</p>
         </div></div>
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🚀</div>
@@ -844,7 +843,7 @@
               <li><strong>Node.js 20+</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>Git</strong> — <a href="https://git-scm.com/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>.NET SDK</strong> — <a href="https://dotnet.microsoft.com/download" target="_blank" rel="noopener">Install</a></li>
-              <li><strong>PAC CLI</strong> — Installed via <code>dotnet tool install -g Microsoft.PowerApps.CLI.Tool</code></li>
+              <li><strong>PAC CLI</strong> — The wizard will install it automatically via <code>dotnet tool install -g Microsoft.PowerApps.CLI.Tool</code> if missing</li>
               <li><strong>1Password CLI</strong> (optional) — <a href="https://developer.1password.com/docs/cli/get-started" target="_blank" rel="noopener">Install</a></li>
             </ul>
             <div class="callout callout-warn">
@@ -859,25 +858,30 @@
           <button class="accordion-header" onclick="toggleAccordion(this)">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-step">2</span>
-            <span class="accordion-title">Name Your Project</span>
+            <span class="accordion-title">Project Identity &amp; Environments</span>
             <span class="accordion-tag tag-guided">You Decide</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
-            <p>The wizard prompts you for these values and validates them:</p>
+            <p>The wizard prompts you for your app name and environment URLs:</p>
             <div class="table-wrap"><table>
-              <thead><tr><th>Value</th><th>Example</th><th>Rules</th></tr></thead>
+              <thead><tr><th>Value</th><th>Example</th><th>Notes</th></tr></thead>
               <tbody>
-                <tr><td>App name</td><td>My Brain</td><td>Display name, any chars</td></tr>
-                <tr><td><strong>Publisher prefix</strong></td><td>mybrn</td><td>2–8 lowercase letters only. <strong>Cannot change later.</strong></td></tr>
-                <tr><td>Publisher display name</td><td>My Brain Engineering</td><td>Human-readable</td></tr>
-                <tr><td>Publisher internal name</td><td>mybrainengineering</td><td>Lowercase, no spaces</td></tr>
-                <tr><td>Solution display name</td><td>My Brain</td><td>Shown in the Power Apps Maker Portal</td></tr>
-                <tr><td>Solution unique name</td><td>MyBrain</td><td>No spaces. Used in CLI commands.</td></tr>
+                <tr><td><strong>App name</strong></td><td>My Brain</td><td>Display name, any characters</td></tr>
+                <tr><td><strong>Dev environment URL</strong></td><td><code>https://org-dev.crm.dynamics.com</code></td><td>Required. Must have Dataverse enabled.</td></tr>
+                <tr><td>Test environment URL</td><td><code>https://org-test.crm.dynamics.com</code></td><td>Optional — press Enter to skip</td></tr>
+                <tr><td>Prod environment URL</td><td><code>https://org.crm.dynamics.com</code></td><td>Optional — press Enter to skip</td></tr>
               </tbody>
             </table></div>
+            <p>If you don't have a development environment yet, create one first:</p>
+            <ol>
+              <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a> → <strong>Environments → + New</strong></li>
+              <li>Name it <em>Your App - Dev</em>, type Developer or Sandbox</li>
+              <li><strong>Toggle "Add Dataverse" to YES</strong> (required!)</li>
+              <li>Copy the Environment URL after provisioning</li>
+            </ol>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
-              <div>The <strong>publisher prefix</strong> is the most consequential naming decision. It prefixes every Dataverse table, column, option set, environment variable, and security role. It <em>cannot</em> be changed after data exists.</div>
+              <div><strong>Don't forget to enable Code Apps!</strong> In the Admin Center → your environment → <strong>Settings → Features</strong> → turn on <strong>"Code components for canvas apps"</strong> and <strong>"Allow publishing of canvas apps with code components"</strong>.</div>
             </div>
           </div></div>
         </div>
@@ -887,67 +891,13 @@
           <button class="accordion-header" onclick="toggleAccordion(this)">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-step">3</span>
-            <span class="accordion-title">Create Publisher in the Power Apps Maker Portal</span>
+            <span class="accordion-title">App Registration &amp; Application User</span>
             <span class="accordion-tag tag-manual">Manual (Browser)</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
-            <p>The wizard displays the exact values to enter. You do this in your browser:</p>
-            <ol>
-              <li>Open <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a></li>
-              <li>Select your <strong>development environment</strong> (top-right dropdown)</li>
-              <li>Navigate to <strong>Solutions → Publishers → + New Publisher</strong></li>
-              <li>Fill in the Display name, Name, and Prefix using values from Step 2</li>
-              <li>Note the <strong>Choice value prefix</strong> number that auto-populates</li>
-              <li>Click <strong>Save</strong></li>
-            </ol>
-            <p>The wizard then asks you for the Choice value prefix number and records it.</p>
-          </div></div>
-        </div>
+            <p>This is the one step where you need to work in the browser. The wizard tells you exactly what to do and collects the results.</p>
 
-        <!-- Step 4 -->
-        <div class="accordion-item">
-          <button class="accordion-header" onclick="toggleAccordion(this)">
-            <span class="accordion-chevron">▶</span>
-            <span class="accordion-step">4</span>
-            <span class="accordion-title">Set Up Environments</span>
-            <span class="accordion-tag tag-manual">Manual (Browser)</span>
-          </button>
-          <div class="accordion-body"><div class="accordion-content">
-            <p>Create at least a <strong>Development</strong> environment. Test and Production are optional to start.</p>
-            <ol>
-              <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a></li>
-              <li>Click <strong>Environments → + New</strong></li>
-              <li>Name: <em>Your App - Dev</em></li>
-              <li>Type: Developer or Sandbox</li>
-              <li><strong>Toggle "Add Dataverse" to YES</strong> (required!)</li>
-              <li>Click Save, wait for provisioning</li>
-              <li>Copy the <strong>Environment URL</strong> (e.g. <code>https://org-name.crm.dynamics.com</code>)</li>
-            </ol>
-            <p>The wizard collects and validates URLs for Dev (required), Test, and Prod.</p>
-            <div class="callout callout-danger">
-              <span class="callout-icon">🚨</span>
-              <div><strong>Don't forget to enable Code Apps!</strong> In the Admin Center → your environment → <strong>Settings → Features</strong> → turn on <strong>"Code components for canvas apps"</strong> and <strong>"Allow publishing of canvas apps with code components"</strong>. See the <a href="#enable-code-apps">Enable Code Apps</a> section for details.</div>
-            </div>
-          </div></div>
-        </div>
-
-        <!-- Step 5 -->
-        <div class="accordion-item">
-          <button class="accordion-header" onclick="toggleAccordion(this)">
-            <span class="accordion-chevron">▶</span>
-            <span class="accordion-step">5</span>
-            <span class="accordion-title">Solution + App Registration + Application User</span>
-            <span class="accordion-tag tag-manual">Manual (Browser)</span>
-          </button>
-          <div class="accordion-body"><div class="accordion-content">
-            <h4>A. Create the Solution</h4>
-            <ol>
-              <li>Open <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a></li>
-              <li>Select Dev environment → <strong>Solutions → + New Solution</strong></li>
-              <li>Set Display name, select your Publisher, set Version to <code>1.0.0.0</code></li>
-            </ol>
-
-            <h4>B. Create Azure App Registration</h4>
+            <h4>A. Create Azure App Registration</h4>
             <ol>
               <li>Open <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener" class="portal-link">↗ Azure Portal — App registrations</a></li>
               <li>Click <strong>+ New registration</strong></li>
@@ -959,7 +909,7 @@
               <li>Click <strong>Grant admin consent</strong></li>
             </ol>
 
-            <h4>C. Register as Application User</h4>
+            <h4>B. Register as Application User</h4>
             <ol>
               <li>Open <a href="https://admin.powerplatform.microsoft.com" target="_blank" rel="noopener" class="portal-link">↗ admin.powerplatform.microsoft.com</a></li>
               <li>Select environment → <strong>Settings → Users + permissions → Application users</strong></li>
@@ -968,7 +918,64 @@
 
             <div class="callout callout-info">
               <span class="callout-icon">ℹ️</span>
-              <div>The wizard collects your Tenant ID, Client ID, and Client Secret (masked input) during this step. The secret is held in memory only — never written to disk in plain text.</div>
+              <div>The wizard collects your Tenant ID, Client ID, and Client Secret (masked input). The secret is held in memory only — never written to disk in plain text.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">4</span>
+            <span class="accordion-title">Authentication Setup</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard takes the credentials from Step 3 and handles everything:</p>
+            <ul>
+              <li>Choose <strong>1Password</strong> or <strong>.env.local</strong> for secret storage</li>
+              <li>Writes credential files (op:// references or raw values)</li>
+              <li>Ensures <code>.env.local</code> is in <code>.gitignore</code></li>
+              <li>Creates PAC auth profiles for each environment: <code>pac auth create --name "Dev" ...</code></li>
+              <li>Runs <code>pac org who</code> to verify — should show your App Registration name, not a human user</li>
+              <li>Checks <code>pac solution list</code> to verify connectivity</li>
+            </ul>
+            <div class="callout callout-success">
+              <span class="callout-icon">✅</span>
+              <div>After this step, all <code>pac</code> commands work without any browser popup.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">5</span>
+            <span class="accordion-title">Publisher</span>
+            <span class="accordion-tag tag-automated">Automated (API)</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The wizard queries Dataverse directly to find existing publishers or create a new one — <strong>no Maker Portal visit needed</strong>.</p>
+            <ul>
+              <li>Lists all existing publishers in the environment via Dataverse Web API</li>
+              <li>Lets you select an existing publisher or create a new one</li>
+              <li>If creating new: prompts for prefix, display name, and internal name</li>
+              <li>Creates the publisher via API with all required properties</li>
+              <li>Records the <strong>Choice value prefix</strong> automatically</li>
+            </ul>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Value</th><th>Example</th><th>Rules</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Publisher prefix</strong></td><td>mybrn</td><td>2–8 lowercase letters only. <strong>Cannot change later.</strong></td></tr>
+                <tr><td>Publisher display name</td><td>My Brain Engineering</td><td>Human-readable</td></tr>
+                <tr><td>Publisher internal name</td><td>mybrainengineering</td><td>Lowercase, no spaces</td></tr>
+              </tbody>
+            </table></div>
+            <div class="callout callout-danger">
+              <span class="callout-icon">🚨</span>
+              <div>The <strong>publisher prefix</strong> is the most consequential naming decision. It prefixes every Dataverse table, column, option set, environment variable, and security role. It <em>cannot</em> be changed after data exists.</div>
             </div>
           </div></div>
         </div>
@@ -978,23 +985,24 @@
           <button class="accordion-header" onclick="toggleAccordion(this)">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-step">6</span>
-            <span class="accordion-title">Authentication Setup</span>
-            <span class="accordion-tag tag-automated">Automated</span>
+            <span class="accordion-title">Solution</span>
+            <span class="accordion-tag tag-automated">Automated (API)</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
-            <p>The wizard handles everything from here:</p>
+            <p>Like the publisher step, the wizard creates or selects a solution via Dataverse Web API — <strong>no Maker Portal visit needed</strong>.</p>
             <ul>
-              <li>Choose <strong>1Password</strong> or <strong>.env.local</strong></li>
-              <li>Writes credential files (op:// references or raw values)</li>
-              <li>Ensures <code>.env.local</code> is in <code>.gitignore</code></li>
-              <li>Creates PAC auth profiles for each environment: <code>pac auth create --name "Dev" ...</code></li>
-              <li>Runs <code>pac org who</code> to verify — should show your App Registration name, not a human user</li>
-              <li>Checks <code>pac solution list</code> for your solution</li>
+              <li>Lists all existing unmanaged solutions in the environment</li>
+              <li>Lets you select an existing solution or create a new one</li>
+              <li>If creating new: prompts for display name and unique name</li>
+              <li>Creates the solution via API, bound to your publisher from Step 5</li>
             </ul>
-            <div class="callout callout-success">
-              <span class="callout-icon">✅</span>
-              <div>After this step, <code>pac code push</code> works without any browser popup.</div>
-            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Value</th><th>Example</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>Solution display name</td><td>My Brain</td><td>Shown in the Maker Portal solution list</td></tr>
+                <tr><td>Solution unique name</td><td>MyBrain</td><td>No spaces. Used in CLI commands and API calls.</td></tr>
+              </tbody>
+            </table></div>
           </div></div>
         </div>
 
@@ -1010,15 +1018,16 @@
             <p>The wizard creates a complete, ready-to-develop project:</p>
             <ul>
               <li>Downloads the official starter template (or creates a minimal fallback)</li>
-              <li>Installs all required dependencies</li>
+              <li>Installs all dependencies (React, Fluent UI v9, TanStack Query, <code>@microsoft/power-apps</code>)</li>
               <li>Writes <code>tsconfig.json</code> with <code>moduleResolution: "bundler"</code></li>
-              <li>Writes <code>vite.config.ts</code> with port 3000 and <code>@/</code> path alias</li>
+              <li>Writes <code>vite.config.ts</code> with port 3000, <code>@/</code> path alias, and relative base path for deploy</li>
               <li>Creates the full folder structure (components, pages, hooks, utils, tests, etc.)</li>
               <li>Writes starter files: <code>main.tsx</code>, <code>App.tsx</code> with Fluent UI + TanStack Query providers</li>
               <li>Copies all instruction files from the foundations repo</li>
               <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
-              <li>Optionally adds data sources via <code>pac code add-data-source</code></li>
-              <li>Initializes Git repo with optional remote and initial commit</li>
+              <li>Optionally sets up connectors and connection references</li>
+              <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
+              <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
           </div></div>
         </div>
@@ -1028,7 +1037,7 @@
           <button class="accordion-header" onclick="toggleAccordion(this)">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-step">8</span>
-            <span class="accordion-title">Build, Verify & Deploy</span>
+            <span class="accordion-title">Build, Verify &amp; Deploy</span>
             <span class="accordion-tag tag-automated">Automated</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
@@ -1042,7 +1051,7 @@
             </ol>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
-              <div>Make sure you've <a href="#enable-code-apps">enabled Code Apps</a> in the environment before your first push, or it will fail with "does not allow this operation for this Code app."</div>
+              <div>Make sure you've enabled Code Apps in the environment before your first push (Settings → Features → "Code components for canvas apps"), or it will fail.</div>
             </div>
             <p>Then displays a complete summary of everything that was set up and what to do next:</p>
             <pre>cd ../your-app
@@ -1057,12 +1066,12 @@ pac code push        ← deploy changes to Power Platform</pre>
     <!-- Portal Quick Links -->
     <section class="section" id="portal-links">
       <h2 class="section-title">Portal Quick Links</h2>
-      <p class="section-subtitle">All the places you'll need to visit during manual setup steps.</p>
+      <p class="section-subtitle">Portals you may need during setup (Step 3 App Registration is the main manual step).</p>
 
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <h3>Power Apps Maker Portal</h3>
-          <p>Create publishers, solutions, tables, and connections.</p>
+          <p>View your solution, tables, and connections. Publishers and solutions are created automatically by the wizard.</p>
           <div style="margin-top:12px;">
             <a href="https://make.powerapps.com" target="_blank" rel="noopener" class="portal-link">↗ make.powerapps.com</a>
           </div>
