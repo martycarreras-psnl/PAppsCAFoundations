@@ -84,6 +84,7 @@ export default async function stepVerifyAndDeploy() {
           if (success) {
             ui.ok('Deployed! Your app is live.');
             ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
+            await addAppToSolution(pac, projectDir, solName);
           }
         } else {
           ui.warn('Could not establish user auth. Deploy manually:');
@@ -98,6 +99,7 @@ export default async function stepVerifyAndDeploy() {
         const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir);
         if (success) {
           ui.ok('Deployed! Your app is updated.');
+          await addAppToSolution(pac, projectDir, solName);
         }
       }
     } else {
@@ -319,6 +321,55 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRet
   ui.warn(`Push failed after ${maxRetries} attempts.`);
   ui.line('  Retry later: node wizard/index.mjs --from 8');
   return false;
+}
+
+// ─────────── Add App to Solution ───────────
+
+/**
+ * Add the deployed Code App to the selected solution.
+ * pac code push creates the app in the environment but does NOT add it
+ * to a solution. We use pac solution add-solution-component to do this.
+ * Component type 300 = Canvas App (Code Apps are canvas apps internally).
+ */
+async function addAppToSolution(pac, projectDir, solutionName) {
+  if (!pac || !solutionName) return;
+
+  // Read appId from power.config.json (populated by pac code push)
+  const configPath = join(projectDir, 'power.config.json');
+  let appId;
+  try {
+    const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+    appId = config.appId;
+  } catch { /* ignore */ }
+
+  if (!appId) {
+    ui.warn('Could not read appId from power.config.json — skipping solution registration.');
+    ui.line('  Add manually: pac solution add-solution-component -sn ' + solutionName + ' -c <appId> -ct 300');
+    return;
+  }
+
+  ui.line('');
+  ui.line(`Adding app to solution "${solutionName}"...`);
+  const { ok, stdout, stderr } = runSafeCapture(pac, [
+    'solution', 'add-solution-component',
+    '-sn', solutionName,
+    '-c', appId,
+    '-ct', '300',
+  ]);
+
+  if (ok) {
+    ui.ok(`App added to solution "${solutionName}"`);
+  } else {
+    const combined = `${stdout}\n${stderr}`;
+    // If already in the solution, that's fine
+    if (/already exists|already added/i.test(combined)) {
+      ui.ok(`App is already in solution "${solutionName}"`);
+    } else {
+      ui.warn(`Could not add app to solution "${solutionName}".`);
+      if (stderr) ui.line(`  ${stderr.split('\n').filter(l => l.trim())[0] || ''}`);
+      ui.line(`  Add manually: ${pac} solution add-solution-component -sn ${solutionName} -c ${appId} -ct 300`);
+    }
+  }
 }
 
 // ─────────── Interactive Auth Helper ───────────
