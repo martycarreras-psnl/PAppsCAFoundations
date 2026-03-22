@@ -671,7 +671,11 @@
 ├── <span class="folder">scripts/</span>
 │   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># 1Password wrapper for pac</span>
 │   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Auth profile creation</span>
-│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># ← THE MAIN EVENT (8-step wizard)</span>
+│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Legacy bash wizard (macOS/Linux)</span>
+├── <span class="folder">wizard/</span>                                 <span class="comment"># ← THE MAIN EVENT</span>
+│   ├── <span class="file">index.mjs</span>                           <span class="comment"># Cross-platform Node.js setup wizard</span>
+│   ├── <span class="folder">lib/</span>                                <span class="comment"># Shared helpers (state, UI, shell)</span>
+│   └── <span class="folder">steps/</span>                              <span class="comment"># 8 step modules</span>
 ├── <span class="folder">solution/</span>                               <span class="comment"># Power Platform solution artifacts</span>
 ├── <span class="file">.env</span>                                    <span class="comment"># 1Password references (safe to commit)</span>
 ├── <span class="file">.env.template</span>                           <span class="comment"># Template for non-1Password teams</span>
@@ -740,8 +744,9 @@
         <span class="callout-icon">✅</span>
         <div>
           <strong>This is the only thing you need to run.</strong> Clone the repo, then:
-          <pre style="margin-top:8px; display:inline-block;">bash scripts/setup-wizard.sh</pre>
-          <p style="margin-top:8px;">The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+          <pre style="margin-top:8px; display:inline-block;">cd wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
+          <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux — no bash required.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+          <p style="margin-top:4px; font-size:13px; color:#605e5c;">Prefer bash? The legacy shell wizard is still available: <code>bash scripts/setup-wizard.sh</code> (macOS/Linux only)</p>
         </div>
       </div>
 

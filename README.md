@@ -23,7 +23,11 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
-│   └── setup-wizard.sh                     # Guided 8-step setup wizard for new developers
+│   └── setup-wizard.sh                     # Guided 8-step setup wizard (bash, legacy)
+├── wizard/                                 # Cross-platform Node.js setup wizard
+│   ├── index.mjs                           # Entry point + step orchestrator
+│   ├── lib/                                # Shared helpers (state, UI, shell, validation)
+│   └── steps/                              # 8 step modules (01-prerequisites … 08-verify-deploy)
 ├── solution/                               # Power Platform solution artifacts
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
@@ -41,9 +45,12 @@ Run one command. The wizard walks you through everything — tool checks, naming
 
 ```bash
 git clone https://github.com/macarrer_microsoft/PAppsCAFoundations.git my-code-app
-cd my-code-app
-bash scripts/setup-wizard.sh
+cd my-code-app/wizard
+npm install
+node index.mjs
 ```
+
+> **Works on Windows, macOS, and Linux — no bash required.**
 
 The wizard:
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
@@ -57,7 +64,9 @@ The wizard:
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off.
 
-To start over: `bash scripts/setup-wizard.sh --reset`
+To start over: `node wizard/index.mjs --reset`
+
+> **Prefer bash?** The original shell wizard is still available: `bash scripts/setup-wizard.sh` (macOS/Linux only).
 
 ### Already set up? Manual path
 

@@ -1,0 +1,72 @@
+// wizard/lib/shell.mjs — Cross-platform command execution
+import { execSync, execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir, platform } from 'node:os';
+
+const IS_WIN = platform() === 'win32';
+
+/** Resolve the PAC CLI path, preferring the dotnet-tools install. */
+export function pacPath() {
+  const ext = IS_WIN ? '.exe' : '';
+  const dotnetToolPath = join(homedir(), '.dotnet', 'tools', `pac${ext}`);
+  if (existsSync(dotnetToolPath)) return dotnetToolPath;
+  // Fall back to PATH
+  try {
+    const cmd = IS_WIN ? 'where pac' : 'which pac';
+    return execSync(cmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+  } catch {
+    return null;
+  }
+}
+
+/** Check whether a command is available on PATH. */
+export function hasCommand(name) {
+  try {
+    const cmd = IS_WIN ? `where ${name}` : `which ${name}`;
+    execSync(cmd, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Get stdout of a command, or null on failure. */
+export function run(cmd, opts = {}) {
+  try {
+    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Run a command and stream output to the console. Returns true on success. */
+export function runLive(cmd, opts = {}) {
+  try {
+    execSync(cmd, { stdio: 'inherit', ...opts });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Run a command array (no shell injection). Returns stdout or null. */
+export function runSafe(file, args, opts = {}) {
+  try {
+    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Run a command array and stream output. Returns true on success. */
+export function runSafeLive(file, args, opts = {}) {
+  try {
+    execFileSync(file, args, { stdio: 'inherit', ...opts });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export { IS_WIN };
