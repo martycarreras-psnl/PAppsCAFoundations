@@ -1,0 +1,447 @@
+---
+applyTo: "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts"
+---
+
+# Power Apps Code Apps — Testing Patterns
+
+This instruction file defines how Code Apps are tested — from unit tests through end-to-end tests. Every Code App ships with tests. Untested code does not merge.
+
+## Testing Stack
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| Unit Tests | Vitest + React Testing Library | Component logic, hooks, utils |
+| E2E Tests | Playwright | Full user flows, connector integration |
+| Mocking | MSW (Mock Service Worker) | Intercept connector calls in tests |
+| Coverage | Vitest built-in (`v8` provider) | Track coverage metrics |
+
+## Test Organization
+
+```
+tests/
+├── e2e/
+│   ├── dashboard.spec.ts       # Page-level E2E tests
+│   ├── project-crud.spec.ts    # Feature flow tests
+│   └── auth.setup.ts           # Authentication setup for E2E
+├── setup/
+│   ├── test-utils.tsx          # Custom render with providers
+│   ├── handlers.ts             # MSW request handlers (mock connectors)
+│   └── server.ts               # MSW server configuration
+└── fixtures/
+    ├── projects.json            # Test data matching generated model shapes
+    └── users.json
+```
+
+Component-level tests live next to their components:
+
+```
+src/components/ProjectCard/
+├── ProjectCard.tsx
+├── ProjectCard.test.tsx         # Unit tests
+└── index.ts
+```
+
+## Test Configuration
+
+### Vitest Config
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup/server.ts'],
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/generated/**', 'src/mockData/**', 'src/**/*.test.*'],
+      thresholds: {
+        branches: 70,
+        functions: 70,
+        lines: 70,
+        statements: 70,
+      },
+    },
+  },
+});
+```
+
+### Playwright Config
+
+```typescript
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? 'github' : 'html',
+
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'mobile', use: { ...devices['Pixel 5'] } },
+  ],
+
+  webServer: {
+    command: 'npm run dev',
+    port: 3000,
+    reuseExistingServer: !process.env.CI,
+    env: { VITE_USE_MOCK: 'true' },
+  },
+});
+```
+
+## Custom Test Renderer
+
+Wrap components in all required providers during tests:
+
+```tsx
+// tests/setup/test-utils.tsx
+import { render, RenderOptions } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { MemoryRouter } from 'react-router-dom';
+import { PowerProvider } from '@/PowerProvider';
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+}
+
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  initialRoute?: string;
+}
+
+function customRender(ui: React.ReactElement, options: CustomRenderOptions = {}) {
+  const { initialRoute = '/', ...renderOptions } = options;
+  const queryClient = createTestQueryClient();
+
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <PowerProvider>
+        <QueryClientProvider client={queryClient}>
+          <FluentProvider theme={webLightTheme}>
+            <MemoryRouter initialEntries={[initialRoute]}>
+              {children}
+            </MemoryRouter>
+          </FluentProvider>
+        </QueryClientProvider>
+      </PowerProvider>
+    );
+  }
+
+  return { ...render(ui, { wrapper: Wrapper, ...renderOptions }), queryClient };
+}
+
+// Re-export everything from Testing Library plus our custom render
+export * from '@testing-library/react';
+export { customRender as render };
+```
+
+## Mocking Connectors with MSW
+
+Mock Service Worker intercepts network requests at the service worker level, so your components behave exactly as they would with real connectors:
+
+```typescript
+// tests/setup/handlers.ts
+import { http, HttpResponse } from 'msw';
+import projectsFixture from '../fixtures/projects.json';
+import usersFixture from '../fixtures/users.json';
+
+export const handlers = [
+  // Mock SQL connector — projects endpoint
+  http.get('*/api/sql/projects', ({ request }) => {
+    const url = new URL(request.url);
+    const top = parseInt(url.searchParams.get('$top') || '25');
+    const skip = parseInt(url.searchParams.get('$skip') || '0');
+    const items = projectsFixture.slice(skip, skip + top);
+
+    return HttpResponse.json({
+      items,
+      hasMore: skip + top < projectsFixture.length,
+      totalCount: projectsFixture.length,
+    });
+  }),
+
+  // Mock Office 365 Users — current user
+  http.get('*/api/office365users/me', () => {
+    return HttpResponse.json(usersFixture[0]);
+  }),
+
+  // Mock create project
+  http.post('*/api/sql/projects', async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json(
+      { id: 'new-project-id', ...body, createdAt: new Date().toISOString() },
+      { status: 201 }
+    );
+  }),
+
+  // Mock error scenario — useful for testing error boundaries
+  http.get('*/api/sql/failing-endpoint', () => {
+    return HttpResponse.json(
+      { error: 'Internal Server Error', message: 'Database connection failed' },
+      { status: 500 }
+    );
+  }),
+];
+```
+
+```typescript
+// tests/setup/server.ts
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
+
+export const server = setupServer(...handlers);
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+## Unit Test Patterns
+
+### Testing a Component
+
+```tsx
+// src/components/ProjectCard/ProjectCard.test.tsx
+import { render, screen } from '../../../tests/setup/test-utils';
+import { ProjectCard } from './ProjectCard';
+
+const mockProject = {
+  id: '1',
+  name: 'Test Project',
+  status: 'Active',
+  owner: 'Jane Smith',
+  dueDate: '2026-06-15',
+};
+
+describe('ProjectCard', () => {
+  it('displays the project name and owner', () => {
+    render(<ProjectCard project={mockProject} />);
+
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
+  it('shows overdue badge when project is past due', () => {
+    const overdueProject = { ...mockProject, dueDate: '2020-01-01' };
+    render(<ProjectCard project={overdueProject} />);
+
+    expect(screen.getByText('Overdue')).toBeInTheDocument();
+  });
+
+  it('calls onSelect when card is clicked', async () => {
+    const onSelect = vi.fn();
+    const { user } = render(<ProjectCard project={mockProject} onSelect={onSelect} />);
+
+    await user.click(screen.getByRole('article'));
+    expect(onSelect).toHaveBeenCalledWith('1');
+  });
+});
+```
+
+### Testing a Hook
+
+```tsx
+// src/hooks/useProjects.test.ts
+import { renderHook, waitFor } from '../tests/setup/test-utils';
+import { useProjects } from './useProjects';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+describe('useProjects', () => {
+  it('fetches and returns projects', async () => {
+    const { result } = renderHook(() => useProjects(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(10); // matches fixture data
+    expect(result.current.data?.[0]).toHaveProperty('name');
+  });
+
+  it('handles server errors gracefully', async () => {
+    // Override handler for this test
+    server.use(
+      http.get('*/api/sql/projects', () => {
+        return HttpResponse.json({ error: 'Server Error' }, { status: 500 });
+      })
+    );
+
+    const { result } = renderHook(() => useProjects(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeDefined();
+  });
+});
+```
+
+### Testing Utilities
+
+```typescript
+// src/utils/formatDate.test.ts
+import { formatDate, isOverdue, daysRemaining } from './formatDate';
+
+describe('formatDate', () => {
+  it('formats ISO dates to human-readable strings', () => {
+    expect(formatDate('2026-06-15')).toBe('Jun 15, 2026');
+  });
+
+  it('returns "N/A" for null or undefined dates', () => {
+    expect(formatDate(null)).toBe('N/A');
+    expect(formatDate(undefined)).toBe('N/A');
+  });
+});
+
+describe('isOverdue', () => {
+  it('returns true for past dates', () => {
+    expect(isOverdue('2020-01-01')).toBe(true);
+  });
+
+  it('returns false for future dates', () => {
+    expect(isOverdue('2030-01-01')).toBe(false);
+  });
+});
+```
+
+## E2E Test Patterns
+
+### Page Navigation
+
+```typescript
+// tests/e2e/navigation.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Navigation', () => {
+  test('navigates between pages using sidebar', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByRole('link', { name: 'Dashboard' }).click();
+    await expect(page).toHaveURL('/dashboard');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await expect(page).toHaveURL('/settings');
+  });
+});
+```
+
+### Data Operations
+
+```typescript
+// tests/e2e/project-crud.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Project Management', () => {
+  test('creates a new project', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    await page.getByRole('button', { name: 'New Project' }).click();
+
+    // Fill form
+    await page.getByLabel('Project Name').fill('E2E Test Project');
+    await page.getByLabel('Status').selectOption('Active');
+    await page.getByLabel('Owner').fill('Test User');
+
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    // Verify project appears in the list
+    await expect(page.getByText('E2E Test Project')).toBeVisible();
+  });
+
+  test('paginates through projects', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Verify first page
+    await expect(page.getByText('Page 1')).toBeVisible();
+
+    // Navigate to next page
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByText('Page 2')).toBeVisible();
+  });
+
+  test('shows error state when connector fails', async ({ page }) => {
+    // This test relies on mock data being configured to return errors for certain routes
+    await page.goto('/dashboard?simulate-error=true');
+
+    await expect(page.getByText('Error loading data')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+  });
+});
+```
+
+### Responsive Testing
+
+```typescript
+// tests/e2e/responsive.spec.ts
+import { test, expect, devices } from '@playwright/test';
+
+test.describe('Responsive Layout', () => {
+  test('shows mobile navigation on small screens', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+
+    // Sidebar should be hidden; hamburger menu visible
+    await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible();
+    await expect(page.getByRole('navigation')).toBeHidden();
+  });
+
+  test('shows sidebar on desktop', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+
+    await expect(page.getByRole('navigation')).toBeVisible();
+  });
+});
+```
+
+## What to Test (and What Not To)
+
+### Always test:
+- Component rendering with different props and states (loading, error, empty, data)
+- User interactions (clicks, form submissions, navigation)
+- Custom hooks that wrap connector calls
+- Utility functions with business logic
+- Error boundaries and fallback states
+- Accessibility basics (correct roles, labels, keyboard navigation)
+
+### Do not test:
+- Generated files (`src/generated/`) — these are produced by PAC CLI and are the CLI's responsibility
+- Fluent UI component internals — trust the library
+- Simple pass-through components with no logic
+- TypeScript types (the compiler already validates these)
+
+## CI Integration
+
+Tests run automatically on every PR. The CI pipeline fails if:
+- Any unit test fails
+- Any E2E test fails
+- Coverage drops below thresholds (70% branches/functions/lines/statements)
+- TypeScript compilation fails
+- ESLint reports errors
+
+Tests in CI use mock data (`VITE_USE_MOCK=true`) so they don't require real Power Platform connections.
