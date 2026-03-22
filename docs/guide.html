@@ -629,6 +629,9 @@
       <button class="nav-item" data-target="connector-ids" onclick="navTo(this)">
         <span class="nav-icon">📇</span> Connector IDs
       </button>
+      <button class="nav-item" data-target="whats-next" onclick="navTo(this)">
+        <span class="nav-icon">🚀</span> What's Next
+      </button>
     </nav>
   </aside>
 
@@ -1433,6 +1436,68 @@ if (response.data.completed) {
 
       <p>To find Connection IDs in the Power Apps Maker Portal, look at the URL after creating a connection:</p>
       <pre>https://make.powerapps.com/environments/xxx/connections/shared_office365users/<strong>CONNECTION_ID</strong>/details</pre>
+    </section>
+
+    <!-- What's Next -->
+    <section class="section" id="whats-next">
+      <h2 class="section-title">What's Next</h2>
+      <p class="section-subtitle">After the wizard finishes, here's your daily workflow and common commands.</p>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Daily Development</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>npm run dev:local</code></td><td>Prototype with mock data — no auth or Power Platform connection needed</td></tr>
+          <tr><td><code>npm run dev</code></td><td>Connected mode — runs Vite + <code>pac code run</code> concurrently</td></tr>
+          <tr><td><code>npm run build</code></td><td>TypeScript check + Vite production build → <code>dist/</code></td></tr>
+          <tr><td><code>npm run test</code></td><td>Run unit tests with Vitest</td></tr>
+          <tr><td><code>npm run lint</code></td><td>ESLint check across <code>src/</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Deploying</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>pac code push</code></td><td>Upload your built app to Power Platform</td></tr>
+          <tr><td><code>npm run deploy</code></td><td>Shortcut: build + push in one command</td></tr>
+        </tbody>
+      </table></div>
+      <div class="card" style="margin-top: var(--s3); border-left: 3px solid var(--orange);">
+        <div class="card-body">
+          <strong>⚠ SPN auth note:</strong> <code>pac code push</code> requires Power Platform API access that service principal (SPN) auth often lacks. If push fails with a <code>checkAccess</code> permission error, switch to interactive auth:
+          <pre style="margin-top: var(--s2);">pac auth create --name DevInteractive --environment &lt;your-env-url&gt; --interactive
+pac auth select --name DevInteractive
+pac code push</pre>
+        </div>
+      </div>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Adding Data Sources</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td><td>Add a Dataverse table — generates TypeScript SDK in <code>src/generated/</code></td></tr>
+          <tr><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td><td>Add any other connector (Office 365 Users, SharePoint, SQL, etc.)</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required — there is no interactive picker mode. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>node wizard/index.mjs</code></td><td>Resume from where you left off</td></tr>
+          <tr><td><code>node wizard/index.mjs --from 7</code></td><td>Re-run from step 7 onward (keeps all config)</td></tr>
+          <tr><td><code>node wizard/index.mjs --reset</code></td><td>Start completely fresh</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Setting Up CI/CD</h3>
+      <p>See <code>.github/instructions/04-deployment.instructions.md</code> for full details. You'll need:</p>
+      <ul style="margin-top: var(--s2);">
+        <li>GitHub secrets: <code>PP_APP_ID</code>, <code>PP_CLIENT_SECRET</code>, <code>PP_TENANT_ID</code></li>
+        <li>Environment variable per target: <code>POWER_PLATFORM_URL</code></li>
+      </ul>
     </section>
 
     <!-- Footer -->
