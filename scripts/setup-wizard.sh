@@ -1062,6 +1062,7 @@ HTMLEOF
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite --port 3000\" \"pac code run\"",
+    "dev:local": "VITE_USE_MOCK=true vite --port 3000",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
@@ -1478,7 +1479,8 @@ step_verify_and_deploy() {
   echo ""
   echo "  What's next:"
   echo "    cd ${project_dir}"
-  echo "    npm run dev          <- start local dev server (port 3000)"
+  echo "    npm run dev:local    <- prototype with mock data (no auth needed)"
+  echo "    npm run dev          <- connected mode (Vite + pac code run)"
   echo "    pac code push        <- deploy changes to Power Platform"
   echo ""
   echo "  To add a data source later:"

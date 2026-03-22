@@ -256,6 +256,7 @@ Every project must define these scripts:
 {
   "scripts": {
     "dev": "concurrently \"vite --port 3000\" \"pac code run\"",
+    "dev:local": "VITE_USE_MOCK=true vite --port 3000",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
@@ -269,11 +270,37 @@ Every project must define these scripts:
 }
 ```
 
-## Starting with Mock Data
+## Local Development with Vite
 
-Always begin development with mock data before connecting real connectors. This enables offline development, faster iteration, and reliable demos.
+Local development has two modes depending on where you are in the development lifecycle. Start with **Prototype Mode** — it requires zero Power Platform configuration and gets you building UI immediately. Graduate to **Connected Mode** when you're ready to work with real data.
 
-Create mock data files that mirror the exact shape of your generated models:
+### Mode 1: Prototype Mode (Mock Data — No Power Platform Required)
+
+This is the fastest way to start building. Vite runs standalone with hot module replacement (HMR). No `pac code run`, no auth profiles, no connections. Your app renders instantly in the browser using mock data.
+
+**When to use:** Prototyping UI, building components, iterating on layout and design, demoing to stakeholders, onboarding new developers.
+
+```bash
+# Start Vite standalone with mock data
+npm run dev:local
+```
+
+This runs `VITE_USE_MOCK=true vite --port 3000`. Vite serves your app at `http://localhost:3000` with sub-second HMR — save a file, see the change instantly.
+
+**What works in this mode:**
+- All React components, routing, and Fluent UI styling
+- TanStack Query hooks (with mock data resolving as promises)
+- Form validation, state management, error boundaries
+- E2E tests via Playwright (pointed at localhost)
+
+**What does NOT work in this mode:**
+- Real connector calls (generated services require the Power Apps runtime)
+- `pac code run` features (platform context, auth context, connection consent)
+- `PowerProvider` context values that come from the Power Platform sandbox
+
+**Required setup for mock data:**
+
+1. Create mock data that mirrors your generated model shapes:
 
 ```typescript
 // src/mockData/projects.ts
@@ -281,17 +308,23 @@ import type { Project } from '@/generated/models/Project';
 
 export const mockProjects: Project[] = [
   {
-    id: '1',
+    id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Website Redesign',
-    status: 'Active',
+    status: 100000000,      // Active (option set integer)
     owner: 'Jane Smith',
-    dueDate: '2026-06-15'
+    dueDate: '2026-06-15',
   },
-  // ... more entries
+  {
+    id: '550e8400-e29b-41d4-a716-446655440001',
+    name: 'Mobile App MVP',
+    status: 100000001,      // Draft
+    owner: 'John Doe',
+    dueDate: '2026-09-01',
+  },
 ];
 ```
 
-Use an environment variable or a simple flag to toggle between mock and real data:
+2. Every hook that calls a connector must check `VITE_USE_MOCK`:
 
 ```typescript
 // src/hooks/useProjects.ts
@@ -305,11 +338,146 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: USE_MOCK
-      ? () => Promise.resolve(mockProjects)
+      ? () => Promise.resolve({ data: mockProjects })
       : () => ProjectService.getAll(),
   });
 }
 ```
+
+3. For hooks that create or update data, mock the mutation too:
+
+```typescript
+// src/hooks/useCreateProject.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ProjectService } from '@/generated/services/ProjectService';
+
+const USE_MOCK = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK === 'true';
+
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: USE_MOCK
+      ? async (data: Partial<Project>) => {
+          // Simulate creation delay
+          await new Promise(r => setTimeout(r, 300));
+          return { data: { ...data, id: crypto.randomUUID() } };
+        }
+      : (data: Partial<Project>) => ProjectService.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+}
+```
+
+### Mode 2: Connected Mode (Real Connectors via Power Platform)
+
+Once you've built the UI and want to connect to real data, switch to connected mode. This runs Vite and `pac code run` side by side.
+
+**Prerequisites for connected mode:**
+- PAC auth profiles created (see `00-environment-setup.instructions.md`)
+- At least one data source added via `pac code add-data-source`
+- TypeScript SDK generated via `pac code generate`
+- Active connection to the target environment: `pac auth select --name "Dev"`
+
+```bash
+# Start both Vite dev server and PAC Code runtime
+npm run dev
+```
+
+This runs `concurrently "vite --port 3000" "pac code run"`:
+- **Vite** (`http://localhost:3000`): Serves your React app with HMR
+- **`pac code run`**: Starts the Power Apps runtime proxy that handles connector calls, auth context, and platform integration
+
+Open `http://localhost:3000` in your browser. The app loads from Vite, and connector calls route through the `pac code run` proxy transparently.
+
+### Vite Environment Variables
+
+Vite exposes environment variables prefixed with `VITE_` to client code via `import.meta.env`. Variables without the `VITE_` prefix are NOT available in the browser (this is a security feature).
+
+| Variable | Purpose | Set In |
+|----------|---------|--------|
+| `VITE_USE_MOCK` | Toggle mock data (`'true'` / unset) | `dev:local` script or `.env.development` |
+| `VITE_APP_TITLE` | App display name (optional) | `.env` or `.env.development` |
+
+**Create a `.env.development` file** for Vite-specific dev settings (this is separate from `.env.local` which holds Power Platform credentials):
+
+```bash
+# .env.development — Vite development settings (safe to commit)
+VITE_USE_MOCK=true
+```
+
+Override per-command on the CLI:
+
+```bash
+VITE_USE_MOCK=false npm run dev:local   # Force connected-mode behavior in standalone Vite
+VITE_USE_MOCK=true npm run dev          # Force mock data even in connected mode
+```
+
+### Vite Configuration Reference
+
+The complete `vite.config.ts` for a Code App:
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,          // Required — Power Apps SDK expects port 3000
+    strictPort: true,    // Fail if 3000 is occupied instead of silently using another port
+    open: true,          // Auto-open browser on npm run dev
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,     // Disable in production builds for Code Apps
+  },
+});
+```
+
+Key settings:
+- **`strictPort: true`**: Prevents Vite from falling back to 3001/3002 if 3000 is busy. If it fails, you have a stale process — kill it and retry.
+- **`open: true`**: Launches your default browser automatically. Remove this if you prefer to open manually.
+
+### Switching Between Modes
+
+| Phase | Command | What's Running | Data Source |
+|-------|---------|---------------|-------------|
+| Prototyping | `npm run dev:local` | Vite only | Mock data |
+| Integration | `npm run dev` | Vite + `pac code run` | Real connectors |
+| Testing | `npm run test` | Vitest | Mock data via MSW |
+| E2E Testing | `npm run test:e2e` | Vite + Playwright | Mock data |
+| Production Build | `npm run build` | `tsc` + Vite build | N/A (static output) |
+| Deploy | `npm run deploy` | Build + `pac code push` | N/A |
+
+### Troubleshooting Local Development
+
+**Port 3000 already in use:**
+```bash
+# Find and kill the process using port 3000
+lsof -ti:3000 | xargs kill -9
+npm run dev:local
+```
+
+**`pac code run` fails to start:**
+- Verify auth: `pac org who` (should show org info, no popup)
+- Check PAC version: avoid v2.3.2 (known bug — see `00-environment-setup.instructions.md`)
+- Ensure `power.config.json` exists next to `package.json`
+
+**HMR not working (changes not reflected):**
+- Check that `vite.config.ts` has the `react()` plugin
+- Clear the Vite cache: `rm -rf node_modules/.vite && npm run dev:local`
+
+**Mock data shape doesn't match real data:**
+- Run `pac code generate` to regenerate TypeScript models
+- Compare `src/generated/models/` types against your mock data
+- Remember: choice/picklist fields are **integers** (100000000), not strings
 
 ## File Naming Conventions
 

@@ -594,6 +594,11 @@
         <span class="nav-icon">🔗</span> Portal Links
       </button>
 
+      <div class="nav-group-label">Development</div>
+      <button class="nav-item" data-target="ref-localdev" onclick="navTo(this)">
+        <span class="nav-icon">💻</span> Local Dev with Vite
+      </button>
+
       <div class="nav-group-label">Reference</div>
       <button class="nav-item" data-target="ref-connectors" onclick="navTo(this)">
         <span class="nav-icon">🔌</span> Connectors
@@ -1016,6 +1021,120 @@ pac code push        ← deploy changes to Power Platform</pre>
           </div>
         </div></div>
       </div>
+    </section>
+
+    <!-- Local Development -->
+    <section class="section" id="ref-localdev">
+      <h2 class="section-title">Local Development with Vite</h2>
+      <p class="section-subtitle">Two modes: Prototype (mock data, no Power Platform) and Connected (real connectors). Always start with Prototype mode.</p>
+
+      <div class="card-grid">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">⚡</div>
+          <h3>Prototype Mode</h3>
+          <p>Vite only. Mock data. No auth, no connections, no Power Platform needed. Build UI fast.</p>
+          <pre style="margin-top:12px;">npm run dev:local</pre>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">🔗</div>
+          <h3>Connected Mode</h3>
+          <p>Vite + <code>pac code run</code>. Real connector calls through the Power Platform proxy.</p>
+          <pre style="margin-top:12px;">npm run dev</pre>
+        </div></div>
+      </div>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">When to Use Each Mode</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Phase</th><th>Command</th><th>What Runs</th><th>Data Source</th></tr></thead>
+        <tbody>
+          <tr><td>Prototyping / UI</td><td><code>npm run dev:local</code></td><td>Vite only</td><td>Mock data</td></tr>
+          <tr><td>Integration</td><td><code>npm run dev</code></td><td>Vite + <code>pac code run</code></td><td>Real connectors</td></tr>
+          <tr><td>Unit Tests</td><td><code>npm run test</code></td><td>Vitest</td><td>Mock data (MSW)</td></tr>
+          <tr><td>E2E Tests</td><td><code>npm run test:e2e</code></td><td>Vite + Playwright</td><td>Mock data</td></tr>
+          <tr><td>Production Build</td><td><code>npm run build</code></td><td><code>tsc</code> + Vite build</td><td>N/A (static)</td></tr>
+          <tr><td>Deploy</td><td><code>npm run deploy</code></td><td>Build + <code>pac code push</code></td><td>N/A</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Prototype Mode — How It Works</h4>
+      <p><code>npm run dev:local</code> runs <code>VITE_USE_MOCK=true vite --port 3000</code>. Vite serves your app at <code>http://localhost:3000</code> with sub-second HMR — save a file, see it instantly.</p>
+
+      <div class="callout callout-success">
+        <span class="callout-icon">✅</span>
+        <div><strong>What works:</strong> All React components, routing, Fluent UI, TanStack Query hooks (resolving mock promises), form validation, state management, error boundaries, Playwright E2E tests.</div>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>What doesn't:</strong> Real connector calls, <code>PowerProvider</code> context, auth context, connection consent — these require <code>pac code run</code>.</div>
+      </div>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Mock Data Pattern</h4>
+      <p>Every hook that calls a connector checks <code>VITE_USE_MOCK</code> to decide whether to return mock data or make a real call:</p>
+      <pre>// src/hooks/useProjects.ts
+import { useQuery } from '@tanstack/react-query';
+import { mockProjects } from '@/mockData/projects';
+import { ProjectService } from '@/generated/services/ProjectService';
+
+const USE_MOCK = import.meta.env.DEV &amp;&amp; import.meta.env.VITE_USE_MOCK === 'true';
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: USE_MOCK
+      ? () =&gt; Promise.resolve({ data: mockProjects })
+      : () =&gt; ProjectService.getAll(),
+  });
+}</pre>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Connected Mode — Prerequisites</h4>
+      <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li>PAC auth profiles created (<code>pac org who</code> shows org, no popup)</li>
+        <li>Data source added: <code>pac code add-data-source</code></li>
+        <li>SDK generated: <code>pac code generate</code></li>
+        <li><code>power.config.json</code> exists next to <code>package.json</code></li>
+      </ul>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Vite Configuration</h4>
+      <pre>// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,          // Required by Power Apps SDK
+    strictPort: true,    // Fail if 3000 occupied (don't silently use 3001)
+    open: true,          // Auto-open browser
+  },
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  build: { outDir: 'dist' },
+});</pre>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Vite Environment Variables</h4>
+      <p>Only variables prefixed with <code>VITE_</code> are exposed to client code via <code>import.meta.env</code>. This is a security feature — Power Platform credentials (<code>PP_*</code>) are never leaked to the browser.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variable</th><th>Purpose</th><th>Set In</th></tr></thead>
+        <tbody>
+          <tr><td><code>VITE_USE_MOCK</code></td><td>Toggle mock data</td><td><code>dev:local</code> script or <code>.env.development</code></td></tr>
+          <tr><td><code>VITE_APP_TITLE</code></td><td>App display name (optional)</td><td><code>.env</code> or <code>.env.development</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Troubleshooting</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Port 3000 already in use</td><td><code>lsof -ti:3000 | xargs kill -9</code></td></tr>
+          <tr><td><code>pac code run</code> fails</td><td>Check <code>pac org who</code>, avoid PAC v2.3.2, confirm <code>power.config.json</code></td></tr>
+          <tr><td>HMR not refreshing</td><td>Verify <code>react()</code> plugin in vite.config.ts, clear cache: <code>rm -rf node_modules/.vite</code></td></tr>
+          <tr><td>Mock data shape mismatch</td><td>Regenerate models: <code>pac code generate</code>, compare with <code>src/generated/models/</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <p style="margin-top:16px;">See <code>.github/instructions/01-scaffold.instructions.md</code> for complete Vite config, mock data patterns, and mutation mocking.</p>
     </section>
 
     <!-- Reference: Connectors -->
