@@ -618,6 +618,9 @@
       <button class="nav-item" data-target="ref-dataverse" onclick="navTo(this)">
         <span class="nav-icon">🗄️</span> Dataverse Schema
       </button>
+      <button class="nav-item" data-target="ref-copilot-studio" onclick="navTo(this)">
+        <span class="nav-icon">🤖</span> Copilot Studio
+      </button>
 
       <div class="nav-group-label">Resources</div>
       <button class="nav-item" data-target="naming-rules" onclick="navTo(this)">
@@ -661,7 +664,8 @@
 │       ├── <span class="file">04-deployment.instructions.md</span>          <span class="comment"># CI/CD, pac code push, ALM</span>
 │       ├── <span class="file">05-testing.instructions.md</span>             <span class="comment"># Vitest, Playwright, MSW</span>
 │       ├── <span class="file">06-security.instructions.md</span>            <span class="comment"># Auth, secrets, DLP, validation</span>
-│       └── <span class="file">07-dataverse-schema.instructions.md</span>    <span class="comment"># Tables, columns, option sets</span>
+│       ├── <span class="file">07-dataverse-schema.instructions.md</span>    <span class="comment"># Tables, columns, option sets</span>
+│       └── <span class="file">08-copilot-studio.instructions.md</span>      <span class="comment"># Copilot Studio agent integration</span>
 ├── <span class="folder">docs/</span>
 │   └── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide</span>
 ├── <span class="folder">scripts/</span>
@@ -677,7 +681,7 @@
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📋</div>
-          <h3>9 Instruction Files</h3>
+          <h3>10 Instruction Files</h3>
           <p>Copilot reads these automatically. They encode every team standard — naming, patterns, security, testing — so AI-generated code is consistent from day one.</p>
         </div></div>
         <div class="card"><div class="card-body">
@@ -1310,6 +1314,77 @@ if (name.length > 200) return 'Max 200 characters';
 ❌  mybrn_IdeaStatus          (camelCase — use all lowercase)</pre>
 
       <p>See <code>.github/instructions/07-dataverse-schema.instructions.md</code> for idempotent setup scripts, column creation patterns, and relationship modeling.</p>
+    </section>
+
+    <!-- Reference: Copilot Studio -->
+    <section class="section" id="ref-copilot-studio">
+      <h2 class="section-title">Copilot Studio Agent Integration</h2>
+      <p class="section-subtitle">Add a conversational AI agent to your Code App using the Microsoft Copilot Studio connector.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <div>Copilot Studio agents are invoked through a Power Platform connector — the same sandbox rules apply. No direct HTTP. The generated <code>CopilotStudioService</code> handles everything.</div>
+      </div>
+
+      <h4>Setup Steps</h4>
+      <ol style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li><strong>Create &amp; publish</strong> your agent in <a href="https://copilotstudio.microsoft.com/" target="_blank" rel="noopener" class="portal-link">↗ Copilot Studio</a></li>
+        <li><strong>Get the agent name</strong> from Channels → Web app → connection string (e.g. <code>cr3e1_customerSupportAgent</code>)</li>
+        <li><strong>Create a connection</strong> in <a href="https://make.powerapps.com" target="_blank" rel="noopener">make.powerapps.com</a> → Connections → + New → "Microsoft Copilot Studio"</li>
+        <li><strong>Add the data source:</strong>
+          <pre style="margin-top:8px;">pac code add-data-source -a "shared_microsoftcopilotstudio" -c &lt;connectionId&gt;</pre>
+        </li>
+        <li><strong>Import &amp; call</strong> the generated service in your React code</li>
+      </ol>
+
+      <h4>Invoking the Agent</h4>
+      <div class="callout callout-danger">
+        <span class="callout-icon">🚨</span>
+        <div><strong>Always use <code>ExecuteCopilotAsyncV2</code>.</strong> The other methods (<code>ExecuteCopilot</code>, <code>ExecuteCopilotAsync</code>) have known issues — fire-and-forget or 502 errors.</div>
+      </div>
+
+      <pre>import { CopilotStudioService } from '@/generated/services/CopilotStudioService';
+
+const response = await CopilotStudioService.ExecuteCopilotAsyncV2({
+  message: "What is the status of my order?",
+  notificationUrl: "https://notificationurlplaceholder",
+  agentName: "cr3e1_customerSupportAgent",
+});
+
+if (response.data.completed) {
+  console.log(response.data.lastResponse);
+}</pre>
+
+      <h4 style="margin-top:var(--s5);">Request Parameters</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Parameter</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>message</code></td><td>Yes</td><td>User's message. Can be JSON string for structured data.</td></tr>
+          <tr><td><code>notificationUrl</code></td><td>Yes</td><td>Always <code>"https://notificationurlplaceholder"</code></td></tr>
+          <tr><td><code>agentName</code></td><td>Yes</td><td>Published agent name (case-sensitive, includes publisher prefix)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4 style="margin-top:var(--s5);">Response Structure</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>responses</code></td><td><code>string[]</code></td><td>Array of response strings from the agent</td></tr>
+          <tr><td><code>conversationId</code></td><td><code>string</code></td><td>Conversation ID for multi-turn tracking</td></tr>
+          <tr><td><code>lastResponse</code></td><td><code>string</code></td><td>Most recent agent response</td></tr>
+          <tr><td><code>completed</code></td><td><code>boolean</code></td><td>Whether the agent finished processing</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>Response casing varies.</strong> Property names may appear as <code>conversationId</code>, <code>ConversationId</code>, or <code>conversationID</code>. Always use optional chaining or a safe accessor.</div>
+      </div>
+
+      <h4 style="margin-top:var(--s5);">Prototype Mode (Mock Data)</h4>
+      <p>When running <code>npm run dev:local</code>, create a mock that simulates agent responses with realistic delays. The instruction file includes a complete mock implementation and shows how to wire it into <code>useCopilotAgent</code> with the <code>VITE_USE_MOCK</code> toggle.</p>
+
+      <p style="margin-top:16px;">See <code>.github/instructions/08-copilot-studio.instructions.md</code> for the complete hook, chat UI component, structured I/O patterns, and troubleshooting.</p>
     </section>
 
     <!-- Naming Rules -->

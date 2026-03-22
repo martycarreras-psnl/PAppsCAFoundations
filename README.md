@@ -16,7 +16,8 @@ PAppsCAFoundations/
 │       ├── 04-deployment.instructions.md          # CI/CD, pac code push, ALM, solution management
 │       ├── 05-testing.instructions.md             # Vitest, Playwright, MSW connector mocking
 │       ├── 06-security.instructions.md            # Auth, secrets, DLP, input validation
-│       └── 07-dataverse-schema.instructions.md    # Tables, columns, option sets, relationships
+│       ├── 07-dataverse-schema.instructions.md    # Tables, columns, option sets, relationships
+│       └── 08-copilot-studio.instructions.md      # Copilot Studio agent integration
 ├── docs/
 │   └── guide.html                          # Interactive visual setup guide (Fluent UI design)
 ├── scripts/
