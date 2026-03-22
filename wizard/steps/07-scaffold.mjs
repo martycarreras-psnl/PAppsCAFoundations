@@ -6,7 +6,7 @@ import {
 import { join, resolve } from 'node:path';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
-import { pacPath, runLive, run, runSafeLive, runSafe, IS_WIN } from '../lib/shell.mjs';
+import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN } from '../lib/shell.mjs';
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 
@@ -517,8 +517,20 @@ async function setupConnectors(pac, projectDir) {
   }
 
   // ── 4. Add data sources via pac code add-data-source ──
+  //    ALL pac code commands require user (interactive) auth.
+  //    The BAP checkAccess API rejects service principal tokens.
   if (pac) {
     ui.line('');
+
+    // Detect SPN auth and switch to user auth before running any pac code commands
+    const authSwitched = await ensureUserAuthForCodeCommands(pac);
+    if (!authSwitched) {
+      ui.warn('Cannot add data sources without user auth.');
+      ui.line('  Switch to user auth and re-run: node wizard/index.mjs --from 7');
+      ui.line('');
+      return;
+    }
+
     ui.line('Adding data sources to your Code App...');
 
     // Check if Dataverse was selected — ask for table names
@@ -534,7 +546,7 @@ async function setupConnectors(pac, projectDir) {
         if (!table.trim()) break;
         const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
         ui.line(`  Running: pac ${args.join(' ')}`);
-        const ok = runSafeLive(pac, args, { cwd: projectDir });
+        const ok = runPacCodeDataSource(pac, args, projectDir);
         if (ok) {
           ui.ok(`${table.trim()} — data source added`);
         } else {
@@ -577,7 +589,7 @@ async function setupConnectors(pac, projectDir) {
           }
           const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
           ui.line(`  Running: pac ${args.join(' ')}`);
-          const ok = runSafeLive(pac, args, { cwd: projectDir });
+          const ok = runPacCodeDataSource(pac, args, projectDir);
           if (ok) {
             ui.ok(`${connector.name} — data source added`);
           } else {
@@ -604,6 +616,123 @@ async function setupConnectors(pac, projectDir) {
   }
   ui.line('After deploying, map each connection reference to an actual connection');
   ui.line('in the Power Apps Maker Portal → Solutions → your solution → Connection References.');
+}
+
+// ─────────── PAC Code Helpers ───────────
+
+const BAP_PERMISSION_RE = /does not have permission to access|checkAccess|HTTP error status: 403/i;
+
+/**
+ * Run pac code add-data-source and detect false-positive success.
+ * PAC CLI may exit 0 but log a 403 error when SPN auth is active.
+ * Returns true only if the command succeeded without BAP errors.
+ */
+function runPacCodeDataSource(pac, args, cwd) {
+  const { ok, stderr } = runSafeCapture(pac, args, { cwd });
+  if (!ok) return false;
+  // PAC may exit 0 despite 403 — check stderr for BAP rejection
+  if (BAP_PERMISSION_RE.test(stderr)) {
+    ui.warn('PAC reported success but encountered a BAP permission error (403).');
+    ui.line('  The data source was NOT actually registered.');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Detect SPN auth and switch to user auth before pac code commands.
+ * ALL pac code commands require user (interactive) auth — the BAP
+ * checkAccess API rejects service principal tokens.
+ */
+async function ensureUserAuthForCodeCommands(pac) {
+  const devUrl = stateGet('PP_ENV_DEV', '').replace(/\/+$/, '');
+
+  // Check current auth profile
+  const authList = runSafe(pac, ['auth', 'list']);
+  if (!authList) return true; // can't determine — proceed and let it fail
+
+  // Find the active profile (marked with *)
+  const lines = authList.split('\n');
+  let activeIsUser = false;
+  let activeIsSPN = false;
+
+  for (const line of lines) {
+    if (!/\*/.test(line.substring(0, 15))) continue; // not the active profile
+    if (/\bUser\b/i.test(line)) activeIsUser = true;
+    if (/\bApplication\b/i.test(line)) activeIsSPN = true;
+    break;
+  }
+
+  if (activeIsUser) return true; // already on user auth
+
+  if (activeIsSPN) {
+    ui.warn('Active PAC profile uses service principal (SPN) auth.');
+    ui.line('  All `pac code` commands require user (interactive) auth.');
+    ui.line('  The BAP checkAccess API rejects SPN tokens for these operations.');
+    ui.line('');
+
+    // Try to find an existing User profile for this environment
+    for (const line of lines) {
+      const indexMatch = line.match(/^\[(\d+)\]/);
+      if (!indexMatch) continue;
+      if (!/\bUser\b/i.test(line)) continue;
+      if (devUrl && !line.replace(/\/+/g, '/').includes(devUrl.replace(/\/+/g, '/'))) continue;
+
+      const idx = indexMatch[1];
+      const selectOk = runSafe(pac, ['auth', 'select', '--index', idx]);
+      if (selectOk !== null) {
+        ui.ok(`Switched to existing User auth profile (index ${idx})`);
+        return true;
+      }
+    }
+
+    // No User profile — create one
+    ui.line('No user-based auth profile found for this environment.');
+    ui.line('A browser sign-in is required for pac code commands.');
+    ui.line('');
+
+    const proceed = await confirm({ message: 'Sign in with a user account now?', default: true });
+    if (!proceed) return false;
+
+    const profileName = stateGet('APP_NAME', 'CodeApp').replace(/\\s+/g, '') + 'User';
+    ui.line('');
+    ui.line('Opening browser for sign-in...');
+    let createOk = runSafeLive(pac, [
+      'auth', 'create',
+      '--name', profileName,
+      '--environment', devUrl,
+    ]);
+
+    if (!createOk) {
+      ui.warn('Browser sign-in failed. Trying device code flow...');
+      ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
+      ui.line('');
+      createOk = runSafeLive(pac, [
+        'auth', 'create',
+        '--name', profileName,
+        '--environment', devUrl,
+        '--deviceCode',
+      ]);
+    }
+
+    if (!createOk) {
+      ui.warn('Could not establish user auth.');
+      return false;
+    }
+
+    runSafe(pac, ['auth', 'select', '--name', profileName]);
+    const who = runSafe(pac, ['org', 'who']);
+    if (who) {
+      ui.ok('User auth verified');
+      return true;
+    }
+
+    ui.warn('Auth created but verification failed. Proceeding anyway...');
+    return true;
+  }
+
+  // Unknown auth type — proceed and let it fail naturally
+  return true;
 }
 
 // ─────────── Helpers ───────────
