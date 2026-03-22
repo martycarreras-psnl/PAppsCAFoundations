@@ -124,64 +124,76 @@ export default async function stepVerifyAndDeploy() {
 /**
  * Ensure an interactive (user-based) PAC auth profile is active.
  * SPN auth cannot push code apps — the BAP checkAccess API rejects it.
- * Returns true if an interactive profile is selected and verified.
+ *
+ * pac auth list output format (real example):
+ *   [1]          UNIVERSAL AgentIdeator-SP     7a53c97f-...  Public Application  ...
+ *   [2]          UNIVERSAL AgentIdeatorRefresh user@...      Public User         ...
+ *   [3]   *      UNIVERSAL Dev                 7a53c97f-...  Public Application  ...
+ *
+ * Key: Type column = "Application" (SPN) vs "User" (interactive).
+ * Environment URL may have a trailing slash.
  */
 async function ensureInteractiveAuth(pac, profileName, envUrl) {
-  // List existing auth profiles to find a usable interactive one
-  const authListOutput = runSafe(pac, ['auth', 'list']);
+  const envUrlNorm = envUrl.replace(/\/+$/, '');
 
+  // Parse pac auth list to find a User-type profile for our environment
+  const authListOutput = runSafe(pac, ['auth', 'list']);
   if (authListOutput) {
     const lines = authListOutput.split('\n');
-
-    // First: try selecting our named profile directly
-    const selectByName = runSafe(pac, ['auth', 'select', '--name', profileName]);
-    if (selectByName !== null) {
-      // Verify it's not an SPN profile
-      const whoCheck = runSafe(pac, ['org', 'who']);
-      if (whoCheck && !whoCheck.toLowerCase().includes('applicationuser')) {
-        ui.ok(`Interactive auth profile "${profileName}" selected`);
-        return true;
-      }
-    }
-
-    // Second: scan for any interactive profile matching the environment
     for (const line of lines) {
-      // Match lines with an index like [1], [2], etc.
       const indexMatch = line.match(/^\[(\d+)\]/);
       if (!indexMatch) continue;
-      // Skip SPN / application user profiles
-      if (line.toLowerCase().includes('applicationuser') || line.toLowerCase().includes('admin_spn')) continue;
-      // Check if this profile targets our environment
-      if (!line.includes(envUrl)) continue;
+
+      // Must be Type=User, NOT Application
+      if (!/\bUser\b/i.test(line)) continue;
+
+      // Must target our environment (normalize trailing slash)
+      if (!line.replace(/\/+/g, '/').includes(envUrlNorm.replace(/\/+/g, '/'))) continue;
 
       const idx = indexMatch[1];
       const selectOk = runSafe(pac, ['auth', 'select', '--index', idx]);
       if (selectOk !== null) {
-        ui.ok(`Selected existing interactive auth profile (index ${idx})`);
+        ui.ok(`Selected existing User auth profile (index ${idx})`);
         return true;
       }
     }
   }
 
-  // No suitable interactive profile found — create one via device code flow
+  // No User profile for this environment — create one
   ui.line('');
-  ui.line('A device-code sign-in is required to push Code Apps.');
-  ui.line('You will get a URL and code to enter in your browser.');
-  ui.line('Sign in with a user who has System Administrator or');
-  ui.line('System Customizer role in the target environment.');
+  ui.line('No user-based auth profile found for this environment.');
+  ui.line('A browser sign-in is required to push Code Apps.');
+  ui.line('Your browser will open — sign in with a user who has');
+  ui.line('System Administrator or System Customizer role.');
+  ui.line('');
+  ui.line(`Environment: ${envUrl}`);
   ui.line('');
 
-  const proceed = await confirm({ message: 'Create interactive auth profile now?', default: true });
+  const proceed = await confirm({ message: 'Sign in now?', default: true });
   if (!proceed) return false;
 
   ui.line('');
-  ui.line('Starting device-code sign-in...');
-  const createOk = runSafeLive(pac, [
+  ui.line('Opening browser for sign-in...');
+  // Default pac auth create (no --deviceCode) opens a browser dialog.
+  // Falls back to device code if the browser flow fails.
+  let createOk = runSafeLive(pac, [
     'auth', 'create',
     '--name', profileName,
     '--environment', envUrl,
-    '--deviceCode',
   ]);
+
+  if (!createOk) {
+    // Browser dialog may not work on headless/remote — try device code
+    ui.warn('Browser sign-in failed. Trying device code flow...');
+    ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
+    ui.line('');
+    createOk = runSafeLive(pac, [
+      'auth', 'create',
+      '--name', profileName,
+      '--environment', envUrl,
+      '--deviceCode',
+    ]);
+  }
 
   if (!createOk) {
     ui.warn('Auth creation failed.');
@@ -194,7 +206,7 @@ async function ensureInteractiveAuth(pac, profileName, envUrl) {
   // Verify it works
   const verifyWho = runSafe(pac, ['org', 'who']);
   if (verifyWho) {
-    ui.ok('Interactive auth verified');
+    ui.ok('User auth verified');
     return true;
   }
 
