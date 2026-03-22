@@ -179,6 +179,13 @@ npm run sync:foundations            # Preview changes + apply
 npm run sync:foundations -- --dry-run   # Preview only, no changes
 ```
 
+> **No `package.json` yet?** If you haven't run the scaffold step (Step 7 of the wizard), there won't be a root `package.json` and `npm run` commands will fail. Use the scripts directly instead:
+>
+> ```bash
+> bash scripts/sync-foundations.sh          # macOS / Linux
+> node scripts/sync-foundations.mjs         # Any platform
+> ```
+
 **What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/guide.html`, `.env.template`
 
 **What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
