@@ -91,7 +91,7 @@ PP_CLIENT_SECRET=ENC:iv_hex:authTag_hex:ciphertext_hex
 
 **Implementation**: `wizard/lib/crypto.mjs` (encrypt/decrypt/isEncrypted)
 
-The wizard's `secrets.mjs` recovery and `scripts/setup-auth.sh` both auto-detect and decrypt `ENC:` values transparently.
+The wizard's `secrets.mjs` recovery and `scripts/setup-auth.mjs` both auto-detect and decrypt `ENC:` values transparently. The legacy `setup-auth.sh` wrapper remains available for Bash-heavy environments.
 
 ### Pre-Commit Hook (papps-secret-guard)
 

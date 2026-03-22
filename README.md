@@ -70,7 +70,7 @@ If you've already completed the Power Platform portal and Admin Center steps and
 
 ```bash
 cp .env.template .env.local   # Fill in credentials
-bash scripts/setup-auth.sh    # Create PAC auth profiles
+node scripts/setup-auth.mjs   # Create PAC auth profiles
 pac org who                   # Verify (no browser popup)
 ```
 
@@ -99,8 +99,10 @@ PAppsCAFoundations/
 ├── docs/
 │   └── guide.html                          # Interactive visual setup guide (Fluent UI design)
 ├── scripts/
-│   ├── op-pac.sh                           # 1Password wrapper for pac commands
-│   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
+│   ├── op-pac.mjs                          # Cross-platform 1Password wrapper for pac commands
+│   ├── op-pac.sh                           # Legacy Bash wrapper for pac commands
+│   ├── setup-auth.mjs                      # Cross-platform auth setup (1Password or .env.local)
+│   ├── setup-auth.sh                       # Legacy Bash auth setup
 │   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
 │   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
 │   ├── generate-dataverse-plan.mjs         # Expand planning payloads into execution plans
@@ -142,6 +144,8 @@ node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.
 This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
 
 The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
+
+The same rule now applies to auth helpers: prefer `node scripts/setup-auth.mjs` and `node scripts/op-pac.mjs` as the canonical cross-platform entry points.
 
 ## Staying Updated
 

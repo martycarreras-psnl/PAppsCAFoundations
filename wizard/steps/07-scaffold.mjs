@@ -136,7 +136,7 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs']) {
+    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
@@ -360,6 +360,8 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run preview\` | Preview production build locally |
 | \`npm run test\` | Run unit tests (Vitest) |
 | \`npm run lint\` | Lint with ESLint |
+| \`npm run setup:auth\` | Create PAC auth profiles from 1Password or .env.local |
+| \`npm run pac -- <args>\` | Run pac with 1Password-injected credentials when using op:// references |
 | \`npm run validate:schema-plan\` | Validate the Dataverse planning artifact before provisioning |
 | \`npm run generate:dataverse-plan\` | Generate normalized Dataverse execution plans from the planning artifact |
 | \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and regenerate the SDK |
@@ -616,6 +618,8 @@ function createMinimalProject(dir, appName) {
       test: 'vitest run',
       'test:watch': 'vitest',
       'test:e2e': 'playwright test',
+      'setup:auth': 'node scripts/setup-auth.mjs',
+      pac: 'node scripts/op-pac.mjs',
       deploy: 'npm run build && pac code push',
       'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
       'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',

@@ -1276,7 +1276,9 @@ GIEOF
   if [ -d "$ROOT_DIR/scripts" ]; then
     mkdir -p "$project_dir/scripts"
     cp "$ROOT_DIR/scripts/setup-auth.sh" "$project_dir/scripts/" 2>/dev/null || true
+    cp "$ROOT_DIR/scripts/setup-auth.mjs" "$project_dir/scripts/" 2>/dev/null || true
     cp "$ROOT_DIR/scripts/op-pac.sh" "$project_dir/scripts/" 2>/dev/null || true
+    cp "$ROOT_DIR/scripts/op-pac.mjs" "$project_dir/scripts/" 2>/dev/null || true
     echo "  ✓ Helper scripts copied"
   fi
 

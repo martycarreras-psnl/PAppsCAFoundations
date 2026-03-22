@@ -1,5 +1,5 @@
 {
-  "version": "2026.03.22.3",
+  "version": "2026.03.22.4",
   "releasedAt": "2026-03-22",
   "capabilities": [
     "execution-contracts",
@@ -9,12 +9,14 @@
     "schema-plan-generator",
     "dataverse-data-source-registration",
     "cross-platform-helper-entrypoints",
+    "cross-platform-auth-entrypoints",
     "copilot-discovery-helper"
   ],
   "notes": [
     "Use this file to compare a downstream project against the current Foundations bundle.",
     "Run npm run sync:foundations to pull newer instruction and helper-script bundles into downstream repos.",
     "Version 2026.03.22.2 completes the reusable Dataverse helper-script layer by generating plan artifacts and registering planned tables through PAC.",
-    "Version 2026.03.22.3 promotes Node-based helper entry points so downstream npm workflows are cross-platform by default."
+    "Version 2026.03.22.3 promotes Node-based helper entry points so downstream npm workflows are cross-platform by default.",
+    "Version 2026.03.22.4 adds Node-based auth wrappers so setup:auth and the 1Password PAC wrapper are cross-platform by default."
   ]
 }

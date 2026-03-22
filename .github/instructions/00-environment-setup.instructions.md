@@ -207,28 +207,28 @@ op run --env-file=.env -- pac solution export --path ./solution.zip --name YourS
 
 **Step 2d: Convenience wrapper script**
 
-To avoid typing `op run --env-file=.env --` every time, create a wrapper:
+To avoid typing `op run --env-file=.env --` every time, create a cross-platform Node wrapper:
 
-```bash
-#!/bin/bash
-# scripts/op-pac.sh — Wrapper that runs pac commands with 1Password-injected credentials
-# Usage: ./scripts/op-pac.sh auth create --name "Dev" --environment $PP_ENV_DEV ...
-#        ./scripts/op-pac.sh code push
-#        ./scripts/op-pac.sh solution export ...
+```javascript
+#!/usr/bin/env node
+// scripts/op-pac.mjs — Wrapper that runs pac commands with 1Password-injected credentials
 
-set -euo pipefail
-op run --env-file=.env -- pac "$@"
+import { execFileSync } from 'node:child_process';
+
+execFileSync('op', ['run', '--env-file=.env', '--', 'pac', ...process.argv.slice(2)], { stdio: 'inherit' });
 ```
+
+The Bash wrapper can stay in the repo for shell-heavy environments, but the `.mjs` entry point should be the default in downstream `package.json` scripts.
 
 Add npm scripts that use it:
 
 ```json
 {
   "scripts": {
-    "pac": "bash scripts/op-pac.sh",
-    "deploy": "npm run build && bash scripts/op-pac.sh code push",
-    "solution:export": "bash scripts/op-pac.sh solution export --path ./solution/solution.zip --name YourSolutionName",
-    "solution:import": "bash scripts/op-pac.sh solution import --path ./solution/solution-managed.zip"
+    "pac": "node scripts/op-pac.mjs",
+    "deploy": "npm run build && node scripts/op-pac.mjs code push",
+    "solution:export": "node scripts/op-pac.mjs solution export --path ./solution/solution.zip --name YourSolutionName",
+    "solution:import": "node scripts/op-pac.mjs solution import --path ./solution/solution-managed.zip"
   }
 }
 ```
@@ -370,116 +370,29 @@ pac org who
 
 Add a setup script that auto-detects whether the developer uses 1Password or `.env.local`:
 
-```bash
-#!/bin/bash
-# scripts/setup-auth.sh — Run once after cloning the repo
-# Supports both 1Password (op CLI) and .env.local credential sources
+```javascript
+#!/usr/bin/env node
+// scripts/setup-auth.mjs — Run once after cloning the repo
+// Supports both 1Password (op CLI) and .env.local credential sources
 
-set -euo pipefail
+import { execFileSync } from 'node:child_process';
 
-# ---- Detect credential source ----
-USE_1PASSWORD=false
-
-if command -v op &>/dev/null && [ -f .env ] && grep -q "^PP_.*=op://" .env 2>/dev/null; then
-  echo "Detected 1Password secret references in .env"
-  USE_1PASSWORD=true
-elif [ -f .env.local ]; then
-  echo "Using credentials from .env.local"
-  source .env.local
-else
-  echo "ERROR: No credential source found."
-  echo ""
-  echo "Option 1 (1Password): Ensure 'op' CLI is installed and .env contains op:// references"
-  echo "Option 2 (.env.local): Copy .env.template to .env.local and fill in your credentials"
-  exit 1
-fi
-
-# ---- Helper to run pac with credentials ----
-run_pac() {
-  if [ "$USE_1PASSWORD" = true ]; then
-    op run --env-file=.env -- pac "$@"
-  else
-    pac "$@"
-  fi
-}
-
-# ---- Validate credentials are resolvable ----
-echo "Validating credentials..."
-if [ "$USE_1PASSWORD" = true ]; then
-  # Test that op can resolve the references (will prompt for biometric/password)
-  op run --env-file=.env -- bash -c 'echo "Tenant: ${PP_TENANT_ID:0:8}... App: ${PP_APP_ID:0:8}..."'
-else
-  for var in PP_TENANT_ID PP_APP_ID PP_CLIENT_SECRET PP_ENV_DEV; do
-    if [ -z "${!var:-}" ]; then
-      echo "ERROR: $var is not set in .env.local"
-      exit 1
-    fi
-  done
-  echo "Tenant: ${PP_TENANT_ID:0:8}... App: ${PP_APP_ID:0:8}..."
-fi
-
-# ---- Create PAC auth profiles ----
-echo ""
-echo "Creating PAC auth profiles..."
-
-run_pac auth create \
-  --name "Dev" \
-  --environment "$PP_ENV_DEV" \
-  --applicationId "$PP_APP_ID" \
-  --clientSecret "$PP_CLIENT_SECRET" \
-  --tenant "$PP_TENANT_ID"
-echo "  ✓ Dev profile created"
-
-if [ -n "${PP_ENV_TEST:-}" ]; then
-  run_pac auth create \
-    --name "Test" \
-    --environment "$PP_ENV_TEST" \
-    --applicationId "$PP_APP_ID" \
-    --clientSecret "$PP_CLIENT_SECRET" \
-    --tenant "$PP_TENANT_ID"
-  echo "  ✓ Test profile created"
-fi
-
-if [ -n "${PP_ENV_PROD:-}" ]; then
-  run_pac auth create \
-    --name "Prod" \
-    --environment "$PP_ENV_PROD" \
-    --applicationId "$PP_APP_ID" \
-    --clientSecret "$PP_CLIENT_SECRET" \
-    --tenant "$PP_TENANT_ID"
-  echo "  ✓ Prod profile created"
-fi
-
-# ---- Verify ----
-echo ""
-echo "Verifying connection..."
-pac auth select --name "Dev"
-pac org who
-
-echo ""
-echo "Setup complete! Auth profiles created successfully."
-echo ""
-echo "Daily usage:"
-if [ "$USE_1PASSWORD" = true ]; then
-  echo "  Profiles are ready — 'pac code push' works without op run."
-  echo "  For ephemeral mode: npm run pac -- code push"
-  echo "  Re-run this script after secret rotation."
-else
-  echo "  'pac code push' works directly — no browser popup."
-fi
-echo ""
-echo "  Switch environments:  pac auth select --name <Dev|Test|Prod>"
-echo "  Check connection:     pac org who"
-echo "  List profiles:        pac auth list"
+// Detect the credential source, resolve secrets, then call:
+// pac auth create --name <Dev|Test|Prod> --environment <url> --applicationId <appId> --clientSecret <secret> --tenant <tenant>
+// Finally verify with:
+// pac auth select --name Dev
+// pac org who
 ```
+
+The full implementation lives in `scripts/setup-auth.mjs`. Keep `setup-auth.sh` only as a legacy Bash wrapper if your team still needs it.
 
 Make it executable and add to `package.json`:
 
 ```json
 {
   "scripts": {
-    "setup:auth": "bash scripts/setup-auth.sh",
-    "pac": "bash scripts/op-pac.sh"
+    "setup:auth": "node scripts/setup-auth.mjs",
+    "pac": "node scripts/op-pac.mjs"
   }
 }
 ```
@@ -615,4 +528,4 @@ Client secrets expire. Plan for rotation:
 → The `.env` file may have incorrect syntax. Ensure each line is `KEY=op://vault/item/field` with no spaces around `=` and no quotes around the `op://` reference.
 
 **"I use 1Password but another team member doesn't"**
-→ Both approaches coexist cleanly. The `.env` file (with `op://` references) and `.env.template` / `.env.local` (with raw values) can both live in the same repo. The `setup-auth.sh` script auto-detects which one to use. Developers using 1Password just ignore `.env.template`; developers not using 1Password ignore `.env`.
+→ Both approaches coexist cleanly. The `.env` file (with `op://` references) and `.env.template` / `.env.local` (with raw values) can both live in the same repo. The `setup-auth.mjs` script auto-detects which one to use. Developers using 1Password just ignore `.env.template`; developers not using 1Password ignore `.env`.
