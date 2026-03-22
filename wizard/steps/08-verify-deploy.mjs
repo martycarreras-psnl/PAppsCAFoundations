@@ -3,7 +3,7 @@ import { confirm, input } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
 import { pacPath, runLive, runSafe, runSafeLive, run } from '../lib/shell.mjs';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export default async function stepVerifyAndDeploy() {
@@ -37,43 +37,74 @@ export default async function stepVerifyAndDeploy() {
     ui.line('');
     ui.divider();
     ui.line('');
-    ui.line('pac code push requires interactive (user) auth.');
-    ui.line('Service principal auth does NOT work for push — the Power Platform');
-    ui.line('BAP API rejects SPN tokens for the push/checkAccess endpoint.');
+
+    // Check if the app is already registered (appId populated in power.config.json)
+    const powerConfigPath = join(projectDir, 'power.config.json');
+    let isFirstPush = true;
+    if (existsSync(powerConfigPath)) {
+      try {
+        const config = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
+        isFirstPush = !config.appId;
+      } catch { /* treat as first push */ }
+    }
+
+    if (isFirstPush) {
+      ui.line('This is the first push — the app has not been registered yet.');
+      ui.line('The first push MUST use user (interactive) auth because');
+      ui.line('the BAP checkAccess API rejects service principal tokens.');
+      ui.line('');
+      ui.line('After the first push succeeds, SPN auth will work for CI/CD.');
+    } else {
+      ui.ok('App already registered (appId found in power.config.json).');
+      ui.line('SPN or user auth both work for subsequent pushes.');
+    }
     ui.line('');
 
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
     if (deploy) {
-      // ── Ensure interactive auth profile exists ──
       const profileName = stateGet('APP_NAME', 'DevInteractive').replace(/\s+/g, '');
-      const profileReady = await ensureInteractiveAuth(pac, profileName, devUrl);
 
-      if (profileReady) {
+      if (isFirstPush) {
+        // First push: require user auth
+        const profileReady = await ensureInteractiveAuth(pac, profileName, devUrl);
+        if (profileReady) {
+          ui.line('');
+          ui.line('Deploying (first push — creating app)...');
+          const pushOk = runSafeLive(pac, ['code', 'push'], { cwd: projectDir });
+          if (pushOk) {
+            ui.ok('Deployed! Your app is live.');
+            ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
+          } else {
+            ui.warn('Deploy failed.');
+            showTroubleshooting(projectDir, pac);
+          }
+        } else {
+          ui.warn('Could not establish user auth. Deploy manually:');
+          ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl}`);
+          ui.line(`  ${pac} auth select --name ${profileName}`);
+          ui.line(`  cd ${projectDir} && ${pac} code push`);
+        }
+      } else {
+        // Subsequent push: use whatever auth is active
         ui.line('');
         ui.line('Deploying...');
         const pushOk = runSafeLive(pac, ['code', 'push'], { cwd: projectDir });
         if (pushOk) {
-          ui.ok('Deployed! Your app is live.');
+          ui.ok('Deployed! Your app is updated.');
         } else {
           ui.warn('Deploy failed.');
-          ui.line('');
-          ui.line('Troubleshooting:');
-          ui.line('  1. Confirm you are signed in with a user that has System Administrator');
-          ui.line('     or System Customizer role in the target environment.');
-          ui.line('  2. Verify power.config.json is in the same directory as package.json.');
-          ui.line('  3. Retry manually:');
-          ui.line(`     cd ${projectDir} && ${pac} code push`);
+          showTroubleshooting(projectDir, pac);
         }
-      } else {
-        ui.warn('Could not establish interactive auth. Deploy manually:');
-        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --deviceCode`);
-        ui.line(`  ${pac} auth select --name ${profileName}`);
-        ui.line(`  cd ${projectDir} && ${pac} code push`);
       }
     } else {
       ui.line('');
-      ui.line('Deploy later with interactive auth:');
-      ui.line(`  ${pac} auth select --name <your-interactive-profile>`);
+      if (isFirstPush) {
+        ui.line('Deploy later (first push needs user auth):');
+        ui.line(`  ${pac} auth create --name <ProfileName> --environment ${devUrl}`);
+        ui.line(`  ${pac} auth select --name <ProfileName>`);
+      } else {
+        ui.line('Deploy later:');
+      }
       ui.line(`  cd ${projectDir} && ${pac} code push`);
     }
   } else if (!distExists) {
@@ -117,6 +148,18 @@ export default async function stepVerifyAndDeploy() {
   ui.line('');
 
   setCompletedStep(8);
+}
+
+// ─────────── Helpers ───────────
+
+function showTroubleshooting(projectDir, pac) {
+  ui.line('');
+  ui.line('Troubleshooting:');
+  ui.line('  1. Confirm you are signed in with a user that has System Administrator');
+  ui.line('     or System Customizer role in the target environment.');
+  ui.line('  2. Verify power.config.json is in the same directory as package.json.');
+  ui.line('  3. Retry manually:');
+  ui.line(`     cd ${projectDir} && ${pac} code push`);
 }
 
 // ─────────── Interactive Auth Helper ───────────
