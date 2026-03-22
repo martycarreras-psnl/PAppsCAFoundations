@@ -48,14 +48,25 @@ export default async function stepVerifyAndDeploy() {
   // ── Deploy ──
   if (distExists && pac) {
     ui.line('');
+    ui.line('Note: pac code push requires Power Platform API access.');
+    ui.line('SPN (service principal) auth often lacks permission for this.');
+    ui.line('If push fails, switch to interactive auth:');
+    ui.line(`  pac auth create --name DevInteractive --environment ${devUrl} --interactive`);
+    ui.line('');
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
     if (deploy) {
       ui.line('');
       ui.line('Deploying...');
-      if (runLive(`"${pac}" code push`, { cwd: projectDir })) {
+      const pushOk = runLive(`"${pac}" code push`, { cwd: projectDir });
+      if (pushOk) {
         ui.ok('Deployed! Your app is live.');
       } else {
-        ui.warn(`Deploy failed. Try manually: cd ${projectDir} && pac code push`);
+        ui.warn('Deploy failed (likely SPN permission issue).');
+        ui.line('');
+        ui.line('Fix: create an interactive auth profile and retry:');
+        ui.line(`  pac auth create --name DevInteractive --environment ${devUrl} --interactive`);
+        ui.line('  pac auth select --name DevInteractive');
+        ui.line(`  cd ${projectDir} && pac code push`);
       }
     } else {
       ui.line(`Skipped. Deploy later: cd ${projectDir} && pac code push`);
@@ -82,8 +93,8 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  pac code push        <- deploy changes to Power Platform');
   ui.line('');
   ui.line('To add a data source later:');
-  ui.line('  pac code add-data-source');
-  ui.line('  pac code generate');
+  ui.line('  pac code add-data-source -a dataverse -t <table_logical_name>');
+  ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
   ui.line('');
   ui.line('To set up CI/CD:');
   ui.line('  See .github/instructions/04-deployment.instructions.md');

@@ -1,5 +1,5 @@
 // wizard/steps/07-scaffold.mjs — Scaffold the Code App project
-import { input, confirm } from '@inquirer/prompts';
+import { input, confirm, select } from '@inquirer/prompts';
 import {
   writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync,
 } from 'node:fs';
@@ -158,25 +158,53 @@ export default async function stepScaffold() {
   ui.line('');
   ui.line('Add data sources now? (You can always add more later)');
   ui.line('');
-  ui.line('Common connectors:');
-  ui.line('  • Dataverse (tables you created)');
-  ui.line('  • Office 365 Users (people picker, org chart)');
-  ui.line('  • SharePoint (documents, lists)');
-  ui.line('  • SQL Server (external databases)');
-  ui.line('');
-  const addDs = await confirm({ message: 'Add a data source now?', default: false });
-  if (addDs && pac) {
+  let addMore = true;
+  while (addMore && pac) {
+    const dsType = await select({
+      message: 'What type of data source?',
+      choices: [
+        { name: 'Dataverse table', value: 'dataverse' },
+        { name: 'Office 365 Users', value: 'shared_office365users' },
+        { name: 'SharePoint', value: 'shared_sharepointonline' },
+        { name: 'SQL Server', value: 'shared_sql' },
+        { name: 'Other connector (enter API ID)', value: '__other__' },
+        { name: 'Skip — no more data sources', value: '__skip__' },
+      ],
+    });
+    if (dsType === '__skip__') break;
+
+    let args;
+    if (dsType === 'dataverse') {
+      const table = await input({ message: 'Dataverse table logical name (e.g. agtpo_agentidea)', validate: (v) => v.trim() ? true : 'Required' });
+      args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
+    } else if (dsType === '__other__') {
+      const apiId = await input({ message: 'Connector API ID (e.g. shared_office365)', validate: (v) => v.trim() ? true : 'Required' });
+      const connId = await input({ message: 'Connection ID (from Power Apps Maker Portal URL, or Enter to skip)', default: '' });
+      args = ['code', 'add-data-source', '-a', apiId.trim()];
+      if (connId.trim()) args.push('-c', connId.trim());
+    } else {
+      // Named connector (shared_office365users, shared_sharepointonline, shared_sql)
+      const connId = await input({ message: `Connection ID for ${dsType} (from Power Apps Maker Portal URL, or Enter to skip)`, default: '' });
+      args = ['code', 'add-data-source', '-a', dsType];
+      if (connId.trim()) args.push('-c', connId.trim());
+    }
+
     ui.line('');
-    ui.line('Running interactive data source picker...');
-    runSafeLive(pac, ['code', 'add-data-source'], { cwd: projectDir });
+    ui.line(`Running: pac ${args.join(' ')}`);
+    const dsOk = runSafeLive(pac, args, { cwd: projectDir });
+    if (dsOk) {
+      ui.ok('Data source added (TypeScript SDK generated in src/generated/)');
+    } else {
+      ui.warn('Data source command failed. You can add it manually later:');
+      ui.line(`  pac ${args.join(' ')}`);
+    }
+
     ui.line('');
-    ui.line('Generating TypeScript SDK from data source...');
-    runSafeLive(pac, ['code', 'generate'], { cwd: projectDir });
-  } else if (addDs) {
-    ui.warn('PAC CLI not found. Run data source commands manually later.');
-  } else {
-    ui.line('Skipping data sources for now.');
-    ui.line('To add later: pac code add-data-source && pac code generate');
+    addMore = await confirm({ message: 'Add another data source?', default: false });
+  }
+  if (!pac) {
+    ui.warn('PAC CLI not found. Add data sources manually later:');
+    ui.line('  pac code add-data-source -a dataverse -t <table_name>');
   }
 
   // ── Git initialization ──
