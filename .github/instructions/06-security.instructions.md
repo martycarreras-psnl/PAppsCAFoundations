@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/**"
 ---
 
 # Power Apps Code Apps — Security & Authentication

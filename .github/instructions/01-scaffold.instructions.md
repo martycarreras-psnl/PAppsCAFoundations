@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "src/**,vite.config.ts,tsconfig.json,package.json,power.config.json"
 ---
 
 # Power Apps Code Apps — Project Scaffolding & Structure

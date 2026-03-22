@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "scripts/**,.env,.env.template,.github/workflows/**,power.config.json,*.sh"
 ---
 
 # Power Apps Code Apps — Environment & Authentication Setup
