@@ -580,6 +580,9 @@
       <button class="nav-item" data-target="tech-stack" onclick="navTo(this)">
         <span class="nav-icon">⚡</span> Tech Stack
       </button>
+      <button class="nav-item" data-target="planning-layer" onclick="navTo(this)">
+        <span class="nav-icon">🧠</span> Planning Layer
+      </button>
 
       <div class="nav-group-label">Setup Wizard</div>
       <button class="nav-item" data-target="enable-code-apps" onclick="navTo(this)">
@@ -646,10 +649,11 @@
     <!-- Hero -->
     <section class="hero" id="hero-section">
       <h1>Power Apps Code Apps</h1>
-      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and go from zero to deployed.</p>
+      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and if you want a top-notch business fit, use the narrative-first planning layer before locking in schema and connectors.</p>
       <div class="hero-actions">
         <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations/generate" class="btn btn-primary" target="_blank" rel="noopener">📋 Use This Template</a>
         <a href="#wizard-overview" class="btn btn-outline">🧙 Run the Wizard</a>
+        <a href="#planning-layer" class="btn btn-outline">🧠 Planning Layer</a>
         <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
       </div>
     </section>
@@ -664,6 +668,9 @@
 │   └── <span class="folder">instructions/</span>                              <span class="comment"># Copilot instruction files</span>
 │       ├── <span class="file">00-before-you-start.instructions.md</span>    <span class="comment"># Publisher, environments, solution</span>
 │       ├── <span class="file">00-environment-setup.instructions.md</span>   <span class="comment"># App Registration, auth, 1Password</span>
+│       ├── <span class="file">00a-business-problem-decomposition.instructions.md</span> <span class="comment"># Turn freeform business narratives into planning inputs</span>
+│       ├── <span class="file">00b-scope-refinement-and-solution-shaping.instructions.md</span> <span class="comment"># Refine workflows, automation, Teams, reporting, governance</span>
+│       ├── <span class="file">00c-solution-concept-to-dataverse-plan.instructions.md</span> <span class="comment"># Bridge refined scope into Dataverse planning</span>
 │       ├── <span class="file">01-scaffold.instructions.md</span>            <span class="comment"># Project structure, tech stack</span>
 │       ├── <span class="file">02-connectors.instructions.md</span>          <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
 │       ├── <span class="file">03-components.instructions.md</span>          <span class="comment"># React + Fluent UI v9 patterns</span>
@@ -692,8 +699,13 @@
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📋</div>
-          <h3>10 Instruction Files</h3>
-          <p>Copilot reads these automatically. They encode every team standard — naming, patterns, security, testing — so AI-generated code is consistent from day one.</p>
+          <h3>13 Instruction Files</h3>
+          <p>Copilot reads these automatically. They now cover both technical execution and narrative-first business planning, so AI guidance can help shape better solutions before code starts.</p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#efe7fd; color:var(--purple);">🧠</div>
+          <h3>Narrative-First Planning</h3>
+          <p>Optional, but high leverage. If the app idea is still taking shape, this planning layer helps Copilot decompose the business narrative, challenge gaps, and refine scope before schema and connectors harden.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
@@ -747,6 +759,49 @@
       </div>
     </section>
 
+    <section class="section" id="planning-layer">
+      <h2 class="section-title">Narrative-First Planning Layer</h2>
+      <p class="section-subtitle">Use this when the business problem is still being worked out and you want the eventual app to be more than a fast scaffold.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">🧠</span>
+        <div>
+          <strong>This is optional, but it is part of the formula for a top-notch app.</strong>
+          If the user already knows exactly what they are building, the wizard can get them moving quickly. If the problem, workflows, approvals, reporting, Teams touchpoints, or Copilot usage are still emerging, the planning layer helps Copilot refine the scope before schema and connectors become expensive to change.
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">1</div>
+          <h3>Decompose the Narrative</h3>
+          <p>Copilot starts from the user's freeform description, identifies goals, actors, workflows, outputs, constraints, and unknowns, then asks only the most useful follow-up questions.</p>
+          <p style="margin-top:12px;"><code>00a-business-problem-decomposition.instructions.md</code></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#fff4ce; color:#835c00;">2</div>
+          <h3>Refine the Scope</h3>
+          <p>Copilot challenges for exception paths, validations, approvals, automation, Teams, Microsoft 365 outputs, reporting, governance, and Copilot placement decisions.</p>
+          <p style="margin-top:12px;"><code>00b-scope-refinement-and-solution-shaping.instructions.md</code></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">3</div>
+          <h3>Convert to Technical Planning</h3>
+          <p>Once the scope is stable, Copilot derives candidate entities, relationships, ownership patterns, and lifecycle states, then hands off into the Dataverse planning artifact workflow.</p>
+          <p style="margin-top:12px;"><code>00c-solution-concept-to-dataverse-plan.instructions.md</code></p>
+        </div></div>
+      </div>
+
+      <div class="callout callout-success">
+        <span class="callout-icon">✅</span>
+        <div>
+          <strong>Use the wizard to get operational fast.</strong>
+          <strong>Use the planning layer to get the business fit right.</strong>
+          Together, they help teams avoid premature schema decisions, guessed connectors, weak approval models, and late-stage rework.
+        </div>
+      </div>
+    </section>
+
     <!-- Wizard Overview -->
     <!-- Enable Code Apps -->
     <section class="section" id="enable-code-apps">
@@ -787,7 +842,7 @@
 
     <section class="section" id="wizard-overview">
       <h2 class="section-title">The Setup Wizard</h2>
-      <p class="section-subtitle">Two steps. Start to finish. No instruction files to read.</p>
+      <p class="section-subtitle">Two steps to get operational fast. For non-trivial apps, pair it with the planning layer before locking in schema and connectors.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
@@ -800,6 +855,7 @@
           <strong>Step 2 — Run the wizard:</strong>
           <pre style="margin-top:8px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
           <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+          <p style="margin-top:8px;"><strong>Want a stronger business fit?</strong> After the wizard gives you a working foundation, use the narrative-first planning instructions to refine the business scope before finalizing Dataverse schema, connectors, approvals, or agent behavior.</p>
           <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
         </div>
       </div>
@@ -1030,11 +1086,16 @@
               <li>Creates the full folder structure (components, pages, hooks, utils, tests, etc.)</li>
               <li>Writes starter files: <code>main.tsx</code>, <code>App.tsx</code> with Fluent UI + TanStack Query providers</li>
               <li>Copies all instruction files from the foundations repo</li>
+              <li>Includes the narrative-first planning instructions so you can refine the business scope before hardening schema and connector choices</li>
               <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
-              <li>Optionally sets up connectors and connection references</li>
+              <li>Optionally sets up connectors and connection references after the solution direction is clear</li>
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
+            <div class="callout callout-warn">
+              <span class="callout-icon">⚠️</span>
+              <div>If your app concept is still evolving, do not treat Step 7 as permission to guess at tables, workflows, or connectors. The planning layer exists to help Copilot elaborate the business problem first.</div>
+            </div>
           </div></div>
         </div>
 
