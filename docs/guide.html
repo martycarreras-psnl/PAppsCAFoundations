@@ -645,22 +645,27 @@
       <p class="section-subtitle">The repo contains instruction files, helper scripts, and a setup wizard that work together.</p>
 
       <div class="file-tree"><span class="folder">PAppsCAFoundations/</span>
-├── <span class="folder">.github/instructions/</span>          <span class="comment"># Copilot instruction files</span>
-│   ├── <span class="file">00-before-you-start</span>          <span class="comment"># Publisher, environments, solution</span>
-│   ├── <span class="file">00-environment-setup</span>         <span class="comment"># App Registration, auth, 1Password</span>
-│   ├── <span class="file">01-scaffold</span>                  <span class="comment"># Project structure, tech stack</span>
-│   ├── <span class="file">02-connectors</span>                <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
-│   ├── <span class="file">03-components</span>                <span class="comment"># React + Fluent UI v9 patterns</span>
-│   ├── <span class="file">04-deployment</span>                <span class="comment"># CI/CD, pac code push, ALM</span>
-│   ├── <span class="file">05-testing</span>                   <span class="comment"># Vitest, Playwright, MSW</span>
-│   ├── <span class="file">06-security</span>                  <span class="comment"># Auth, secrets, DLP, validation</span>
-│   └── <span class="file">07-dataverse-schema</span>          <span class="comment"># Tables, columns, option sets</span>
+├── <span class="folder">.github/</span>
+│   └── <span class="folder">instructions/</span>                              <span class="comment"># Copilot instruction files</span>
+│       ├── <span class="file">00-before-you-start.instructions.md</span>    <span class="comment"># Publisher, environments, solution</span>
+│       ├── <span class="file">00-environment-setup.instructions.md</span>   <span class="comment"># App Registration, auth, 1Password</span>
+│       ├── <span class="file">01-scaffold.instructions.md</span>            <span class="comment"># Project structure, tech stack</span>
+│       ├── <span class="file">02-connectors.instructions.md</span>          <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
+│       ├── <span class="file">03-components.instructions.md</span>          <span class="comment"># React + Fluent UI v9 patterns</span>
+│       ├── <span class="file">04-deployment.instructions.md</span>          <span class="comment"># CI/CD, pac code push, ALM</span>
+│       ├── <span class="file">05-testing.instructions.md</span>             <span class="comment"># Vitest, Playwright, MSW</span>
+│       ├── <span class="file">06-security.instructions.md</span>            <span class="comment"># Auth, secrets, DLP, validation</span>
+│       └── <span class="file">07-dataverse-schema.instructions.md</span>    <span class="comment"># Tables, columns, option sets</span>
+├── <span class="folder">docs/</span>
+│   └── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide</span>
 ├── <span class="folder">scripts/</span>
-│   ├── <span class="file">setup-wizard.sh</span>              <span class="comment"># ← THE MAIN EVENT (8-step wizard)</span>
-│   ├── <span class="file">setup-auth.sh</span>                <span class="comment"># Auth profile creation</span>
-│   └── <span class="file">op-pac.sh</span>                    <span class="comment"># 1Password wrapper for pac</span>
-├── <span class="file">.env</span>                             <span class="comment"># 1Password references (safe to commit)</span>
-├── <span class="file">.env.template</span>                    <span class="comment"># Template for non-1Password teams</span>
+│   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># 1Password wrapper for pac</span>
+│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Auth profile creation</span>
+│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># ← THE MAIN EVENT (8-step wizard)</span>
+├── <span class="folder">solution/</span>                               <span class="comment"># Power Platform solution artifacts</span>
+├── <span class="file">.env</span>                                    <span class="comment"># 1Password references (safe to commit)</span>
+├── <span class="file">.env.template</span>                           <span class="comment"># Template for non-1Password teams</span>
+├── <span class="file">.gitignore</span>
 └── <span class="file">README.md</span></div>
 
       <div class="card-grid">
