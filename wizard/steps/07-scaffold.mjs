@@ -42,9 +42,12 @@ export default async function stepScaffold() {
   ui.line('Downloading starter template...');
   mkdirSync(projectDir, { recursive: true });
 
+  const dirNotEmpty = existsSync(projectDir) && readdirSync(projectDir).length > 0;
+  const degitForce = dirNotEmpty ? ' --force' : '';
+
   let templateOk = false;
   try {
-    templateOk = runLive(`npx --yes degit microsoft/PowerAppsCodeApps/templates/starter "${projectDir}"`);
+    templateOk = runLive(`npx --yes degit microsoft/PowerAppsCodeApps/templates/starter "${projectDir}"${degitForce}`);
     if (templateOk) ui.ok('Template downloaded');
   } catch { /* fall through */ }
 
@@ -421,7 +424,8 @@ function createMinimalProject(dir, appName) {
     scripts: {
       dev: 'concurrently "vite --port 3000" "pac code run"',
       'dev:local': crossPlatformDevLocal,
-      build: 'tsc && vite build',
+      typecheck: 'tsc --noEmit',
+      build: 'npm run typecheck && vite build',
       preview: 'vite preview',
       lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
       format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
@@ -429,7 +433,6 @@ function createMinimalProject(dir, appName) {
       'test:watch': 'vitest',
       'test:e2e': 'playwright test',
       deploy: 'npm run build && pac code push',
-      generate: 'pac code generate',
     },
   }, null, 2) + '\n');
 }

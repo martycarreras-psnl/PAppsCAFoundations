@@ -1,8 +1,8 @@
 // wizard/steps/08-verify-deploy.mjs — Build, verify & deploy
-import { confirm } from '@inquirer/prompts';
+import { confirm, input } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
-import { pacPath, runLive, runSafe, run } from '../lib/shell.mjs';
+import { pacPath, runLive, runSafe, runSafeLive, run } from '../lib/shell.mjs';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -32,45 +32,54 @@ export default async function stepVerifyAndDeploy() {
     ui.line("  You can fix build errors and run 'npm run build' later.");
   }
 
-  // ── Auth verification ──
-  if (pac) {
-    ui.line('');
-    ui.line('Final auth check...');
-    runSafe(pac, ['auth', 'select', '--name', 'Dev']);
-    const who = runSafe(pac, ['org', 'who']);
-    if (who) {
-      ui.ok('Auth verified');
-    } else {
-      ui.warn('Auth check failed');
-    }
-  }
-
   // ── Deploy ──
   if (distExists && pac) {
     ui.line('');
-    ui.line('Note: pac code push requires Power Platform API access.');
-    ui.line('SPN (service principal) auth often lacks permission for this.');
-    ui.line('If push fails, switch to interactive auth:');
-    ui.line(`  pac auth create --name DevInteractive --environment ${devUrl} --interactive`);
+    ui.divider();
     ui.line('');
+    ui.line('pac code push requires interactive (user) auth.');
+    ui.line('Service principal auth does NOT work for push — the Power Platform');
+    ui.line('BAP API rejects SPN tokens for the push/checkAccess endpoint.');
+    ui.line('');
+
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
     if (deploy) {
-      ui.line('');
-      ui.line('Deploying...');
-      const pushOk = runLive(`"${pac}" code push`, { cwd: projectDir });
-      if (pushOk) {
-        ui.ok('Deployed! Your app is live.');
-      } else {
-        ui.warn('Deploy failed (likely SPN permission issue).');
+      // ── Ensure interactive auth profile exists ──
+      const profileName = stateGet('APP_NAME', 'DevInteractive').replace(/\s+/g, '');
+      const profileReady = await ensureInteractiveAuth(pac, profileName, devUrl);
+
+      if (profileReady) {
         ui.line('');
-        ui.line('Fix: create an interactive auth profile and retry:');
-        ui.line(`  pac auth create --name DevInteractive --environment ${devUrl} --interactive`);
-        ui.line('  pac auth select --name DevInteractive');
-        ui.line(`  cd ${projectDir} && pac code push`);
+        ui.line('Deploying...');
+        const pushOk = runSafeLive(pac, ['code', 'push'], { cwd: projectDir });
+        if (pushOk) {
+          ui.ok('Deployed! Your app is live.');
+        } else {
+          ui.warn('Deploy failed.');
+          ui.line('');
+          ui.line('Troubleshooting:');
+          ui.line('  1. Confirm you are signed in with a user that has System Administrator');
+          ui.line('     or System Customizer role in the target environment.');
+          ui.line('  2. Verify power.config.json is in the same directory as package.json.');
+          ui.line('  3. Retry manually:');
+          ui.line(`     cd ${projectDir} && ${pac} code push`);
+        }
+      } else {
+        ui.warn('Could not establish interactive auth. Deploy manually:');
+        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --interactive`);
+        ui.line(`  ${pac} auth select --name ${profileName}`);
+        ui.line(`  cd ${projectDir} && ${pac} code push`);
       }
     } else {
-      ui.line(`Skipped. Deploy later: cd ${projectDir} && pac code push`);
+      ui.line('');
+      ui.line('Deploy later with interactive auth:');
+      ui.line(`  ${pac} auth select --name <your-interactive-profile>`);
+      ui.line(`  cd ${projectDir} && ${pac} code push`);
     }
+  } else if (!distExists) {
+    ui.line('');
+    ui.line('Skipping deploy — no dist/index.html. Build first, then push:');
+    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);
   }
 
   // ── Summary ──
@@ -108,4 +117,82 @@ export default async function stepVerifyAndDeploy() {
   ui.line('');
 
   setCompletedStep(8);
+}
+
+// ─────────── Interactive Auth Helper ───────────
+
+/**
+ * Ensure an interactive (user-based) PAC auth profile is active.
+ * SPN auth cannot push code apps — the BAP checkAccess API rejects it.
+ * Returns true if an interactive profile is selected and verified.
+ */
+async function ensureInteractiveAuth(pac, profileName, envUrl) {
+  // Check if current auth is already interactive (non-SPN)
+  const whoOutput = runSafe(pac, ['org', 'who']);
+
+  // List existing auth profiles to see what's available
+  const authListOutput = runSafe(pac, ['auth', 'list']);
+
+  // Try to find and select an existing interactive profile
+  if (authListOutput) {
+    // Look for a profile that matches our environment and is not SPN
+    // pac auth list shows profiles with [*] for active, includes environment URL
+    const lines = authListOutput.split('\n');
+    let interactiveProfileFound = false;
+
+    for (const line of lines) {
+      // Interactive profiles typically show "Public" or user email, not "ApplicationUser"
+      if (line.includes(envUrl) && !line.toLowerCase().includes('applicationuser')) {
+        interactiveProfileFound = true;
+        break;
+      }
+    }
+
+    if (interactiveProfileFound) {
+      ui.line('Found existing interactive auth profile.');
+      // Try selecting by name
+      const selectOk = runSafe(pac, ['auth', 'select', '--name', profileName]);
+      if (selectOk !== null) {
+        ui.ok(`Auth profile "${profileName}" selected`);
+        return true;
+      }
+    }
+  }
+
+  // No suitable interactive profile — create one
+  ui.line('');
+  ui.line('An interactive (browser) sign-in is required to push Code Apps.');
+  ui.line('This will open your browser — sign in with a user who has');
+  ui.line('System Administrator or System Customizer role in the environment.');
+  ui.line('');
+
+  const proceed = await confirm({ message: 'Create interactive auth profile now?', default: true });
+  if (!proceed) return false;
+
+  ui.line('');
+  ui.line('Opening browser for sign-in...');
+  const createOk = runSafeLive(pac, [
+    'auth', 'create',
+    '--name', profileName,
+    '--environment', envUrl,
+    '--interactive',
+  ]);
+
+  if (!createOk) {
+    ui.warn('Interactive auth creation failed.');
+    return false;
+  }
+
+  // Select the newly created profile
+  runSafe(pac, ['auth', 'select', '--name', profileName]);
+
+  // Verify it works
+  const verifyWho = runSafe(pac, ['org', 'who']);
+  if (verifyWho) {
+    ui.ok('Interactive auth verified');
+    return true;
+  }
+
+  ui.warn('Auth created but verification failed.');
+  return false;
 }
