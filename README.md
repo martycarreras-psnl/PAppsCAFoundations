@@ -1,6 +1,6 @@
 # Power Apps Code Apps — Foundations
 
-A template repository with opinionated, comprehensive GitHub Copilot instruction files for building Power Apps Code Apps. Clone this repo (or use it as a template) to give every developer on your team consistent, AI-assisted guidance for scaffolding, connectors, components, deployment, testing, and security.
+A **GitHub template repository** with opinionated, comprehensive GitHub Copilot instruction files for building Power Apps Code Apps. Each new project starts from this template — you get the full instruction set, setup wizard, and scaffolding tools from your first commit.
 
 ## What's Inside
 
@@ -41,18 +41,42 @@ Open [docs/guide.html](docs/guide.html) in your browser for a visual walkthrough
 
 ## Quick Start
 
-Run one command. The wizard walks you through everything — tool checks, naming, Power Apps Maker Portal and Admin Center steps, authentication, scaffolding, and your first deploy:
+### Option A: Use this template (recommended)
+
+This is the standard GitHub workflow. It creates a brand-new repo under your account/org with no shared git history.
+
+1. Click the green **"Use this template"** button at the top of this repo → **"Create a new repository"**
+2. Name your new repo (e.g. `my-expense-tracker`), set visibility, and click **Create**
+3. Clone **your new repo** and run the wizard:
 
 ```bash
-git clone https://github.com/macarrer_microsoft/PAppsCAFoundations.git my-code-app
+git clone https://github.com/your-org/my-expense-tracker.git
+cd my-expense-tracker/wizard
+npm install
+node index.mjs
+```
+
+Because you cloned your own repo, `origin` already points to the right place. The wizard detects this and skips the remote URL prompt.
+
+### Option B: degit (no GitHub account required)
+
+If you just want to explore or don't want to create a GitHub repo yet:
+
+```bash
+npx degit macarrer_microsoft/PAppsCAFoundations my-code-app
 cd my-code-app/wizard
 npm install
 node index.mjs
 ```
 
+`degit` downloads the files without any `.git` history. The wizard will `git init` a fresh repo and ask you for a remote URL during Step 7 — you can provide one then or add it later.
+
+> **Do NOT `git clone` this template repo directly** — that leaves `origin` pointing back to PAppsCAFoundations instead of your own repo.
+
 > **Works on Windows, macOS, and Linux — no bash required.**
 
-The wizard:
+### What the wizard does
+
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
 2. **Collects project identity** — publisher prefix, solution name, app name
 3. **Guides you through Power Apps Maker Portal and Admin Center steps** — tells you exactly what to click and type, using the values you just entered
@@ -85,9 +109,3 @@ See `00-environment-setup.instructions.md` for details.
 When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code that follows your team's exact standards — Fluent UI v9 components, TanStack Query hooks for connectors, solution-aware Dataverse patterns, and more.
 
 Each file has an `applyTo` scope so Copilot only loads the relevant instructions based on which files you're editing.
-
-## Using as a Template
-
-1. Go to this repo's Settings → check "Template repository"
-2. Every new Code App starts with "Use this template" on GitHub
-3. Developers get the full instruction set from their first commit

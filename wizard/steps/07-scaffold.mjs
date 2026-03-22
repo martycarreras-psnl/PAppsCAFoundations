@@ -202,18 +202,38 @@ export default async function stepScaffold() {
     }
   }
 
-  ui.line('');
-  ui.line('Do you have a remote repository URL?');
-  ui.line('(e.g. https://github.com/your-org/my-brain.git)');
-  ui.line('Press Enter to skip — you can add one later with:');
-  ui.line('  git remote add origin <url>');
-  ui.line('');
-  const remoteUrl = await input({ message: 'Remote URL (Enter to skip)', default: '' });
-  if (remoteUrl) {
-    run('git remote remove origin', { cwd: projectDir });
-    run(`git remote add origin "${remoteUrl}"`, { cwd: projectDir });
-    ui.ok(`Remote 'origin' set to ${remoteUrl}`);
-    stateSet('GIT_REMOTE', remoteUrl);
+  // ── Remote URL — detect existing origin (template repos) or prompt ──
+  const existingOrigin = run('git remote get-url origin', { cwd: projectDir });
+  const templateRepoPattern = /PAppsCAFoundations/i;
+  let finalRemoteUrl = '';
+
+  if (existingOrigin && !templateRepoPattern.test(existingOrigin)) {
+    // User came via "Use this template" — origin already points to their repo
+    finalRemoteUrl = existingOrigin.trim();
+    ui.ok(`Remote 'origin' already set to ${finalRemoteUrl}`);
+    stateSet('GIT_REMOTE', finalRemoteUrl);
+  } else {
+    // No origin, or origin still points to the template repo — prompt for the real one
+    if (existingOrigin && templateRepoPattern.test(existingOrigin)) {
+      ui.warn('Current origin points to the PAppsCAFoundations template repo.');
+      ui.line('You need to set origin to your own repository.');
+      run('git remote remove origin', { cwd: projectDir });
+    }
+
+    ui.line('');
+    ui.line('Do you have a remote repository URL?');
+    ui.line('(e.g. https://github.com/your-org/my-app.git)');
+    ui.line('Press Enter to skip — you can add one later with:');
+    ui.line('  git remote add origin <url>');
+    ui.line('');
+    const remoteUrl = await input({ message: 'Remote URL (Enter to skip)', default: '' });
+    if (remoteUrl) {
+      run('git remote remove origin', { cwd: projectDir });  // remove any stale origin
+      run(`git remote add origin "${remoteUrl}"`, { cwd: projectDir });
+      ui.ok(`Remote 'origin' set to ${remoteUrl}`);
+      stateSet('GIT_REMOTE', remoteUrl);
+      finalRemoteUrl = remoteUrl;
+    }
   }
 
   ui.line('');
@@ -225,7 +245,7 @@ export default async function stepScaffold() {
     ui.warn('Commit failed (git user.name/user.email may not be configured)');
   }
 
-  if (remoteUrl) {
+  if (finalRemoteUrl) {
     const push = await confirm({ message: 'Push to remote now?', default: true });
     if (push) {
       if (runLive('git push -u origin main', { cwd: projectDir })) {

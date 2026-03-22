@@ -1356,17 +1356,34 @@ GIEOF
 
   echo ""
   echo "  Do you have a remote repository URL?"
-  echo "  (e.g. https://github.com/your-org/my-brain.git)"
+  echo "  (e.g. https://github.com/your-org/my-app.git)"
   echo "  Press Enter to skip — you can add one later with:"
   echo "    git remote add origin <url>"
   echo ""
-  local remote_url
-  remote_url=$(ask_input "Remote URL (Enter to skip)" "")
-  if [ -n "$remote_url" ]; then
-    git remote remove origin 2>/dev/null || true
-    git remote add origin "$remote_url"
-    echo "  ✓ Remote 'origin' set to ${remote_url}"
-    state_set "GIT_REMOTE" "$remote_url"
+
+  # Detect existing origin — skip prompt if it already points to user's repo
+  local existing_origin remote_url=""
+  existing_origin=$(git remote get-url origin 2>/dev/null || echo "")
+
+  if [ -n "$existing_origin" ] && ! echo "$existing_origin" | grep -qi "PAppsCAFoundations"; then
+    # User came via "Use this template" — origin already points to their repo
+    echo "  ✓ Remote 'origin' already set to ${existing_origin}"
+    state_set "GIT_REMOTE" "$existing_origin"
+    remote_url="$existing_origin"
+  else
+    if [ -n "$existing_origin" ] && echo "$existing_origin" | grep -qi "PAppsCAFoundations"; then
+      echo "  ⚠ Current origin points to the PAppsCAFoundations template repo."
+      echo "  You need to set origin to your own repository."
+      git remote remove origin 2>/dev/null || true
+    fi
+
+    remote_url=$(ask_input "Remote URL (Enter to skip)" "")
+    if [ -n "$remote_url" ]; then
+      git remote remove origin 2>/dev/null || true
+      git remote add origin "$remote_url"
+      echo "  ✓ Remote 'origin' set to ${remote_url}"
+      state_set "GIT_REMOTE" "$remote_url"
+    fi
   fi
 
   echo ""
