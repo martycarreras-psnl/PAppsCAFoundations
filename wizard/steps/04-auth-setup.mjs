@@ -30,18 +30,27 @@ export default async function stepAuthSetup() {
     ui.line('');
   }
 
-  // ── Auth mode selection ──
-  const choices = [];
-  if (hasOp) {
-    choices.push({ name: '1Password (secrets never touch disk) — RECOMMENDED', value: '1password' });
-  } else {
-    choices.push({ name: '1Password — UNAVAILABLE (op CLI not found)', value: '1password', disabled: true });
-  }
-  choices.push({ name: '.env.local file (secrets on disk, gitignored)', value: 'envlocal' });
+  // ── Auth mode — may already be set from Step 03 (1Password) ──
+  let authMode = stateGet('AUTH_MODE', '');
 
-  const authMode = await select({ message: 'How do you want to store credentials?', choices });
-  stateSet('AUTH_MODE', authMode);
-  stateSet('HAS_OP', hasOp);
+  if (authMode === '1password' && hasOp) {
+    // Already chose 1Password in Step 03 — skip the question
+    ui.line('Using 1Password for credential storage (selected in previous step).');
+    ui.line('');
+  } else {
+    // Ask for storage mode
+    const choices = [];
+    if (hasOp) {
+      choices.push({ name: '1Password (secrets never touch disk) — RECOMMENDED', value: '1password' });
+    } else {
+      choices.push({ name: '1Password — UNAVAILABLE (op CLI not found)', value: '1password', disabled: true });
+    }
+    choices.push({ name: '.env.local file (secrets on disk, gitignored)', value: 'envlocal' });
+
+    authMode = await select({ message: 'How do you want to store credentials?', choices });
+    stateSet('AUTH_MODE', authMode);
+    stateSet('HAS_OP', hasOp);
+  }
 
   ui.line('');
   const pac = pacPath();
@@ -50,8 +59,11 @@ export default async function stepAuthSetup() {
   if (authMode === '1password') {
     // ── 1Password setup ──
     const appName = stateGet('APP_NAME');
-    const vault = await input({ message: '1Password vault name', default: 'Engineering' });
-    const itemName = await input({ message: '1Password item name', default: `PowerApps CodeApps - ${appName}` });
+    // Use vault/item from Step 03 if already set, otherwise prompt
+    let vault = stateGet('OP_VAULT', '');
+    let itemName = stateGet('OP_ITEM', '');
+    if (!vault) vault = await input({ message: '1Password vault name', default: 'Engineering' });
+    if (!itemName) itemName = await input({ message: '1Password item name', default: `PowerApps CodeApps - ${appName}` });
     stateSet('OP_VAULT', vault);
     stateSet('OP_ITEM', itemName);
 
