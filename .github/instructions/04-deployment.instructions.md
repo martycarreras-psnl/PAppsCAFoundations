@@ -375,23 +375,169 @@ Always deploy managed solutions to non-development environments. This prevents s
 
 ### Connection References
 
-When your Code App uses connectors, the solution contains connection references. These are environment-specific — each environment has its own connection instance. During deployment:
+A connection reference is a solution component that says "this app uses the Office 365 Users connector." It is the pointer — not the actual authenticated connection. The actual connection is environment-specific and must be created manually in each target environment before the solution is imported. These two things are linked at import time via a **deployment settings file**.
 
-1. The solution import creates connection references in the target environment
-2. An admin (or automated process) must create or map actual connections
-3. Users authorize the connections on first use (consent flow)
+**The flow:**
+1. Developer adds a connector via `pac data-source add` → PAC creates a connection reference inside the solution
+2. Before importing to any environment, an admin creates an actual connection in that environment (maker portal → Connections)
+3. At import time, a deployment settings file maps the connection reference logical name to the connection ID in that environment
+4. After import, the connection reference is bound — the app works without any user consent prompt
 
-For automated deployments, pre-create connections in target environments and map them during import:
+**Missing this mapping is the #1 cause of "the app deployed but connectors don't work."**
+
+#### Step 1: Find the connection reference logical name
+
+After running `pac data-source add`, the connection reference appears in your solution. Find its logical name:
+
+```bash
+# List connection references in your solution
+pac solution list-connection-references --solution-name YourSolutionName
+
+# Or inspect the unpacked solution XML:
+# solution/src/ConnectionReferences/<yourprefix>_office365users/ConnectionReference.xml
+# The LogicalName attribute is what you need
+```
+
+Logical names follow the pattern `yourprefix_connectorname`, e.g.:
+- `yourprefix_office365users`
+- `yourprefix_sharepointonline`
+- `yourprefix_sql`
+
+#### Step 2: Find the connection ID in each environment
+
+In each environment (dev, test, prod), the admin who created the connection can find its ID in the maker portal URL:
+
+```
+https://make.powerapps.com/environments/<env-id>/connections/shared_office365users/<CONNECTION_ID>/details
+                                                                                    ^^^^^^^^^^^^^^^^
+                                                                                    This is the ID you need
+```
+
+Alternatively, use the Power Apps API to list connection IDs programmatically:
+
+```bash
+# Get a token for the Power Apps API
+TOKEN=$(az account get-access-token --resource "https://service.powerapps.com/" --query accessToken -o tsv)
+
+# List connections in an environment (replace <env-id> with the environment GUID)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://api.powerapps.com/providers/Microsoft.PowerApps/environments/<env-id>/connections?api-version=2016-11-01" \
+  | jq '.value[] | {name: .name, displayName: .properties.displayName, connector: .properties.apiId}'
+```
+
+The `.name` field is the connection ID.
+
+#### Step 3: Create deployment settings files
+
+Create one deployment settings file per environment. These files are safe to commit — they contain connection IDs (not secrets) and environment variable values.
+
+```
+solution/
+  deployment-settings-dev.json
+  deployment-settings-test.json
+  deployment-settings-prod.json
+```
+
+File format:
+
+```json
+{
+  "EnvironmentVariables": [
+    {
+      "SchemaName": "yourprefix_ApiBaseUrl",
+      "Value": "https://api-dev.example.com"
+    },
+    {
+      "SchemaName": "yourprefix_MaxPageSize",
+      "Value": "50"
+    }
+  ],
+  "ConnectionReferences": [
+    {
+      "LogicalName": "yourprefix_office365users",
+      "ConnectionId": "abc123def456abc123def456abc12345",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_office365users"
+    },
+    {
+      "LogicalName": "yourprefix_sharepointonline",
+      "ConnectionId": "xyz789xyz789xyz789xyz789xyz78901",
+      "ConnectorId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+    }
+  ]
+}
+```
+
+`LogicalName` → the connection reference name from Step 1
+`ConnectionId` → the ID from the maker portal URL (Step 2), specific to this environment
+`ConnectorId` → the Power Platform internal connector ID (see table below)
+
+**Common connector IDs:**
+
+| Connector | ConnectorId |
+|---|---|
+| Office 365 Users | `/providers/Microsoft.PowerApps/apis/shared_office365users` |
+| Office 365 Outlook | `/providers/Microsoft.PowerApps/apis/shared_office365` |
+| SharePoint | `/providers/Microsoft.PowerApps/apis/shared_sharepointonline` |
+| Microsoft Dataverse | `/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps` |
+| SQL Server | `/providers/Microsoft.PowerApps/apis/shared_sql` |
+| Microsoft Teams | `/providers/Microsoft.PowerApps/apis/shared_teams` |
+| Azure Blob Storage | `/providers/Microsoft.PowerApps/apis/shared_azureblob` |
+
+#### Step 4: Import with the deployment settings file
+
+**Local (manual) import:**
+
+```bash
+# Import unmanaged to dev
+pac solution import \
+  --path ./solution/solution-unmanaged.zip \
+  --settings-file ./solution/deployment-settings-dev.json \
+  --activate-plugins true
+
+# Import managed to test or prod
+pac solution import \
+  --path ./solution/solution-managed.zip \
+  --settings-file ./solution/deployment-settings-test.json \
+  --activate-plugins true
+```
+
+**CI/CD (GitHub Actions) — pass settings file per environment:**
 
 ```yaml
-- name: Import Solution
+- name: Import Solution to Test
   uses: microsoft/powerplatform-actions/import-solution@v1
   with:
     environment-url: ${{ vars.POWER_PLATFORM_URL }}
-    solution-file: ./solution-managed.zip
+    solution-file: ./solution/solution-managed.zip
     app-id: ${{ secrets.PP_APP_ID }}
     client-secret: ${{ secrets.PP_CLIENT_SECRET }}
     tenant-id: ${{ secrets.PP_TENANT_ID }}
+    deployment-settings-file: ./solution/deployment-settings-test.json
+    activate-plugins: true
+```
+
+Store environment-specific deployment settings files in the repo. Each GitHub environment (`development`, `test`, `production`) uses its own file. The connection IDs inside those files are not secrets — they're just identifiers, not credentials.
+
+#### What happens if a connection reference is not mapped
+
+If you import a solution without a deployment settings file (or with a missing entry), the connection reference lands in the environment in an **unmapped** state. The app will:
+- Show an error when a user tries to use any feature that calls that connector
+- Require an admin to manually open the connection reference in the maker portal and bind it to a connection
+
+You can check for unmapped connection references after import:
+
+```bash
+pac connection-reference list --environment $PP_ENV_TEST
+# Any reference showing "Not configured" needs to be mapped
+```
+
+To fix an unmapped reference after the fact without re-importing the solution:
+
+```bash
+pac connection-reference update \
+  --name yourprefix_office365users \
+  --connection-id abc123def456 \
+  --environment $PP_ENV_TEST
 ```
 
 ### Solution Versioning
