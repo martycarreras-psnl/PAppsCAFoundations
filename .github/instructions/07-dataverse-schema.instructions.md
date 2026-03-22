@@ -20,12 +20,15 @@ Every schema bootstrap script must follow this exact order. Reversing any step c
 3. Simple Columns (String, Number, Boolean, DateTime, Currency)
 4. Picklist Columns (bound to global option sets created in step 1)
 5. Lookup Columns / Relationships (referencing tables created in step 2)
-6. PublishAllXml (makes ALL schema changes visible to the runtime)
-7. pac code add-data-source -a dataverse -t <table> (registers each table)
-8. pac code generate (generates TypeScript SDK from registered tables)
+6. Security Role — "<App Name> Collaborator" with Collaborator-level privileges on all custom tables
+7. PublishAllXml (makes ALL schema changes visible to the runtime)
+8. pac code add-data-source -a dataverse -t <table> (registers each table)
+9. pac code generate (generates TypeScript SDK from registered tables)
 ```
 
-Skipping step 6 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pac code add-data-source` until published.
+Skipping step 7 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pac code add-data-source` until published.
+
+Skipping step 6 means users with only Basic User cannot access your custom tables — Dataverse denies access by default on new custom entities.
 
 ---
 
@@ -825,6 +828,209 @@ const clearPayload = {
 
 ---
 
+## Security Role — App Collaborator
+
+Every Code App that uses custom Dataverse tables **must** have a dedicated security role. Without it, users with only the Basic User role cannot read, create, or update records in your custom tables — Dataverse denies access by default.
+
+### Design: Supplementary Role (not a copy)
+
+The role is **supplementary** — it is designed to be assigned **alongside** Basic User, not to replace it. It contains **only** privileges for your custom tables. This approach:
+
+- Avoids duplicating ~100+ platform privileges from Basic User (no drift when Microsoft updates it)
+- Is portable across environments (no dependency on Basic User's internal privilege GUIDs)
+- Is easy to create and maintain programmatically
+
+### Naming Convention
+
+The role name follows this pattern:
+
+```
+<SOLUTION_DISPLAY_NAME> Collaborator
+```
+
+Examples: `Project Tracker Collaborator`, `Expense Manager Collaborator`, `HR Onboarding Collaborator`
+
+The wizard stores this as `SOLUTION_DISPLAY_NAME` in project state.
+
+### Privilege Levels — Collaborator Settings
+
+The Collaborator permission setting (per [Microsoft docs](https://learn.microsoft.com/en-us/power-platform/admin/security-roles-privileges#permission-settings)) maps to these Dataverse privilege depths:
+
+| Privilege | Depth | Constant | Meaning |
+|-----------|-------|----------|----------|
+| Create | Local (BU) | `2` | Create records in own business unit |
+| Read | Global (Org) | `3` | Read all records in the organization |
+| Write | Local (BU) | `2` | Update records in own business unit |
+| Delete | Local (BU) | `2` | Delete records in own business unit |
+| Append | Local (BU) | `2` | Attach records to this entity |
+| AppendTo | Local (BU) | `2` | Allow other records to be attached to this entity |
+| Assign | Local (BU) | `2` | Assign records to another user in BU |
+| Share | Local (BU) | `2` | Share records with another user in BU |
+
+Depth values for the API: `0` = None, `1` = User, `2` = Business Unit (Local), `3` = Parent:Child BU, `4` = Organization (Global).
+
+### Programmatic creation via Web API
+
+The script below auto-detects all custom tables with your publisher prefix and grants Collaborator-level privileges on each.
+
+```bash
+# ── Helper: Create or update the app's Collaborator security role ──
+create_or_update_security_role() {
+  local role_name="${SOLUTION_DISPLAY_NAME} Collaborator"
+  local prefix="${PREFIX}_"
+
+  echo "── Security Role: ${role_name} ──"
+
+  # ── Step 1: Check if role already exists ──
+  local encoded_name
+  encoded_name=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$role_name")
+  local existing
+  existing=$(api_call GET "/roles?\$filter=name eq '${encoded_name}'&\$select=roleid,name" 2>/dev/null || echo '{}')
+  local role_id
+  role_id=$(echo "$existing" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); v=d.get('value',[]); print(v[0]['roleid'] if v else '')" 2>/dev/null || echo '')
+
+  if [ -z "$role_id" ]; then
+    # ── Step 2a: Create the role ──
+    local create_result
+    create_result=$(api_call POST "/roles" "$(python3 -c "
+import json,sys
+print(json.dumps({
+    'name': sys.argv[1],
+    'description': f'Collaborator-level access to all {sys.argv[1].replace(\" Collaborator\", \"\")} custom tables. Assign alongside Basic User.',
+    'isinherited': 0
+}))" "$role_name")")
+    role_id=$(echo "$create_result" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('roleid',''))" 2>/dev/null)
+    if [ -z "$role_id" ]; then
+      echo "  [ERROR] Failed to create security role '${role_name}'"
+      return 1
+    fi
+    echo "  [OK] Created security role: ${role_name} (${role_id})"
+  else
+    echo "  [OK] Security role already exists: ${role_name} (${role_id})"
+  fi
+
+  # ── Step 3: Auto-detect all custom tables with our prefix ──
+  local tables_json
+  tables_json=$(api_call GET "/EntityDefinitions?\$filter=IsCustomEntity eq true and startswith(LogicalName, '${prefix}')&\$select=LogicalName,ObjectTypeCode" 2>/dev/null || echo '{"value":[]}')
+  local table_count
+  table_count=$(echo "$tables_json" | python3 -c "import json,sys; print(len(json.loads(sys.stdin.read()).get('value',[])))" 2>/dev/null || echo '0')
+  echo "  Found ${table_count} custom tables with prefix '${prefix}'"
+
+  # ── Step 4: For each table, add Collaborator privileges ──
+  # Privilege names follow the pattern: prvCreate<EntityName>, prvRead<EntityName>, etc.
+  # The entity name in privilege names uses the SchemaName-like format (no underscores, PascalCase-ish)
+  echo "$tables_json" | python3 -c "
+import json, sys
+
+data = json.loads(sys.stdin.read())
+tables = data.get('value', [])
+
+# Collaborator privilege depths
+# Create=BU(2), Read=Org(4), Write=BU(2), Delete=BU(2), Append=BU(2), AppendTo=BU(2), Assign=BU(2), Share=BU(2)
+privileges = [
+    ('Create',   2),
+    ('Read',     4),  # 4 = Organization (Global) depth in privilege API
+    ('Write',    2),
+    ('Delete',   2),
+    ('Append',   2),
+    ('AppendTo', 2),
+    ('Assign',   2),
+    ('Share',    2),
+]
+
+for t in tables:
+    otc = t['ObjectTypeCode']
+    logical = t['LogicalName']
+    for priv_name, depth in privileges:
+        # Output: ObjectTypeCode|PrivilegeName|Depth
+        print(f'{otc}|{priv_name}|{depth}|{logical}')
+" | while IFS='|' read -r otc priv_action depth logical_name; do
+    # Look up the privilege ID for this action on this entity
+    local priv_name="prv${priv_action}${logical_name}"
+    local priv_result
+    priv_result=$(api_call GET "/privileges?\$filter=Name eq '${priv_name}'&\$select=privilegeid,Name" 2>/dev/null || echo '{"value":[]}')
+    local priv_id
+    priv_id=$(echo "$priv_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['privilegeid'] if v else '')" 2>/dev/null || echo '')
+
+    if [ -n "$priv_id" ]; then
+      # Add privilege to role with the specified depth
+      # Depth mapping for AddPrivilegesRole: 1=User, 2=BU, 3=Parent:Child, 4=Org
+      api_call POST "/roles(${role_id})/systemuserroles_association/\$ref" \
+        "{}" >/dev/null 2>&1 || true
+      # Use the dedicated AddPrivilegesRole action
+      api_call POST "/AddPrivilegesRole" "$(python3 -c "
+import json
+print(json.dumps({
+    'RoleId': '${role_id}',
+    'Privileges': [{
+        'PrivilegeId': '${priv_id}',
+        'Depth': '${depth}'
+    }]
+}))" )" >/dev/null 2>&1 || true
+    fi
+  done
+  echo "  [OK] Collaborator privileges applied to ${table_count} tables"
+}
+
+# Usage in bootstrap script:
+create_or_update_security_role
+```
+
+### Assigning the role to users (dev/test environments)
+
+For automated test/dev setup, you can assign the role programmatically:
+
+```bash
+# ── Helper: Assign a security role to a user ──
+assign_security_role() {
+  local user_email="$1"     # e.g. "testuser@contoso.com"
+  local role_name="$2"      # e.g. "Project Tracker Collaborator"
+
+  # Find the user's systemuserid
+  local user_result
+  user_result=$(api_call GET "/systemusers?\$filter=internalemailaddress eq '${user_email}'&\$select=systemuserid" 2>/dev/null)
+  local user_id
+  user_id=$(echo "$user_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['systemuserid'] if v else '')" 2>/dev/null || echo '')
+  if [ -z "$user_id" ]; then
+    echo "  [WARN] User not found: ${user_email}"
+    return 1
+  fi
+
+  # Find the role ID
+  local encoded_name
+  encoded_name=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$role_name")
+  local role_result
+  role_result=$(api_call GET "/roles?\$filter=name eq '${encoded_name}'&\$select=roleid" 2>/dev/null)
+  local role_id
+  role_id=$(echo "$role_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['roleid'] if v else '')" 2>/dev/null || echo '')
+  if [ -z "$role_id" ]; then
+    echo "  [WARN] Role not found: ${role_name}"
+    return 1
+  fi
+
+  # Associate the role with the user
+  api_call POST "/systemusers(${user_id})/systemuserroles_association/\$ref" \
+    "{\"@odata.id\": \"${DATAVERSE_URL}/api/data/v9.2/roles(${role_id})\"}" >/dev/null 2>&1
+  echo "  [OK] Assigned '${role_name}' to ${user_email}"
+}
+
+# Usage:
+assign_security_role "testuser@contoso.com" "${SOLUTION_DISPLAY_NAME} Collaborator"
+```
+
+### Key rules for security roles
+
+- **Supplementary, not standalone**: Always assign alongside Basic User — never expect this role alone to be sufficient for platform functionality (dashboards, personal views, etc.)
+- **Auto-detect tables**: Use the `IsCustomEntity eq true and startswith(LogicalName, '<prefix>')` filter to automatically discover all tables with your prefix — no hardcoded table lists that go stale
+- **Collaborator is the safe default**: It gives broad read access (global) but limits writes to the user's business unit — appropriate for most business apps
+- **Include in solution**: The role is created with the `MSCRM.SolutionUniqueName` header (via `api_call`), so it travels with your solution export/import
+- **Re-run safe**: The script checks for existing roles before creating — it's idempotent
+- **Production assignment**: In production, assign roles via the Power Platform Admin Center or Azure AD group-to-role mapping — not via script
+
+> For the conceptual background on why supplementary roles and Dataverse security role design, see `06-security.instructions.md`.
+
+---
+
 ## Solution Layering and Import Order
 
 If your schema spans multiple solutions (e.g. a base solution with shared option sets and a project-specific solution with tables that reference those option sets), the import order matters:
@@ -928,11 +1134,14 @@ api_call() { ... }  # (defined above in Solution Context section)
 # ── 8. Create relationships (lookup columns) ──
 # ... create_relationship_if_missing calls ...
 
-# ── 9. Publish ──
+# ── 9. Create / update security role ──
+create_or_update_security_role   # (defined above in Security Role section)
+
+# ── 10. Publish ──
 api_call POST "/PublishAllXml" '{}'
 echo "[DONE] Schema created and published."
 
-# ── 10. Register data sources (run from the Code App project directory) ──
+# ── 11. Register data sources (run from the Code App project directory) ──
 echo ""
 echo "Now run these commands in your project directory:"
 echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_project"
@@ -970,8 +1179,15 @@ Before writing any setup script or creating any schema manually, answer these qu
 - [ ] Do both parent and child tables exist before creating the relationship?
 - [ ] Is cascade delete set to `"Restrict"` (safe default)?
 
+**Security Role:**
+- [ ] Does the script create a `<SOLUTION_DISPLAY_NAME> Collaborator` security role?
+- [ ] Is the role supplementary (designed to be assigned alongside Basic User, not replace it)?
+- [ ] Does the role auto-detect all custom tables with the publisher prefix?
+- [ ] Are privileges set to Collaborator depth (Create/Write/Delete/Append/AppendTo/Assign/Share=BU, Read=Org)?
+- [ ] Is the role created within the solution (via `api_call` with `MSCRM.SolutionUniqueName`)?
+
 **Publishing & Registration:**
-- [ ] Does the script call `PublishAllXml` after all schema changes?
+- [ ] Does the script call `PublishAllXml` after all schema changes (including the security role)?
 - [ ] Is `pac code add-data-source -a dataverse -t <table>` run for every table the app needs?
 - [ ] Is `pac code generate` run after adding data sources?
 - [ ] Is the setup script idempotent (safe to re-run on an environment that already has the schema)?

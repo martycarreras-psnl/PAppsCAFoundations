@@ -259,6 +259,65 @@ console.error('[ProjectService] Failed to fetch projects:', error);
 - In production, route logs to your organization's monitoring tool (Application Insights, etc.)
 - Never log full request/response bodies from connectors — they may contain PII
 
+## Dataverse Security Roles
+
+Code Apps that use custom Dataverse tables must have a dedicated **supplementary** security role to grant users access to those tables. Dataverse denies access to custom entities by default — even for users who have the Basic User role.
+
+### Supplementary Role Pattern
+
+The correct approach is:
+
+1. **Do NOT copy Basic User** — copying duplicates ~100+ platform privileges, creates drift risk when Microsoft updates Basic User, and makes the role hard to move across environments
+2. **Create a supplementary role** that contains ONLY privileges for your custom tables
+3. **Assign both roles** to each user: Basic User (platform access) + your custom role (app data access)
+4. Dataverse security is **additive** — the union of all assigned roles determines what a user can do
+
+### Naming Convention
+
+```
+<SOLUTION_DISPLAY_NAME> Collaborator
+```
+
+Examples: `Project Tracker Collaborator`, `Expense Manager Collaborator`
+
+The name comes from `SOLUTION_DISPLAY_NAME` (captured by the setup wizard).
+
+### Collaborator Privilege Levels
+
+The "Collaborator" permission setting ([Microsoft docs](https://learn.microsoft.com/en-us/power-platform/admin/security-roles-privileges#permission-settings)) translates to:
+
+| Privilege | Depth | What it means |
+|-----------|-------|---------------|
+| **Create** | Business Unit | Users can create records in their own BU |
+| **Read** | Organization (Global) | Users can read ALL records across the org |
+| **Write** | Business Unit | Users can update records in their own BU |
+| **Delete** | Business Unit | Users can delete records in their own BU |
+| **Append** | Business Unit | Users can attach records to this entity |
+| **AppendTo** | Business Unit | Other records can reference this entity |
+| **Assign** | Business Unit | Users can reassign records within their BU |
+| **Share** | Business Unit | Users can share records within their BU |
+
+This is the safe default for most business apps — broad read access so everyone can see data, but writes are scoped to the user's business unit.
+
+### Why This Matters
+
+- Without this role, any user who is not a System Administrator will get `403 Forbidden` on all CRUD operations against your custom tables
+- The role must be **created inside your solution** (with `MSCRM.SolutionUniqueName` header) so it's included in solution export/import and travels through your ALM pipeline
+- The script auto-detects all custom tables with your publisher prefix, so new tables automatically get covered when the script re-runs
+
+### When to Assign Multiple Roles
+
+| Scenario | Roles to assign |
+|----------|-----------------|
+| Standard app user | Basic User + `<App> Collaborator` |
+| Power user who manages settings | Basic User + `<App> Collaborator` + custom admin role (if needed) |
+| Service account / SPN | System Administrator (in dev/test) or minimum-privilege custom role (in prod) |
+| CI/CD deployment identity | System Administrator (or System Customizer for schema-only changes) |
+
+> **Programmatic creation**: See `07-dataverse-schema.instructions.md` → "Security Role — App Collaborator" section for full bash helpers to create the role and assign it to users via the Web API.
+
+---
+
 ## Code Review Security Checklist
 
 Every PR review should check:
@@ -271,3 +330,5 @@ Every PR review should check:
 - [ ] Connector queries use `$select` (don't fetch unnecessary columns that might contain sensitive data)
 - [ ] Role-based UI checks don't replace actual data-level security
 - [ ] `.gitignore` covers all sensitive file patterns
+- [ ] A `<SOLUTION_DISPLAY_NAME> Collaborator` security role exists and covers all custom tables
+- [ ] The security role is supplementary (assigned alongside Basic User, not replacing it)
