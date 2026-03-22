@@ -136,7 +136,7 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs']) {
+    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
@@ -770,6 +770,7 @@ function createMinimalProject(dir, appName) {
       dev: 'concurrently "vite --port 3000" "pac code run"',
       'dev:local': crossPlatformDevLocal,
       typecheck: 'tsc --noEmit',
+      prebuild: 'node scripts/patch-datasources-info.mjs',
       build: 'npm run typecheck && vite build',
       preview: 'vite preview',
       lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
