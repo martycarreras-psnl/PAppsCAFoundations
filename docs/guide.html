@@ -1162,7 +1162,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(({ command }) =&gt; ({
+  base: command === 'build' ? './' : '/', // CRITICAL for Code Apps
   plugins: [react()],
   server: {
     port: 3000,          // Required by Power Apps SDK
@@ -1173,7 +1174,8 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   build: { outDir: 'dist' },
-});</pre>
+}));</pre>
+      <p class="callout danger"><strong>base: './'</strong> is required for production builds. Power Apps serves your bundle from a nested, non-root path. Without relative base, all asset URLs are absolute (/assets/index-abc.js) which 404 → blank screen.</p>
 
       <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Vite Environment Variables</h4>
       <p>Only variables prefixed with <code>VITE_</code> are exposed to client code via <code>import.meta.env</code>. This is a security feature — Power Platform credentials (<code>PP_*</code>) are never leaked to the browser.</p>

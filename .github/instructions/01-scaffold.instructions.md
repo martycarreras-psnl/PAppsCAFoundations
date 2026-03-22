@@ -150,13 +150,14 @@ The Power Apps SDK requires the dev server on port 3000. Vite config must set th
 
 ```typescript
 // vite.config.ts
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? './' : '/',
   server: { port: 3000 },
   plugins: [react()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') }
   }
-});
+}));
 ```
 
 ### Path aliases
@@ -422,7 +423,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? './' : '/', // CRITICAL — Code Apps serve from a non-root path
   plugins: [react()],
   server: {
     port: 3000,          // Required — Power Apps SDK expects port 3000
@@ -438,10 +440,11 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,     // Disable in production builds for Code Apps
   },
-});
+}));
 ```
 
 Key settings:
+- **`base: './'` (build) / `'/'` (dev)**: CRITICAL for Code Apps. Power Apps serves your bundle from a nested, non-root path inside an iframe. Without relative `base`, all asset URLs in the built HTML are absolute (`/assets/index-abc123.js`) which 404 → blank screen. The `({ command })` function form lets `npm run dev` keep using absolute paths (which Vite's dev server needs) while the production build uses relative paths.
 - **`strictPort: true`**: Prevents Vite from falling back to 3001/3002 if 3000 is busy. If it fails, you have a stale process — kill it and retry.
 - **`open: true`**: Launches your default browser automatically. Remove this if you prefer to open manually.
 
