@@ -80,10 +80,11 @@ export default async function stepVerifyAndDeploy() {
         if (profileReady) {
           ui.line('');
           ui.line('Deploying (first push — creating app)...');
-          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir);
+          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solName);
           if (success) {
             ui.ok('Deployed! Your app is live.');
             ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
+            // Safety net: ensure app is in solution even if -s flag was ignored
             await addAppToSolution(pac, projectDir, solName);
           }
         } else {
@@ -96,7 +97,7 @@ export default async function stepVerifyAndDeploy() {
         // Subsequent push: use whatever auth is active
         ui.line('');
         ui.line('Deploying...');
-        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir);
+        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solName);
         if (success) {
           ui.ok('Deployed! Your app is updated.');
           await addAppToSolution(pac, projectDir, solName);
@@ -167,9 +168,12 @@ const DUPLICATE_APP_RE = /already created an application with this name.*Existin
  * Attempt pac code push, detect known errors, and offer guided retry.
  * Returns true on success, false on permanent failure.
  */
-async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRetries = 3) {
+async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solName, maxRetries = 3) {
+  const pushArgs = ['code', 'push'];
+  if (solName) pushArgs.push('-s', solName);
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const { ok, stdout, stderr } = runSafeCapture(pac, ['code', 'push'], { cwd: projectDir });
+    const { ok, stdout, stderr } = runSafeCapture(pac, pushArgs, { cwd: projectDir });
     const combined = `${stdout}\n${stderr}`;
     if (stdout) process.stdout.write(stdout);
     if (ok) return true;
