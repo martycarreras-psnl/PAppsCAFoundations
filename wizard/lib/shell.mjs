@@ -69,4 +69,17 @@ export function runSafeLive(file, args, opts = {}) {
   }
 }
 
+/**
+ * Run a command array, stream stdout to console, and capture stderr.
+ * Returns { ok: boolean, stderr: string }.
+ */
+export function runSafeCapture(file, args, opts = {}) {
+  try {
+    execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'inherit', 'pipe'], ...opts });
+    return { ok: true, stderr: '' };
+  } catch (err) {
+    return { ok: false, stderr: err.stderr || err.message || '' };
+  }
+}
+
 export { IS_WIN };

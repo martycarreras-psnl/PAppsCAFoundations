@@ -2,7 +2,7 @@
 import { confirm, input } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
-import { pacPath, runLive, runSafe, runSafeLive, run } from '../lib/shell.mjs';
+import { pacPath, runLive, runSafe, runSafeLive, runSafeCapture, run } from '../lib/shell.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -80,13 +80,10 @@ export default async function stepVerifyAndDeploy() {
         if (profileReady) {
           ui.line('');
           ui.line('Deploying (first push — creating app)...');
-          const pushOk = runSafeLive(pac, ['code', 'push'], { cwd: projectDir });
-          if (pushOk) {
+          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir);
+          if (success) {
             ui.ok('Deployed! Your app is live.');
             ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
-          } else {
-            ui.warn('Deploy failed.');
-            showTroubleshooting(projectDir, pac);
           }
         } else {
           ui.warn('Could not establish user auth. Deploy manually:');
@@ -98,12 +95,9 @@ export default async function stepVerifyAndDeploy() {
         // Subsequent push: use whatever auth is active
         ui.line('');
         ui.line('Deploying...');
-        const pushOk = runSafeLive(pac, ['code', 'push'], { cwd: projectDir });
-        if (pushOk) {
+        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir);
+        if (success) {
           ui.ok('Deployed! Your app is updated.');
-        } else {
-          ui.warn('Deploy failed.');
-          showTroubleshooting(projectDir, pac);
         }
       }
     } else {
@@ -160,16 +154,111 @@ export default async function stepVerifyAndDeploy() {
   setCompletedStep(8);
 }
 
-// ─────────── Helpers ───────────
+// ─────────── Push with Error Detection & Retry ───────────
 
-function showTroubleshooting(projectDir, pac) {
-  ui.line('');
-  ui.line('Troubleshooting:');
-  ui.line('  1. Confirm you are signed in with a user that has System Administrator');
-  ui.line('     or System Customizer role in the target environment.');
-  ui.line('  2. Verify power.config.json is in the same directory as package.json.');
-  ui.line('  3. Retry manually:');
-  ui.line(`     cd ${projectDir} && ${pac} code push`);
+const CODE_APPS_NOT_ENABLED_RE = /does not allow this operation for this Code app/i;
+const SPN_PERMISSION_RE = /does not have permission to access.*checkAccess/i;
+
+/**
+ * Attempt pac code push, detect known errors, and offer guided retry.
+ * Returns true on success, false on permanent failure.
+ */
+async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const { ok, stderr } = runSafeCapture(pac, ['code', 'push'], { cwd: projectDir });
+    if (ok) return true;
+
+    // ── Code Apps not enabled in environment ──
+    if (CODE_APPS_NOT_ENABLED_RE.test(stderr)) {
+      ui.line('');
+      ui.warn('Code Apps are not enabled in this environment.');
+      ui.line('');
+      ui.line('  To fix this:');
+      ui.line('  1. Go to admin.powerplatform.microsoft.com');
+      ui.line('  2. Select your environment → Settings → Features');
+      ui.line('  3. Toggle ON:');
+      ui.line('     • "Power Apps component framework for canvas apps"');
+      ui.line('     • "Allow publishing of canvas apps with code components"');
+      ui.line('     • "Power Apps Code Apps"');
+      ui.line('  4. Save and wait 1–2 minutes for propagation');
+      ui.line('');
+      ui.line('  After toggling, you may also need to refresh your auth profile.');
+      ui.line('  The wizard can delete and re-create it for you.');
+      ui.line('');
+
+      if (attempt >= maxRetries) break;
+
+      const retry = await confirm({
+        message: `Enable features, then retry? (attempt ${attempt}/${maxRetries})`,
+        default: true,
+      });
+      if (!retry) return false;
+
+      // Offer to refresh the auth profile (clears cached env capabilities)
+      const refresh = await confirm({ message: 'Refresh auth profile? (recommended after toggling features)', default: true });
+      if (refresh) {
+        ui.line('  Refreshing auth profile...');
+        runSafe(pac, ['auth', 'delete', '--name', profileName]);
+        const createOk = runSafeLive(pac, [
+          'auth', 'create',
+          '--name', profileName,
+          '--environment', envUrl,
+        ]);
+        if (createOk) {
+          runSafe(pac, ['auth', 'select', '--name', profileName]);
+          ui.ok('Auth profile refreshed');
+        } else {
+          ui.warn('Auth refresh failed. Retrying push with existing profile...');
+        }
+      }
+
+      ui.line('');
+      ui.line('Retrying push...');
+      continue;
+    }
+
+    // ── SPN permission error (needs user auth) ──
+    if (SPN_PERMISSION_RE.test(stderr)) {
+      ui.line('');
+      ui.warn('Push failed — service principal does not have permission.');
+      ui.line('  The first push for a new app requires user (interactive) auth.');
+      ui.line('  Switching to interactive auth...');
+      ui.line('');
+
+      if (attempt >= maxRetries) break;
+
+      const authOk = await ensureInteractiveAuth(pac, profileName, envUrl);
+      if (!authOk) {
+        ui.warn('Could not establish user auth.');
+        break;
+      }
+      ui.line('');
+      ui.line('Retrying push with user auth...');
+      continue;
+    }
+
+    // ── Unknown error ──
+    ui.line('');
+    ui.warn('Deploy failed.');
+    if (stderr) {
+      // Show the last meaningful line from stderr
+      const lines = stderr.split('\n').filter((l) => l.trim());
+      const errorLine = lines.find((l) => /^Error:/i.test(l)) || lines[lines.length - 1] || '';
+      if (errorLine) ui.line(`  ${errorLine.trim()}`);
+    }
+    ui.line('');
+    ui.line('Troubleshooting:');
+    ui.line('  1. Confirm you are signed in with a user that has System Administrator');
+    ui.line('     or System Customizer role in the target environment.');
+    ui.line('  2. Verify power.config.json is in the same directory as package.json.');
+    ui.line('  3. Retry manually:');
+    ui.line(`     cd ${projectDir} && ${pac} code push`);
+    return false;
+  }
+
+  ui.warn(`Push failed after ${maxRetries} attempts.`);
+  ui.line('  Retry later: node wizard/index.mjs --from 8');
+  return false;
 }
 
 // ─────────── Interactive Auth Helper ───────────
