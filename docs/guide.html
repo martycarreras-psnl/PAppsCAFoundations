@@ -646,11 +646,11 @@
     <!-- Hero -->
     <section class="hero" id="hero-section">
       <h1>Power Apps Code Apps</h1>
-      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. One wizard command takes you from zero to deployed.</p>
+      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and go from zero to deployed.</p>
       <div class="hero-actions">
-        <a href="#wizard-overview" class="btn btn-primary">🧙 Run the Wizard</a>
+        <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations/generate" class="btn btn-primary" target="_blank" rel="noopener">📋 Use This Template</a>
+        <a href="#wizard-overview" class="btn btn-outline">🧙 Run the Wizard</a>
         <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
-        <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations" class="btn btn-outline" target="_blank" rel="noopener">↗ GitHub</a>
       </div>
     </section>
 
@@ -781,15 +781,21 @@
 
     <section class="section" id="wizard-overview">
       <h2 class="section-title">The Setup Wizard</h2>
-      <p class="section-subtitle">One command. Start to finish. No instruction files to read.</p>
+      <p class="section-subtitle">Two steps. Start to finish. No instruction files to read.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
         <div>
-          <strong>This is the only thing you need to run.</strong> Clone the repo, then:
-          <pre style="margin-top:8px; display:inline-block;">cd wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
+          <strong>Step 1 — Get the code</strong> (pick one):
+          <ul style="margin:8px 0 4px 0; padding-left:20px; line-height:1.8;">
+            <li><strong>Recommended:</strong> Click <strong>"Use this template"</strong> on GitHub → create your repo → <code>git clone https://github.com/your-org/my-app.git</code></li>
+            <li><strong>Quick explore:</strong> <code>npx degit macarrer_microsoft/PAppsCAFoundations my-app</code></li>
+          </ul>
+          <strong>Step 2 — Run the wizard:</strong>
+          <pre style="margin-top:8px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
           <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux — no bash required.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
           <p style="margin-top:4px; font-size:13px; color:#605e5c;">Prefer bash? The legacy shell wizard is still available: <code>bash scripts/setup-wizard.sh</code> (macOS/Linux only)</p>
+          <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
         </div>
       </div>
 
