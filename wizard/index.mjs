@@ -4,11 +4,12 @@
 // Usage:
 //   node wizard/index.mjs            # Run (resumes where you left off)
 //   node wizard/index.mjs --reset    # Start over from scratch
+//   node wizard/index.mjs --from 7   # Re-run from step 7 onward
 
 import { confirm } from '@inquirer/prompts';
 import * as ui from './lib/ui.mjs';
 import {
-  loadState, getCompletedStep, resetState, stateGet, stateSet, TOTAL_STEPS,
+  loadState, getCompletedStep, setCompletedStep, resetState, stateGet, stateSet, TOTAL_STEPS,
 } from './lib/state.mjs';
 
 import stepPrerequisites from './steps/01-prerequisites.mjs';
@@ -43,6 +44,20 @@ async function main() {
 
   loadState();
   ui.banner();
+
+  // Handle --from N flag (re-run from a specific step)
+  const fromIdx = process.argv.indexOf('--from');
+  if (fromIdx !== -1) {
+    const fromStep = parseInt(process.argv[fromIdx + 1], 10);
+    if (fromStep >= 1 && fromStep <= TOTAL_STEPS) {
+      setCompletedStep(fromStep - 1);
+      ui.line(`Jumping to Step ${fromStep}. Previous config is preserved.`);
+      ui.line('');
+    } else {
+      console.error(`  Invalid step number. Use --from 1 through --from ${TOTAL_STEPS}`);
+      process.exit(1);
+    }
+  }
 
   // Check for wizard version mismatch (step order changed between v1 and v2)
   const stateVersion = parseInt(stateGet('WIZARD_VERSION', '0'), 10);
