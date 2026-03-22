@@ -248,7 +248,7 @@ npm run solution:export           # Export solution with secrets
 
 ### Option B: Shared `.env.local` Template (Simpler, No 1Password Required)
 
-If your team doesn't use 1Password, use a plain `.env.local` file. This is less secure (secrets sit on disk) but requires no additional tooling.
+If your team doesn't use 1Password, use a `.env.local` file. The setup wizard **encrypts `PP_CLIENT_SECRET` at rest** using AES-256-GCM with a machine-specific key (see `06-security.instructions.md` for details). Even if `.env.local` is accidentally committed, the client secret is not exposed in plaintext.
 
 Create a `.env.template` file in the repo (committed to Git — it contains no secrets, just variable names):
 

@@ -70,10 +70,39 @@ Never hardcode any of the following in source code, environment files committed 
 
 | Secret Type | Storage Location |
 |-------------|-----------------|
-| App Registration credentials (SPN) | 1Password shared vault (recommended) or `.env.local` for developers; GitHub secrets for CI/CD (see `00-environment-setup.instructions.md`) |
+| App Registration credentials (SPN) | 1Password shared vault (recommended) or `.env.local` (encrypted at rest); GitHub secrets for CI/CD (see `00-environment-setup.instructions.md`) |
 | API keys for connectors | Power Platform connection configuration |
 | Environment-specific config | Power Platform environment variables (created inside the solution) |
 | Per-user auth | Microsoft Entra ID (handled by platform) |
+
+### Local Secret Encryption
+
+When the wizard writes `PP_CLIENT_SECRET` to `.env.local`, it encrypts the value using **AES-256-GCM** with a machine-specific key. The encrypted format uses an `ENC:` prefix:
+
+```
+PP_CLIENT_SECRET=ENC:iv_hex:authTag_hex:ciphertext_hex
+```
+
+**How it works:**
+- **Algorithm**: AES-256-GCM (authenticated encryption — confidentiality + tamper detection)
+- **Key derivation**: `scryptSync(hostname:username:salt, salt, 32)` — key is derived in-memory from the machine identity, never stored on disk
+- **IV**: Random 16 bytes per encryption (never reused)
+- **Portability**: Encrypted values only decrypt on the same machine + OS user. Moving `.env.local` to another machine will fail decryption — re-run the wizard or re-enter the secret.
+
+**Implementation**: `wizard/lib/crypto.mjs` (encrypt/decrypt/isEncrypted)
+
+The wizard's `secrets.mjs` recovery and `scripts/setup-auth.sh` both auto-detect and decrypt `ENC:` values transparently.
+
+### Pre-Commit Hook (papps-secret-guard)
+
+A git pre-commit hook is installed automatically by the wizard (Step 4). It blocks commits that contain:
+1. `.env.local` or `.env.*.local` files staged for commit
+2. Plaintext `PP_CLIENT_SECRET=<value>` where the value is not `op://` or `ENC:` prefixed
+
+The hook script lives at `scripts/pre-commit-hook.sh`. Manual installation:
+```bash
+cp scripts/pre-commit-hook.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
 
 ### .gitignore Must Include
 
@@ -108,7 +137,7 @@ playwright-report/
 
 ### Scanning for Leaked Secrets
 
-Add a pre-commit hook or CI step to detect accidentally committed secrets:
+The pre-commit hook (`papps-secret-guard`) catches secrets locally before they enter Git history. For CI/CD, add a pipeline step:
 
 ```yaml
 # In CI pipeline
@@ -330,5 +359,7 @@ Every PR review should check:
 - [ ] Connector queries use `$select` (don't fetch unnecessary columns that might contain sensitive data)
 - [ ] Role-based UI checks don't replace actual data-level security
 - [ ] `.gitignore` covers all sensitive file patterns
+- [ ] `.env.local` secrets are encrypted (`ENC:` prefix) — never plaintext
+- [ ] Pre-commit hook is installed (check `.git/hooks/pre-commit` exists)
 - [ ] A `<SOLUTION_DISPLAY_NAME> Collaborator` security role exists and covers all custom tables
 - [ ] The security role is supplementary (assigned alongside Basic User, not replacing it)

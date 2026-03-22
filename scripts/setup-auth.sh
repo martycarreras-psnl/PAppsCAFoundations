@@ -23,6 +23,12 @@ if command -v op &>/dev/null && [ -f .env ] && grep -q "^PP_.*=op://" .env 2>/de
 elif [ -f .env.local ]; then
   echo "[.env.local] Using credentials from .env.local"
   source .env.local
+  # Decrypt encrypted client secret (written by wizard with AES-256-GCM)
+  if [[ "${PP_CLIENT_SECRET:-}" == ENC:* ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PP_CLIENT_SECRET=$(node "$SCRIPT_DIR/decrypt-secret.mjs" "$PP_CLIENT_SECRET")
+    echo "  (client secret decrypted from encrypted storage)"
+  fi
 else
   echo "ERROR: No credential source found."
   echo ""

@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { getRootDir, stateGet } from './state.mjs';
 import { runSafe } from './shell.mjs';
+import { decrypt, isEncrypted } from './crypto.mjs';
 
 let _secret = '';
 
@@ -23,7 +24,11 @@ export function recoverSecret() {
     const content = readFileSync(envLocal, 'utf-8');
     const match = content.match(/^PP_CLIENT_SECRET=(.+)$/m);
     if (match && match[1] && !match[1].startsWith('op://')) {
-      _secret = match[1].trim();
+      let value = match[1].trim();
+      if (isEncrypted(value)) {
+        try { value = decrypt(value); } catch { return ''; }
+      }
+      _secret = value;
       return _secret;
     }
   }
