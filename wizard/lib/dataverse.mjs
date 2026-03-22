@@ -67,20 +67,23 @@ export async function dvGet(path) {
 }
 
 /** POST to Dataverse Web API. Returns created entity (Prefer: return=representation). */
-export async function dvPost(path, body) {
+export async function dvPost(path, body, { solutionName } = {}) {
   const envUrl = stateGet('PP_ENV_DEV').replace(/\/$/, '');
   const token = await getToken();
 
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'OData-MaxVersion': '4.0',
+    'OData-Version': '4.0',
+    Prefer: 'return=representation',
+  };
+  if (solutionName) headers['MSCRM.SolutionUniqueName'] = solutionName;
+
   const res = await fetch(`${envUrl}/api/data/v9.2/${path}`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'OData-MaxVersion': '4.0',
-      'OData-Version': '4.0',
-      Prefer: 'return=representation',
-    },
+    headers,
     body: JSON.stringify(body),
   });
 

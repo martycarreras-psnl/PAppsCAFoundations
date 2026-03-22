@@ -1,12 +1,14 @@
 // wizard/steps/07-scaffold.mjs — Scaffold the Code App project
-import { input, confirm, select } from '@inquirer/prompts';
+import { input, confirm, select, checkbox } from '@inquirer/prompts';
 import {
   writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync,
 } from 'node:fs';
 import { join, resolve } from 'node:path';
 import * as ui from '../lib/ui.mjs';
-import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
+import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
 import { pacPath, runLive, run, runSafeLive, runSafe, IS_WIN } from '../lib/shell.mjs';
+import { dvGet, dvPost } from '../lib/dataverse.mjs';
+import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 
 export default async function stepScaffold() {
   ui.stepHeader(7, TOTAL_STEPS, 'Scaffolding Your Code App');
@@ -152,60 +154,16 @@ export default async function stepScaffold() {
     ui.warn('PAC CLI not found — skipping pac code init.');
   }
 
-  // ── Data sources ──
+  // ── Connectors & Connection References ──
   ui.line('');
   ui.divider();
   ui.line('');
-  ui.line('Add data sources now? (You can always add more later)');
+  ui.line('Now let\'s set up connectors for your app.');
+  ui.line('The wizard will create connection references in your solution');
+  ui.line('so they travel with it across environments.');
   ui.line('');
-  let addMore = true;
-  while (addMore && pac) {
-    const dsType = await select({
-      message: 'What type of data source?',
-      choices: [
-        { name: 'Dataverse table', value: 'dataverse' },
-        { name: 'Office 365 Users', value: 'shared_office365users' },
-        { name: 'SharePoint', value: 'shared_sharepointonline' },
-        { name: 'SQL Server', value: 'shared_sql' },
-        { name: 'Other connector (enter API ID)', value: '__other__' },
-        { name: 'Skip — no more data sources', value: '__skip__' },
-      ],
-    });
-    if (dsType === '__skip__') break;
 
-    let args;
-    if (dsType === 'dataverse') {
-      const table = await input({ message: 'Dataverse table logical name (e.g. agtpo_agentidea)', validate: (v) => v.trim() ? true : 'Required' });
-      args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
-    } else if (dsType === '__other__') {
-      const apiId = await input({ message: 'Connector API ID (e.g. shared_office365)', validate: (v) => v.trim() ? true : 'Required' });
-      const connId = await input({ message: 'Connection ID (from Power Apps Maker Portal URL, or Enter to skip)', default: '' });
-      args = ['code', 'add-data-source', '-a', apiId.trim()];
-      if (connId.trim()) args.push('-c', connId.trim());
-    } else {
-      // Named connector (shared_office365users, shared_sharepointonline, shared_sql)
-      const connId = await input({ message: `Connection ID for ${dsType} (from Power Apps Maker Portal URL, or Enter to skip)`, default: '' });
-      args = ['code', 'add-data-source', '-a', dsType];
-      if (connId.trim()) args.push('-c', connId.trim());
-    }
-
-    ui.line('');
-    ui.line(`Running: pac ${args.join(' ')}`);
-    const dsOk = runSafeLive(pac, args, { cwd: projectDir });
-    if (dsOk) {
-      ui.ok('Data source added (TypeScript SDK generated in src/generated/)');
-    } else {
-      ui.warn('Data source command failed. You can add it manually later:');
-      ui.line(`  pac ${args.join(' ')}`);
-    }
-
-    ui.line('');
-    addMore = await confirm({ message: 'Add another data source?', default: false });
-  }
-  if (!pac) {
-    ui.warn('PAC CLI not found. Add data sources manually later:');
-    ui.line('  pac code add-data-source -a dataverse -t <table_name>');
-  }
+  await setupConnectors(pac, projectDir);
 
   // ── Git initialization ──
   ui.line('');
@@ -260,6 +218,173 @@ export default async function stepScaffold() {
   }
 
   setCompletedStep(7);
+}
+
+// ─────────── Connector / Connection Reference Setup ───────────
+
+const COMMON_CONNECTORS = [
+  { apiId: 'shared_commondataserviceforapps', name: 'Dataverse', hasTable: false },
+  { apiId: 'shared_office365users', name: 'Office 365 Users', hasTable: false },
+  { apiId: 'shared_sharepointonline', name: 'SharePoint', hasTable: false },
+  { apiId: 'shared_office365', name: 'Office 365 Outlook', hasTable: false },
+  { apiId: 'shared_teams', name: 'Microsoft Teams', hasTable: false },
+  { apiId: 'shared_sql', name: 'SQL Server', hasTable: false },
+  { apiId: 'shared_azureblob', name: 'Azure Blob Storage', hasTable: false },
+];
+
+async function setupConnectors(pac, projectDir) {
+  const prefix = stateGet('PUBLISHER_PREFIX');
+  const solutionName = stateGet('SOLUTION_UNIQUE_NAME');
+
+  // Try to recover the client secret for Dataverse API calls
+  let hasApiAccess = false;
+  let secret = getSecret();
+  if (!secret) secret = recoverSecret();
+  if (secret) {
+    hasApiAccess = true;
+  }
+
+  // ── 1. Discover existing connection references in our solution ──
+  let existingRefs = [];
+  if (hasApiAccess) {
+    try {
+      ui.line('Checking for existing connection references...');
+      const data = await dvGet(
+        `connectionreferences?$filter=startswith(connectionreferencelogicalname,'${prefix}_')` +
+        '&$select=connectionreferenceid,connectionreferencelogicalname,connectorid,connectionreferencedisplayname',
+      );
+      existingRefs = data.value || [];
+      if (existingRefs.length > 0) {
+        ui.ok(`Found ${existingRefs.length} existing connection reference(s):`);
+        for (const ref of existingRefs) {
+          ui.info(`${ref.connectionreferencedisplayname} (${ref.connectorid.split('/').pop()})`);
+        }
+      }
+    } catch (err) {
+      ui.warn(`Could not query connection references: ${err.message}`);
+    }
+  }
+  ui.line('');
+
+  // ── 2. Present connector checklist ──
+  const existingApiIds = new Set(existingRefs.map((r) => r.connectorid.split('/').pop()));
+  const choices = COMMON_CONNECTORS.map((c) => ({
+    name: existingApiIds.has(c.apiId)
+      ? `${c.name}  (already set up ✓)`
+      : c.name,
+    value: c.apiId,
+    checked: existingApiIds.has(c.apiId),
+  }));
+
+  const selected = await checkbox({
+    message: 'Which connectors does your app need? (Space to toggle, Enter to confirm)',
+    choices,
+  });
+
+  if (selected.length === 0) {
+    ui.line('No connectors selected. You can add them later.');
+    ui.line('');
+    return;
+  }
+
+  // ── 3. Create connection references for new selections ──
+  const newSelections = selected.filter((apiId) => !existingApiIds.has(apiId));
+  const createdRefs = [];
+
+  if (newSelections.length > 0 && hasApiAccess) {
+    ui.line('');
+    ui.line('Creating connection references in your solution...');
+    for (const apiId of newSelections) {
+      const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+      const logicalName = `${prefix}_${apiId}`;
+      try {
+        const result = await dvPost('connectionreferences', {
+          connectionreferencedisplayname: connector.name,
+          connectionreferencelogicalname: logicalName,
+          connectorid: `/providers/Microsoft.PowerApps/apis/${apiId}`,
+        }, { solutionName });
+        createdRefs.push({ apiId, connRefId: result.connectionreferenceid, name: connector.name });
+        ui.ok(`${connector.name} — connection reference created`);
+      } catch (err) {
+        if (err.message.includes('database constraint') || err.message.includes('already exists')) {
+          ui.ok(`${connector.name} — connection reference already exists`);
+          // Find its ID from existing refs or query it
+          const existing = existingRefs.find((r) => r.connectionreferencelogicalname === logicalName);
+          if (existing) createdRefs.push({ apiId, connRefId: existing.connectionreferenceid, name: connector.name });
+        } else {
+          ui.warn(`${connector.name} — failed: ${err.message}`);
+        }
+      }
+    }
+  } else if (newSelections.length > 0) {
+    ui.line('');
+    ui.warn('No API access — cannot create connection references automatically.');
+    ui.line('Create them manually in the Power Apps Maker Portal:');
+    ui.line('  Solutions → your solution → + Add existing → Connection Reference');
+    for (const apiId of newSelections) {
+      const c = COMMON_CONNECTORS.find((conn) => conn.apiId === apiId);
+      ui.line(`  • ${c.name} (${apiId})`);
+    }
+  }
+
+  // ── 4. Add data sources via pac code add-data-source ──
+  if (pac) {
+    ui.line('');
+    ui.line('Adding data sources to your Code App...');
+
+    // Check if Dataverse was selected — ask for table names
+    if (selected.includes('shared_commondataserviceforapps')) {
+      ui.line('');
+      ui.line('Dataverse selected — which tables do you need?');
+      ui.line(`(logical names, e.g. ${prefix}_project, ${prefix}_task)`);
+      ui.line('Enter them one at a time. Press Enter on a blank line when done.');
+      ui.line('');
+      let tableNum = 1;
+      while (true) {
+        const table = await input({ message: `Table ${tableNum} (blank to stop)`, default: '' });
+        if (!table.trim()) break;
+        const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
+        ui.line(`  Running: pac ${args.join(' ')}`);
+        const ok = runSafeLive(pac, args, { cwd: projectDir });
+        if (ok) {
+          ui.ok(`${table.trim()} — data source added`);
+        } else {
+          ui.warn(`${table.trim()} — failed. Add manually later: pac ${args.join(' ')}`);
+        }
+        tableNum++;
+      }
+    }
+
+    // Add non-Dataverse connectors as data sources
+    const nonDvSelected = selected.filter((id) => id !== 'shared_commondataserviceforapps');
+    for (const apiId of nonDvSelected) {
+      const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+      const ref = createdRefs.find((r) => r.apiId === apiId) ||
+        existingRefs.find((r) => r.connectorid.endsWith(`/${apiId}`));
+      const args = ['code', 'add-data-source', '-a', apiId];
+      if (ref) {
+        args.push('-cr', ref.connectionreferenceid || ref.connRefId);
+        args.push('-s', stateGet('SOLUTION_ID', ''));
+      }
+      ui.line(`  Running: pac ${args.join(' ')}`);
+      const ok = runSafeLive(pac, args, { cwd: projectDir });
+      if (ok) {
+        ui.ok(`${connector.name} — data source added`);
+      } else {
+        ui.warn(`${connector.name} — failed. Add manually later: pac code add-data-source -a ${apiId}`);
+      }
+    }
+  } else {
+    ui.warn('PAC CLI not found. Add data sources manually after installing pac:');
+    ui.line('  pac code add-data-source -a dataverse -t <table_name>');
+  }
+
+  ui.line('');
+  if (hasApiAccess && createdRefs.length > 0) {
+    ui.line('Connection references have been created in your solution.');
+  }
+  ui.line('After deploying, map each connection reference to an actual connection');
+  ui.line('in the Power Apps Maker Portal → Solutions → your solution → Connection References.');
 }
 
 // ─────────── Helpers ───────────

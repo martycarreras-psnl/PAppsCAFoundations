@@ -49,7 +49,7 @@ export default async function stepSolution() {
     ui.line('');
   }
 
-  let solUniqueName, solFriendlyName;
+  let solUniqueName, solFriendlyName, solId;
 
   if (solutions.length > 0) {
     const choices = solutions.map((s) => ({
@@ -71,18 +71,20 @@ export default async function stepSolution() {
       const sol = solutions.find((s) => s.solutionid === selected);
       solUniqueName = sol.uniquename;
       solFriendlyName = sol.friendlyname;
+      solId = sol.solutionid;
       ui.ok(`Selected: ${solFriendlyName} (${solUniqueName})`);
     } else {
-      ({ solUniqueName, solFriendlyName } = await createNewSolution(publisherId, appName));
+      ({ solUniqueName, solFriendlyName, solId } = await createNewSolution(publisherId, appName));
     }
   } else {
     ui.line('No existing solutions found — let\'s create one.');
     ui.line('');
-    ({ solUniqueName, solFriendlyName } = await createNewSolution(publisherId, appName));
+    ({ solUniqueName, solFriendlyName, solId } = await createNewSolution(publisherId, appName));
   }
 
   stateSet('SOLUTION_DISPLAY_NAME', solFriendlyName);
   stateSet('SOLUTION_UNIQUE_NAME', solUniqueName);
+  if (solId) stateSet('SOLUTION_ID', solId);
 
   ui.line('');
   ui.divider();
@@ -109,16 +111,18 @@ async function createNewSolution(publisherId, appName) {
   });
 
   // Try to create via Dataverse API
+  let solId = '';
   if (publisherId) {
     try {
       ui.line('');
       ui.line('Creating solution via Dataverse API...');
-      await dvPost('solutions', {
+      const result = await dvPost('solutions', {
         uniquename: solUniqueName.trim(),
         friendlyname: solFriendlyName.trim(),
         version: '1.0.0.0',
         'publisherid@odata.bind': `/publishers(${publisherId})`,
       });
+      solId = result.solutionid || '';
       ui.ok('Solution created!');
     } catch (err) {
       ui.warn('Could not create solution via API.');
@@ -138,5 +142,6 @@ async function createNewSolution(publisherId, appName) {
   return {
     solUniqueName: solUniqueName.trim(),
     solFriendlyName: solFriendlyName.trim(),
+    solId,
   };
 }

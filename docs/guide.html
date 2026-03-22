@@ -1472,15 +1472,23 @@ pac code push</pre>
         </div>
       </div>
 
-      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Adding Data Sources</h3>
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Connectors &amp; Connection References</h3>
+      <p>The wizard auto-creates <strong>connection references</strong> in your solution so they travel across environments. During step 7, you pick connectors from a checklist and the wizard creates the references via the Dataverse API.</p>
       <div class="table-wrap"><table>
-        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <thead><tr><th>Action</th><th>How</th></tr></thead>
         <tbody>
-          <tr><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td><td>Add a Dataverse table — generates TypeScript SDK in <code>src/generated/</code></td></tr>
-          <tr><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td><td>Add any other connector (Office 365 Users, SharePoint, SQL, etc.)</td></tr>
+          <tr><td>Add connectors via wizard</td><td><code>node wizard/index.mjs --from 7</code> (re-runs connector setup)</td></tr>
+          <tr><td>Add Dataverse table manually</td><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td></tr>
+          <tr><td>Add other connector manually</td><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td></tr>
+          <tr><td>Map references after import</td><td>Power Apps Maker Portal &rarr; Solutions &rarr; Connection References</td></tr>
         </tbody>
       </table></div>
-      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required — there is no interactive picker mode. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
+      <div class="card" style="margin-top: var(--s3); border-left: 3px solid var(--blue);">
+        <div class="card-body">
+          <strong>How it works:</strong> A <em>connection reference</em> says "this solution uses the Office 365 Users connector." The actual authenticated <em>connection</em> (your credentials) is mapped to the reference per-environment. This means you deploy once and map per-environment — no secrets in the solution.
+        </div>
+      </div>
+      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
       <div class="table-wrap"><table>

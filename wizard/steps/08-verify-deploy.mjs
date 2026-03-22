@@ -92,9 +92,14 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  npm run dev          <- connected mode (Vite + pac code run)');
   ui.line('  pac code push        <- deploy changes to Power Platform');
   ui.line('');
-  ui.line('To add a data source later:');
+  ui.line('To add connectors later:');
+  ui.line('  node wizard/index.mjs --from 7    (re-run connector setup)');
+  ui.line('  — or manually —');
   ui.line('  pac code add-data-source -a dataverse -t <table_logical_name>');
   ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
+  ui.line('');
+  ui.line('Connection references travel with your solution.');
+  ui.line('Map them to actual connections in Power Apps Maker Portal after import.');
   ui.line('');
   ui.line('To set up CI/CD:');
   ui.line('  See .github/instructions/04-deployment.instructions.md');
