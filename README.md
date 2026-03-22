@@ -18,6 +18,7 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
 │   └── op-pac.sh                           # 1Password wrapper for pac commands
+│   └── setup-wizard.sh                     # Guided local setup wizard for new developers
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
 ├── .gitignore
@@ -45,6 +46,14 @@ npm install
 - Copy `.env.template` to `.env.local`
 - Fill in credentials from your team lead
 - Run `npm run setup:auth`
+
+### Optional: use the local setup wizard (recommended for first-time users)
+
+```bash
+bash scripts/setup-wizard.sh
+```
+
+The wizard walks you through tool checks, dependency install, and auth setup with simple prompts.
 
 ### 3. Verify (no browser popup)
 
