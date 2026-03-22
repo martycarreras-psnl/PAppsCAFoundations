@@ -101,10 +101,13 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── op-pac.sh                           # 1Password wrapper for pac commands
 │   ├── setup-auth.sh                       # One-command auth setup (1Password or .env.local)
+│   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
 │   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
 │   ├── generate-dataverse-plan.mjs         # Expand planning payloads into execution plans
+│   ├── register-dataverse-data-sources.mjs # Cross-platform Dataverse table registration via PAC
 │   ├── register-dataverse-data-sources.sh  # Register planned tables with pac and regenerate SDK
 │   ├── schema-plan.example.json            # Starter Dataverse planning artifact
+│   ├── sync-foundations.mjs                # Cross-platform template sync entry point
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
 │   └── setup-wizard.sh                     # Guided 8-step setup wizard (bash, legacy)
@@ -133,10 +136,12 @@ Foundations now includes a reusable Dataverse execution layer that sits between 
 ```bash
 node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
 node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
-bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json
+node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
 ```
 
 This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
+
+The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
 
 ## Staying Updated
 

@@ -65,8 +65,10 @@ The Copilot Studio connector requires a connection in the target environment, ju
 Use the scripted discovery helper first:
 
 ```bash
-bash scripts/discover-copilot-connection.sh
+node scripts/discover-copilot-connection.mjs
 ```
+
+Prefer the `.mjs` entry point for cross-platform execution on macOS, Linux, and Windows. The `.sh` variant remains available for Bash-heavy environments.
 
 Behavior:
 - **0 connections found** — prints Maker Portal steps, waits, retries

@@ -136,7 +136,7 @@ export default async function stepScaffold() {
   const scriptsDir = join(ROOT, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'discover-copilot-connection.sh', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh']) {
+    for (const f of ['setup-auth.sh', 'op-pac.sh', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
@@ -619,8 +619,8 @@ function createMinimalProject(dir, appName) {
       deploy: 'npm run build && pac code push',
       'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
       'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
-      'register:dataverse': 'bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json',
-      'sync:foundations': 'bash scripts/sync-foundations.sh',
+      'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
+      'sync:foundations': 'node scripts/sync-foundations.mjs',
     },
   }, null, 2) + '\n');
 }

@@ -60,12 +60,14 @@ Foundations now provides a reusable script chain for this handoff:
 ```bash
 node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
 node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
-bash scripts/register-dataverse-data-sources.sh dataverse/register-datasources.plan.json
+node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
 ```
 
 - `validate-schema-plan.mjs` checks the planning artifact before any provisioning work starts
 - `generate-dataverse-plan.mjs` emits normalized execution plans for tables, relationships, and connector registration
-- `register-dataverse-data-sources.sh` consumes the generated registration plan and runs `pac code add-data-source` in order, followed by `pac code generate`
+- `register-dataverse-data-sources.mjs` consumes the generated registration plan and runs `pac code add-data-source` in order, followed by `pac code generate`
+
+Prefer the `.mjs` entry points for cross-platform automation. The `.sh` variant exists for Bash-heavy environments but is not the canonical path for Windows.
 
 Use these helpers as the default execution path in downstream repos. If you replace them, the alternative must still preserve the same ordered contract and re-runnable plan artifacts.
 
