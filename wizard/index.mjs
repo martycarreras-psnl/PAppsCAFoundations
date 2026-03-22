@@ -8,25 +8,28 @@
 import { confirm } from '@inquirer/prompts';
 import * as ui from './lib/ui.mjs';
 import {
-  loadState, getCompletedStep, resetState, stateGet, TOTAL_STEPS,
+  loadState, getCompletedStep, resetState, stateGet, stateSet, TOTAL_STEPS,
 } from './lib/state.mjs';
 
 import stepPrerequisites from './steps/01-prerequisites.mjs';
-import stepProjectIdentity from './steps/02-project-identity.mjs';
-import stepCreatePublisher from './steps/03-create-publisher.mjs';
-import stepEnvironments from './steps/04-environments.mjs';
-import stepSolutionAndAppReg from './steps/05-solution-app-reg.mjs';
-import stepAuthSetup from './steps/06-auth-setup.mjs';
+import stepProjectAndEnv from './steps/02-project-and-env.mjs';
+import stepAppRegistration from './steps/03-app-registration.mjs';
+import stepAuthSetup from './steps/04-auth-setup.mjs';
+import stepPublisher from './steps/05-publisher.mjs';
+import stepSolution from './steps/06-solution.mjs';
 import stepScaffold from './steps/07-scaffold.mjs';
 import stepVerifyAndDeploy from './steps/08-verify-deploy.mjs';
 
+// Increment when step order changes to detect stale resume state
+const WIZARD_VERSION = 2;
+
 const steps = [
   stepPrerequisites,
-  stepProjectIdentity,
-  stepCreatePublisher,
-  stepEnvironments,
-  stepSolutionAndAppReg,
+  stepProjectAndEnv,
+  stepAppRegistration,
   stepAuthSetup,
+  stepPublisher,
+  stepSolution,
   stepScaffold,
   stepVerifyAndDeploy,
 ];
@@ -40,6 +43,20 @@ async function main() {
 
   loadState();
   ui.banner();
+
+  // Check for wizard version mismatch (step order changed between v1 and v2)
+  const stateVersion = parseInt(stateGet('WIZARD_VERSION', '0'), 10);
+  if (stateVersion < WIZARD_VERSION && getCompletedStep() > 0) {
+    ui.warn('The wizard has been updated with a new step order.');
+    ui.line('Your saved progress is from an older version.');
+    ui.line('');
+    const startOver = await confirm({ message: 'Start fresh with the new wizard?', default: true });
+    if (startOver) {
+      resetState();
+      loadState();
+    }
+  }
+  stateSet('WIZARD_VERSION', String(WIZARD_VERSION));
 
   let completed = getCompletedStep();
 
