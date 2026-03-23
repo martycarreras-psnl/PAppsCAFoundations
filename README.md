@@ -38,6 +38,26 @@ That's it. The wizard walks you through everything — tool checks, naming, Powe
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
 
+## Methodology
+
+Foundations now assumes a deliberate sequence for non-trivial apps:
+
+1. Plan the business workflow
+2. Prototype the UX against mock providers
+3. Let prototype feedback change the planning payload
+4. Freeze the Dataverse plan
+5. Bind real connectors and implement real providers
+
+This means the wizard does **not** expect connection IDs during the first scaffold run. Connector binding is a later, explicit move into connected mode.
+
+When you are ready for real data, run:
+
+```bash
+node wizard/index.mjs --from 8
+```
+
+That later flow creates connection references in the solution, attempts to discover existing environment connections with `pac connection list`, and lets the developer select the right connection when matches exist.
+
 ## Execution Roadmap
 
 Foundations is now evolving against an explicit 8-step robustness roadmap:
@@ -84,7 +104,10 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
 7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload
-8. **Builds, verifies, and optionally deploys** — while steering you toward mock-mode validation before real connector binding
+8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable
+9. **Builds, verifies, and optionally deploys** — after prototype validation and connector binding are complete
+
+Connector setup is intentionally deferred. The expected next move after scaffold is `npm run dev:local`, not collecting connection IDs.
 
 ### Already set up? Manual path
 
@@ -101,6 +124,8 @@ See `00-environment-setup.instructions.md` for details.
 ## Visual Guide
 
 Once you have the code on your machine, open [docs/guide.html](docs/guide.html) in your browser for an interactive visual walkthrough — tech stack overview, naming conventions, Power Apps Maker Portal links, and a detailed breakdown of each wizard step all in one page.
+
+The short version is: plan first, prototype second, connect later.
 
 ## What's Inside
 
@@ -139,11 +164,11 @@ PAppsCAFoundations/
 │   ├── sync-foundations.mjs                # Cross-platform template sync entry point
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
-│   └── setup-wizard.sh                     # Guided 8-step setup wizard (bash, legacy)
+│   └── setup-wizard.sh                     # Guided legacy setup wizard (bash)
 ├── wizard/                                 # Cross-platform Node.js setup wizard
 │   ├── index.mjs                           # Entry point + step orchestrator
 │   ├── lib/                                # Shared helpers (state, UI, shell, validation)
-│   └── steps/                              # 8 step modules (01-prerequisites … 08-verify-deploy)
+│   └── steps/                              # 9 step modules (01-prerequisites … 08-connectors + deploy)
 ├── solution/                               # Power Platform solution artifacts
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
@@ -177,6 +202,14 @@ node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.
 This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
 
 If you want the full recommended sequence from planning payload to mock UX to real providers, follow [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
+
+For later connector binding, prefer rerunning the wizard from the dedicated connector step:
+
+```bash
+node wizard/index.mjs --from 8
+```
+
+That path is designed for the point where the planning payload is stable enough that connection references and connection IDs are no longer guesses.
 
 The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
 

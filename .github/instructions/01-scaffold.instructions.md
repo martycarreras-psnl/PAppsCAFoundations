@@ -243,23 +243,30 @@ pac code init
 # 8. If the app's business scope is still being defined, stop here and complete
 #    the planning flow before choosing connectors or Dataverse tables.
 
-# 9. After planning and schema decisions are stable, add your first data source
-#    (interactive — choose a connector). This creates a connection reference in
-#    your solution automatically.
-pac code add-data-source
+# 9. Build in prototype mode first.
+npm run dev:local
 
-# 10. Generate typed services from the connector
+# 10. When the planning payload is stable and you are ready to bind real data,
+#     re-run the wizard from the connector step so it can create connection
+#     references and help discover existing connections.
+node wizard/index.mjs --from 8
+
+# 11. Generate typed services from the connector
 pac code generate
 
-# 11. Verify your solution contains the Code App and connection references
+# 12. Verify your solution contains the Code App and connection references
 #     Open Power Apps Maker Portal → Solutions → YourSolution
 #     You should see: the Code App, connection reference(s), and any tables you've added
 
-# 12. Start development (Vite + PAC Code Run on port 3000)
+# 13. Start connected development (Vite + PAC Code Run on port 3000)
 npm run dev
 ```
 
 **After scaffolding, do not create Dataverse tables or add connectors based on guesswork.** First refine the business scope and convert it into a conceptual plan. Once that is stable, create any Dataverse tables your app needs from within the solution (see the "All Dataverse Artifacts Must Be Solution-Aware" rule above). Do not create tables from the top-level Tables view in the Power Apps Maker Portal.
+
+**Connector binding is intentionally deferred.** During the initial scaffold, do not ask the developer for connection IDs up front. The expected method is: plan the workflow, prototype the UX with mock providers, refine `dataverse/planning-payload.json`, and only then bind real connectors.
+
+When moving into connected mode, prefer a later wizard flow that can inspect existing environment connections with `pac connection list`, filter by connector API ID, and let the developer select the right one. If no match is discovered, then prompt for manual creation in Maker Portal or for a pasted Connection ID.
 
 ## Package.json Scripts
 

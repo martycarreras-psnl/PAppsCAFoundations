@@ -52,4 +52,4 @@ export function resetState() {
   if (existsSync(STATE_FILE)) unlinkSync(STATE_FILE);
 }
 
-export const TOTAL_STEPS = 8;
+export const TOTAL_STEPS = 9;

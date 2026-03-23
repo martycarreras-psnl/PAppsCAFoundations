@@ -9,6 +9,7 @@ import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS, getRootDir
 import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN } from '../lib/shell.mjs';
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
+import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
 import {
   copyFoundationFiles,
   createMinimalProject,
@@ -164,22 +165,12 @@ export default async function stepScaffold() {
   ui.line('');
   ui.divider();
   ui.line('');
-  ui.line('Now let\'s set up connectors for your app.');
-  ui.line('The wizard will create connection references in your solution');
-  ui.line('so they travel with it across environments.');
-  ui.line('If your UX and data model are still moving, skip this for now and stay in prototype mode.');
+  ui.line('Connector binding is now a dedicated later step.');
+  ui.line('The expected flow is plan → prototype → refine the planning payload → bind real connectors.');
   ui.line('');
-
-  const setupConnectorsNow = await confirm({
-    message: 'Add connectors now?',
-    default: false,
-  });
-
-  if (setupConnectorsNow) {
-    await setupConnectors(pac, projectDir);
-  } else {
-    ui.line('Skipping connector setup for now. Re-run Step 7 or add data sources later after prototype review.');
-  }
+  ui.line('Skipping connector setup during initial scaffold.');
+  ui.line('When the prototype is stable, move to the dedicated connector step:');
+  ui.line('  node wizard/index.mjs --from 8');
 
   // ── Git initialization ──
   ui.line('');
@@ -263,6 +254,22 @@ A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeSc
 
 ## Getting Started
 
+## Recommended Method
+
+1. Plan the workflow and conceptual model.
+2. Prototype the UX with mock providers.
+3. Capture feedback in dataverse/prototype-feedback.md.
+4. Update dataverse/planning-payload.json and rerun npm run prototype:seed.
+5. Bind real connectors only when the model is stable.
+
+The initial scaffold intentionally does not ask for connection IDs. When you are ready for real data, run:
+
+\`\`\`bash
+node wizard/index.mjs --from 8
+\`\`\`
+
+That later flow can inspect existing environment connections with \`pac connection list\` and let you choose one when matches exist.
+
 ### Prerequisites
 
 - Node.js 18+
@@ -323,11 +330,22 @@ ${envTable}
 
 ### Connectors
 
-Data sources are managed via Power Platform connectors. To add a new data source:
+Data sources are managed via Power Platform connectors, but real connector binding is a later step after prototype validation.
+
+Preferred path:
+
+\`\`\`bash
+node wizard/index.mjs --from 8
+\`\`\`
+
+Manual fallback:
 
 \`\`\`bash
 # Add a Dataverse table
 ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${publisherPrefix}_tablename
+
+# Add a non-Dataverse connector once you know the Connection ID
+~/.dotnet/tools/pac code add-data-source -a shared_office365users -c <connection_id>
 
 # Regenerate TypeScript SDK
 ~/.dotnet/tools/pac code generate
@@ -409,7 +427,7 @@ const COMMON_CONNECTORS = [
   { apiId: 'shared_azureblob', name: 'Azure Blob Storage', hasTable: false },
 ];
 
-async function setupConnectors(pac, projectDir) {
+export async function setupConnectors(pac, projectDir) {
   const prefix = stateGet('PUBLISHER_PREFIX');
   const solutionName = stateGet('SOLUTION_UNIQUE_NAME');
 
@@ -514,7 +532,7 @@ async function setupConnectors(pac, projectDir) {
     const authSwitched = await ensureUserAuthForCodeCommands(pac);
     if (!authSwitched) {
       ui.warn('Cannot add data sources without user auth.');
-      ui.line('  Switch to user auth and re-run: node wizard/index.mjs --from 7');
+      ui.line('  Switch to user auth and re-run: node wizard/index.mjs --from 8');
       ui.line('');
       return;
     }
@@ -558,38 +576,22 @@ async function setupConnectors(pac, projectDir) {
       ui.line('  Click a connection → the ID is the GUID at the end of the browser URL.');
       ui.line('');
 
-      const hasConnIds = await confirm({
-        message: 'Do you have Connection IDs ready for these connectors?',
-        default: false,
-      });
-
-      if (hasConnIds) {
-        for (const apiId of nonDvSelected) {
-          const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
-          const connectionId = await input({
-            message: `Connection ID for ${connector.name} (blank to skip)`,
-            default: '',
-          });
-          if (!connectionId.trim()) {
-            ui.info(`${connector.name} — skipped`);
-            ui.line(`    Add later: pac code add-data-source -a ${apiId} -c <CONNECTION_ID>`);
-            continue;
-          }
-          const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
-          ui.line(`  Running: pac ${args.join(' ')}`);
-          const ok = runPacCodeDataSource(pac, args, projectDir);
-          if (ok) {
-            ui.ok(`${connector.name} — data source added`);
-          } else {
-            ui.warn(`${connector.name} — failed. Try manually:`);
-            ui.line(`    pac code add-data-source -a ${apiId} -c ${connectionId.trim()}`);
-          }
+      for (const apiId of nonDvSelected) {
+        const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+        const connectionId = await resolveConnectionIdForConnector(pac, apiId, connector.name);
+        if (!connectionId) {
+          ui.info(`${connector.name} — skipped`);
+          ui.line(`    Add later: pac code add-data-source -a ${apiId} -c <CONNECTION_ID>`);
+          continue;
         }
-      } else {
-        ui.line('No problem — add them any time after creating connections:');
-        for (const apiId of nonDvSelected) {
-          const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
-          ui.line(`  pac code add-data-source -a ${apiId} -c <CONNECTION_ID>  # ${connector.name}`);
+        const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
+        ui.line(`  Running: pac ${args.join(' ')}`);
+        const ok = runPacCodeDataSource(pac, args, projectDir);
+        if (ok) {
+          ui.ok(`${connector.name} — data source added`);
+        } else {
+          ui.warn(`${connector.name} — failed. Try manually:`);
+          ui.line(`    pac code add-data-source -a ${apiId} -c ${connectionId.trim()}`);
         }
       }
     }
@@ -604,6 +606,60 @@ async function setupConnectors(pac, projectDir) {
   }
   ui.line('After deploying, map each connection reference to an actual connection');
   ui.line('in the Power Apps Maker Portal → Solutions → your solution → Connection References.');
+}
+
+async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
+  while (true) {
+    const discovered = discoverConnectionsForApiId(pac, apiId);
+
+    if (discovered.length > 0) {
+      const selected = await select({
+        message: `Select the ${connectorName} connection to use`,
+        choices: [
+          ...discovered.map((entry) => ({
+            name: `${entry.displayName} (${entry.connectionId})`,
+            value: entry.connectionId,
+          })),
+          { name: 'Re-scan connections', value: '__rescan__' },
+          { name: 'Paste a connection ID manually', value: '__manual__' },
+          { name: 'Skip this connector for now', value: '__skip__' },
+        ],
+      });
+
+      if (selected === '__rescan__') continue;
+      if (selected === '__skip__') return '';
+      if (selected === '__manual__') {
+        const manual = await input({
+          message: `Connection ID for ${connectorName} (blank to skip)`,
+          default: '',
+        });
+        return manual.trim();
+      }
+
+      return selected;
+    }
+
+    ui.warn(`No existing ${connectorName} connections were found via pac connection list.`);
+    ui.line('Create one in Power Apps Maker Portal → Data → Connections, then return here.');
+
+    const nextAction = await select({
+      message: `How do you want to continue for ${connectorName}?`,
+      choices: [
+        { name: 'Re-scan connections after creating one', value: '__rescan__' },
+        { name: 'Paste a connection ID manually', value: '__manual__' },
+        { name: 'Skip this connector for now', value: '__skip__' },
+      ],
+    });
+
+    if (nextAction === '__rescan__') continue;
+    if (nextAction === '__skip__') return '';
+
+    const manual = await input({
+      message: `Connection ID for ${connectorName} (blank to skip)`,
+      default: '',
+    });
+    return manual.trim();
+  }
 }
 
 // ─────────── PAC Code Helpers ───────────

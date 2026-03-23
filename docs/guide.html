@@ -592,7 +592,7 @@
         <span class="nav-icon">🧙</span> Wizard Overview
       </button>
       <button class="nav-item" data-target="wizard-steps" onclick="navTo(this)">
-        <span class="nav-icon">📋</span> All 8 Steps
+        <span class="nav-icon">📋</span> All 9 Steps
       </button>
 
       <div class="nav-group-label">Portal Quick Links</div>
@@ -652,7 +652,7 @@
     <!-- Hero -->
     <section class="hero" id="hero-section">
       <h1>Power Apps Code Apps</h1>
-      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and if you want a top-notch business fit, use the narrative-first planning layer before locking in schema and connectors.</p>
+      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and follow the intended sequence: plan first, prototype second, connect real systems later.</p>
       <div class="hero-actions">
         <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations/generate" class="btn btn-primary" target="_blank" rel="noopener">📋 Use This Template</a>
         <a href="#wizard-overview" class="btn btn-outline">🧙 Run the Wizard</a>
@@ -674,6 +674,7 @@
 │       ├── <span class="file">00a-business-problem-decomposition.instructions.md</span> <span class="comment"># Turn freeform business narratives into planning inputs</span>
 │       ├── <span class="file">00b-scope-refinement-and-solution-shaping.instructions.md</span> <span class="comment"># Refine workflows, automation, Teams, reporting, governance</span>
 │       ├── <span class="file">00c-solution-concept-to-dataverse-plan.instructions.md</span> <span class="comment"># Bridge refined scope into Dataverse planning</span>
+│       ├── <span class="file">00d-prototype-validation.instructions.md</span> <span class="comment"># Validate UX with mock data before schema hardens</span>
 │       ├── <span class="file">01-scaffold.instructions.md</span>            <span class="comment"># Project structure, tech stack</span>
 │       ├── <span class="file">02-connectors.instructions.md</span>          <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
 │       ├── <span class="file">03-components.instructions.md</span>          <span class="comment"># React + Fluent UI v9 patterns</span>
@@ -692,7 +693,7 @@
 ├── <span class="folder">wizard/</span>                                 <span class="comment"># ← THE MAIN EVENT</span>
 │   ├── <span class="file">index.mjs</span>                           <span class="comment"># Cross-platform Node.js setup wizard</span>
 │   ├── <span class="folder">lib/</span>                                <span class="comment"># Shared helpers (state, UI, shell)</span>
-│   └── <span class="folder">steps/</span>                              <span class="comment"># 8 step modules</span>
+│   └── <span class="folder">steps/</span>                              <span class="comment"># 9 step modules</span>
 ├── <span class="folder">solution/</span>                               <span class="comment"># Power Platform solution artifacts</span>
 ├── <span class="file">.env</span>                                    <span class="comment"># 1Password references (safe to commit)</span>
 ├── <span class="file">.env.template</span>                           <span class="comment"># Template for non-1Password teams</span>
@@ -702,7 +703,7 @@
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📋</div>
-          <h3>13 Instruction Files</h3>
+          <h3>14 Instruction Files</h3>
           <p>Copilot reads these automatically. They now cover both technical execution and narrative-first business planning, so AI guidance can help shape better solutions before code starts.</p>
         </div></div>
         <div class="card"><div class="card-body">
@@ -713,7 +714,7 @@
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
           <h3>Setup Wizard</h3>
-          <p>One script, 8 steps, zero guesswork. Creates publisher and solution via API, sets up auth, scaffolds your app, and deploys — all from the terminal.</p>
+          <p>One script, 9 steps, zero guesswork. Creates publisher and solution via API, sets up auth, scaffolds your app, adds a dedicated connector-binding pass, and deploys from the terminal.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔐</div>
@@ -813,6 +814,11 @@
           <div style="margin-top:8px;"><a href="prototype-golden-path.md">Open the prototype-first golden path</a></div>
         </div>
       </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div><strong>Expected methodology:</strong> the initial wizard run scaffolds the app and seeds prototype assets. It does not assume you already know the connector mix or the correct connection IDs. Real connector binding is a later step after the prototype has influenced the planning payload.</div>
+      </div>
     </section>
 
     <!-- Wizard Overview -->
@@ -891,15 +897,15 @@
         </div></div>
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🚀</div>
-          <h3 style="font-size:13px;">Steps 7–8</h3>
-          <p>Scaffold, build &amp; deploy</p>
+          <h3 style="font-size:13px;">Steps 7–9</h3>
+          <p>Scaffold, bind connectors, build &amp; deploy</p>
         </div></div>
       </div>
     </section>
 
-    <!-- All 8 Steps -->
+    <!-- All 9 Steps -->
     <section class="section" id="wizard-steps">
-      <h2 class="section-title">All 8 Wizard Steps</h2>
+      <h2 class="section-title">All 9 Wizard Steps</h2>
       <p class="section-subtitle">Expand each step to see what happens and what you'll need.</p>
 
       <div class="accordion">
@@ -1123,23 +1129,23 @@
               <li>Includes the narrative-first planning instructions so you can refine the business scope before hardening schema and connector choices</li>
               <li>Seeds prototype contracts, mock providers, and <code>dataverse/prototype-feedback.md</code> from the planning payload</li>
               <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
-              <li>Lets you skip connector setup if the prototype and planning payload still need refinement</li>
+              <li>Defers connector setup by default so the team can prototype before binding real systems</li>
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
 
             <h4>Connector &amp; Data Source Setup</h4>
-            <p>The wizard presents a checklist of common connectors. For each non-Dataverse connector (Office 365 Users, SharePoint, Teams, etc.), you need a <strong>Connection ID</strong> — a GUID that identifies an actual authenticated connection instance.</p>
+            <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later with <code>node wizard/index.mjs --from 8</code> once the planning payload and prototype are stable enough to bind real systems.</p>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
                 <strong>All <code>pac code</code> commands require user (interactive) auth.</strong> The BAP checkAccess API rejects SPN tokens. The wizard detects SPN auth and automatically switches to a user profile before running <code>pac code add-data-source</code>.
-                <p style="margin-top:8px;">If you don't have Connection IDs ready, the wizard skips non-Dataverse connectors with copy-paste commands for later. You can always re-run this step: <code>node wizard/index.mjs --from 7</code></p>
+                <p style="margin-top:8px;">When you do re-run connector setup, the wizard first tries <code>pac connection list</code>, filters to the selected connector API ID, and lets you choose from discovered connections. Manual Connection ID entry is only the fallback.</p>
               </div>
             </div>
 
             <h4 style="margin-top:16px;">How to Get Connection IDs</h4>
-            <p>You must create connections <strong>before</strong> adding them as data sources. See the <a href="#create-connections">Creating Connections</a> section below for step-by-step instructions.</p>
+            <p>You must create connections <strong>before</strong> adding them as data sources. See the <a href="#create-connections">Creating Connections</a> section below for step-by-step instructions. Once they exist, the later wizard connector flow can often discover them for you.</p>
 
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
@@ -1153,6 +1159,30 @@
           <button class="accordion-header" onclick="toggleAccordion(this)">
             <span class="accordion-chevron">▶</span>
             <span class="accordion-step">8</span>
+            <span class="accordion-title">Bind Connectors &amp; Data Sources</span>
+            <span class="accordion-tag tag-automated">Automated</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>This is the first connected-mode step. Run it only after the planning payload and prototype are stable enough that connector choices are no longer guesses.</p>
+            <ol>
+              <li>Creates solution-level connection references for the connectors you actually chose</li>
+              <li>Runs <code>pac connection list</code> and filters matches to the selected connector API ID</li>
+              <li>Lets you select an existing connection when matches are found</li>
+              <li>Falls back to manual Connection ID entry only when discovery does not find a usable match</li>
+              <li>Adds the selected data sources to the Code App so generated services can be produced later</li>
+            </ol>
+            <div class="callout callout-warn">
+              <span class="callout-icon">⚠️</span>
+              <div>This step still requires user auth for <code>pac code add-data-source</code>. The wizard will switch away from SPN auth automatically when needed.</div>
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Step 9 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">9</span>
             <span class="accordion-title">Build, Verify &amp; Deploy</span>
             <span class="accordion-tag tag-automated">Automated</span>
           </button>
@@ -1174,6 +1204,7 @@
 npm run dev:local    ← prototype with mock providers
 npm run prototype:seed ← refresh prototype assets after editing the planning payload
 npm run dev          ← connected mode once real providers exist
+node wizard/index.mjs --from 8 ← bind real connectors when ready
 pac code push        ← deploy changes to Power Platform</pre>
           </div></div>
         </div>
@@ -1184,7 +1215,7 @@ pac code push        ← deploy changes to Power Platform</pre>
     <!-- Creating Connections -->
     <section class="section" id="create-connections">
       <h2 class="section-title">Creating Connections</h2>
-      <p class="section-subtitle">Before adding connectors as data sources in Step 7, you must create the actual connection instances in the Maker Portal.</p>
+      <p class="section-subtitle">Before moving from prototype mode into connected mode, create the actual connection instances in the Maker Portal.</p>
 
       <p>A <strong>connection reference</strong> (created by the wizard in your solution) is a pointer that says "this app uses the Office 365 Users connector." The <strong>connection</strong> is the authenticated instance — the actual credential that makes it work. You need both.</p>
 
@@ -1216,6 +1247,10 @@ pac code push        ← deploy changes to Power Platform</pre>
       </table></div>
 
       <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
+      <p>Preferred path: rerun the wizard when you are ready to connect real data.</p>
+      <pre style="margin-bottom:8px;">node wizard/index.mjs --from 8</pre>
+      <p>The wizard will create the solution-level connection references, try to discover existing environment connections with <code>pac connection list</code>, and let you select one when matches are found.</p>
+
       <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
 pac code add-data-source -a dataverse -t myprefix_project
 
@@ -1397,7 +1432,7 @@ export default defineConfig(({ command }) =&gt; ({
     <!-- Reference: Connectors -->
     <section class="section" id="ref-connectors">
       <h2 class="section-title">Connectors</h2>
-      <p class="section-subtitle">Code Apps cannot make direct HTTP calls. All data access goes through Power Platform connectors.</p>
+      <p class="section-subtitle">Code Apps cannot make direct HTTP calls. All data access goes through Power Platform connectors, but connector binding should happen after prototype validation.</p>
 
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
@@ -1405,6 +1440,8 @@ export default defineConfig(({ command }) =&gt; ({
       </div>
 
       <h4>Adding a Data Source</h4>
+      <p>Recommended order: prototype first, then rerun the wizard from the dedicated connector step once the planning payload is stable.</p>
+      <pre style="margin-bottom:8px;">node wizard/index.mjs --from 8</pre>
       <pre><em># Dataverse (no connection ID needed):</em>
 pac code add-data-source -a dataverse -t myprefix_project
 
@@ -1729,11 +1766,11 @@ pac code push</pre>
       </div>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Connectors &amp; Connection References</h3>
-      <p>The wizard auto-creates <strong>connection references</strong> in your solution so they travel across environments. During step 7, you pick connectors from a checklist and the wizard creates the references via the Dataverse API.</p>
+      <p>The wizard auto-creates <strong>connection references</strong> in your solution so they travel across environments. This now happens in an explicit later connector-binding pass, not during the initial scaffold.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Action</th><th>How</th></tr></thead>
         <tbody>
-          <tr><td>Add connectors via wizard</td><td><code>node wizard/index.mjs --from 7</code> (re-runs connector setup)</td></tr>
+          <tr><td>Add connectors via wizard</td><td><code>node wizard/index.mjs --from 8</code> (runs the dedicated connector-binding step)</td></tr>
           <tr><td>Add Dataverse table manually</td><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td></tr>
           <tr><td>Add other connector manually</td><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td></tr>
           <tr><td>Map references after import</td><td>Power Apps Maker Portal &rarr; Solutions &rarr; Connection References</td></tr>
@@ -1744,14 +1781,15 @@ pac code push</pre>
           <strong>How it works:</strong> A <em>connection reference</em> says "this solution uses the Office 365 Users connector." The actual authenticated <em>connection</em> (your credentials) is mapped to the reference per-environment. This means you deploy once and map per-environment — no secrets in the solution.
         </div>
       </div>
-      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
+      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. The wizard compensates for this by discovering existing environment connections with <code>pac connection list</code> and letting you select one when possible. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
           <tr><td><code>node wizard/index.mjs</code></td><td>Resume from where you left off</td></tr>
-          <tr><td><code>node wizard/index.mjs --from 7</code></td><td>Re-run from step 7 onward (keeps all config)</td></tr>
+          <tr><td><code>node wizard/index.mjs --from 7</code></td><td>Re-run from scaffold onward, including the later connector and deploy steps</td></tr>
+          <tr><td><code>node wizard/index.mjs --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
           <tr><td><code>node wizard/index.mjs --reset</code></td><td>Start completely fresh</td></tr>
         </tbody>
       </table></div>

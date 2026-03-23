@@ -36,15 +36,35 @@ These connectors have official support and documented patterns for Code Apps:
 
 **Planning reminder:** Do not use `pac code add-data-source` as a discovery tool for figuring out what your app should connect to. The connector strategy should follow a refined business scope and, for Dataverse, an approved schema plan.
 
+### Recommended Timing
+
+Do not ask for connection IDs during the initial scaffold if the app is still in the planning or prototype phase. The recommended order is:
+
+1. Plan the workflow and conceptual model
+2. Prototype the UX with mock providers
+3. Refine the planning payload based on prototype feedback
+4. Bind real connectors and data sources only when the model is stable
+
 ### Via PAC CLI (preferred)
 
 ```bash
-# Interactive — lists available connectors and lets you pick
-pac code add-data-source
+# Dataverse tables
+pac code add-data-source -a dataverse -t <logical_table_name>
+
+# Non-Dataverse connectors
+pac code add-data-source -a <connector_api_id> -c <connection_id>
 
 # After adding, generate typed TypeScript services
 pac code generate
 ```
+
+When a developer is ready to bind a non-Dataverse connector, first try to discover existing connections in the environment:
+
+```bash
+pac connection list
+```
+
+Filter the output to the connector API ID such as `shared_office365users` or `shared_sharepointonline`, then present the discovered connections and let the developer choose one. If no matching connection exists, instruct the developer to create it in Power Apps Maker Portal → Data → Connections, then re-scan. Only fall back to pasted Connection IDs when discovery is not possible.
 
 This creates files in `src/generated/`:
 - `services/<ConnectorName>Service.ts` — Methods for each operation the connector exposes

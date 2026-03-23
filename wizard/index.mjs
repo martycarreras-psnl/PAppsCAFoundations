@@ -4,7 +4,7 @@
 // Usage:
 //   node wizard/index.mjs            # Run (resumes where you left off)
 //   node wizard/index.mjs --reset    # Start over from scratch
-//   node wizard/index.mjs --from 7   # Re-run from step 7 onward
+//   node wizard/index.mjs --from 8   # Re-run from connector binding onward
 
 import { confirm } from '@inquirer/prompts';
 import * as ui from './lib/ui.mjs';
@@ -19,10 +19,11 @@ import stepAuthSetup from './steps/04-auth-setup.mjs';
 import stepPublisher from './steps/05-publisher.mjs';
 import stepSolution from './steps/06-solution.mjs';
 import stepScaffold from './steps/07-scaffold.mjs';
-import stepVerifyAndDeploy from './steps/08-verify-deploy.mjs';
+import stepConnectors from './steps/08-connectors.mjs';
+import stepVerifyAndDeploy from './steps/09-verify-deploy.mjs';
 
 // Increment when step order changes to detect stale resume state
-const WIZARD_VERSION = 2;
+const WIZARD_VERSION = 3;
 
 const steps = [
   stepPrerequisites,
@@ -32,6 +33,7 @@ const steps = [
   stepPublisher,
   stepSolution,
   stepScaffold,
+  stepConnectors,
   stepVerifyAndDeploy,
 ];
 
