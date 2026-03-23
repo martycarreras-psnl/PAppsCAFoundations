@@ -12,7 +12,8 @@ export default async function stepVerifyAndDeploy() {
   const projectDir = stateGet('PROJECT_DIR');
   const appName = stateGet('APP_NAME');
   const prefix = stateGet('PUBLISHER_PREFIX');
-  const solName = stateGet('SOLUTION_UNIQUE_NAME');
+  const solUniqueName = stateGet('SOLUTION_UNIQUE_NAME');
+  const solDisplayName = stateGet('SOLUTION_DISPLAY_NAME');
   const devUrl = stateGet('PP_ENV_DEV');
   const testUrl = stateGet('PP_ENV_TEST', '');
   const prodUrl = stateGet('PP_ENV_PROD', '');
@@ -80,12 +81,12 @@ export default async function stepVerifyAndDeploy() {
         if (profileReady) {
           ui.line('');
           ui.line('Deploying (first push — creating app)...');
-          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solName);
+          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solDisplayName);
           if (success) {
             ui.ok('Deployed! Your app is live.');
             ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
             // Safety net: ensure app is in solution even if -s flag was ignored
-            await addAppToSolution(pac, projectDir, solName);
+            await addAppToSolution(pac, projectDir, solUniqueName);
           }
         } else {
           ui.warn('Could not establish user auth. Deploy manually:');
@@ -97,10 +98,10 @@ export default async function stepVerifyAndDeploy() {
         // Subsequent push: use whatever auth is active
         ui.line('');
         ui.line('Deploying...');
-        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solName);
+        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solDisplayName);
         if (success) {
           ui.ok('Deployed! Your app is updated.');
-          await addAppToSolution(pac, projectDir, solName);
+          await addAppToSolution(pac, projectDir, solUniqueName);
         }
       }
     } else {
@@ -125,7 +126,7 @@ export default async function stepVerifyAndDeploy() {
   ui.summary('Project:', appName);
   ui.summary('Location:', projectDir);
   ui.summary('Prefix:', prefix);
-  ui.summary('Solution:', solName);
+  ui.summary('Solution:', solDisplayName || solUniqueName);
   ui.summary('Dev env:', devUrl);
   if (testUrl) ui.summary('Test env:', testUrl);
   if (prodUrl) ui.summary('Prod env:', prodUrl);
@@ -168,9 +169,9 @@ const DUPLICATE_APP_RE = /already created an application with this name.*Existin
  * Attempt pac code push, detect known errors, and offer guided retry.
  * Returns true on success, false on permanent failure.
  */
-async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solName, maxRetries = 3) {
+async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solDisplayName, maxRetries = 3) {
   const pushArgs = ['code', 'push'];
-  if (solName) pushArgs.push('-s', solName);
+  if (solDisplayName) pushArgs.push('-s', solDisplayName);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const { ok, stdout, stderr } = runSafeCapture(pac, pushArgs, { cwd: projectDir });
