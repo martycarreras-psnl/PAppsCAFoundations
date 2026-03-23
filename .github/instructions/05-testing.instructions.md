@@ -34,6 +34,8 @@ Foundations supports two complementary test modes:
 
 Use mocked tests for repeatable CI checks. Use the Power Apps local-play flow before deployment when the feature depends on real runtime behavior, connector wiring, or Power Platform authentication.
 
+When the app is following the prototype-first workflow, make the prototype and tests share the same domain contracts and mock seed data where practical. Do not let prototype data and test fixtures drift into different shapes unless there is a deliberate reason.
+
 ### Power Apps local-play rule
 
 When validating the real Code App experience:

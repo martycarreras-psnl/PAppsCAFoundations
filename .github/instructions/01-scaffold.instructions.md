@@ -285,7 +285,7 @@ Every project must define these scripts:
 
 ## Local Development with Vite
 
-Local development has two modes depending on where you are in the development lifecycle. Start with **Prototype Mode** — it requires zero Power Platform configuration and gets you building UI immediately. Graduate to **Connected Mode** when you're ready to work with real data.
+Local development has two modes depending on where you are in the development lifecycle. Start with **Prototype Mode** — it requires zero Power Platform configuration and gets you building UI immediately. Graduate to **Connected Mode** when the prototype has influenced the final planning payload and you're ready to bind real providers.
 
 ### Mode 1: Prototype Mode (Mock Data — No Power Platform Required)
 
@@ -313,73 +313,97 @@ This runs `VITE_USE_MOCK=true vite --port 3000`. Vite serves your app at `http:/
 
 **Required setup for mock data:**
 
-1. Create mock data that mirrors your generated model shapes:
+1. Create domain models and provider contracts that are independent of `src/generated/**`:
 
 ```typescript
-// src/mockData/projects.ts
-import type { Project } from '@/generated/models/Project';
+// src/types/domain-models.ts
+export interface ProjectRequest {
+  id: string;
+  name: string;
+  requestStatus: number;
+  requestedOn?: string;
+}
 
-export const mockProjects: Project[] = [
+// src/services/data-contracts.ts
+import type { ProjectRequest } from '@/types/domain-models';
+
+export interface ProjectRequestRepository {
+  list(): Promise<ProjectRequest[]>;
+  getById(id: string): Promise<ProjectRequest | null>;
+}
+```
+
+2. Seed mock data against those domain models:
+
+```typescript
+// src/mockData/projectRequests.ts
+import type { ProjectRequest } from '@/types/domain-models';
+
+export const mockProjectRequests: ProjectRequest[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Website Redesign',
-    status: 100000000,      // Active (option set integer)
-    owner: 'Jane Smith',
-    dueDate: '2026-06-15',
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440001',
-    name: 'Mobile App MVP',
-    status: 100000001,      // Draft
-    owner: 'John Doe',
-    dueDate: '2026-09-01',
+    requestStatus: 100000000,
+    requestedOn: '2026-06-15',
   },
 ];
 ```
 
-2. Every hook that calls a connector must check `VITE_USE_MOCK`:
+3. Prefer one provider factory to choose mock vs real implementations:
 
 ```typescript
-// src/hooks/useProjects.ts
+// src/services/providerFactory.ts
+import { createMockDataProvider } from '@/services/mock-data-provider';
+import { createRealDataProvider } from '@/services/real-data-provider';
+
+export function createAppDataProvider() {
+  return import.meta.env.VITE_USE_MOCK === 'true'
+    ? createMockDataProvider()
+    : createRealDataProvider();
+}
+```
+
+4. Hooks should depend on provider contracts, not on generated services directly:
+
+```typescript
+// src/hooks/useProjectRequests.ts
 import { useQuery } from '@tanstack/react-query';
-import { mockProjects } from '@/mockData/projects';
-import { ProjectService } from '@/generated/services/ProjectService';
+import { createAppDataProvider } from '@/services/providerFactory';
 
-const USE_MOCK = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK === 'true';
+const provider = createAppDataProvider();
 
-export function useProjects() {
+export function useProjectRequests() {
   return useQuery({
-    queryKey: ['projects'],
-    queryFn: USE_MOCK
-      ? () => Promise.resolve({ data: mockProjects })
-      : () => ProjectService.getAll(),
+    queryKey: ['projectRequests'],
+    queryFn: () => provider.projectRequests.list(),
   });
 }
 ```
 
-3. For hooks that create or update data, mock the mutation too:
+5. Keep the real connector implementation at the integration edge:
 
 ```typescript
-// src/hooks/useCreateProject.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ProjectService } from '@/generated/services/ProjectService';
+// src/services/real-data-provider.ts
+import { ProjectRequestsService } from '@/generated/services/ProjectRequestsService';
+import type { AppDataProvider } from '@/services/data-contracts';
 
-const USE_MOCK = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK === 'true';
-
-export function useCreateProject() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: USE_MOCK
-      ? async (data: Partial<Project>) => {
-          // Simulate creation delay
-          await new Promise(r => setTimeout(r, 300));
-          return { data: { ...data, id: crypto.randomUUID() } };
-        }
-      : (data: Partial<Project>) => ProjectService.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
-  });
+export function createRealDataProvider(): AppDataProvider {
+  return {
+    projectRequests: {
+      async list() {
+        const result = await ProjectRequestsService.getAll();
+        return (result.data || []).map(mapProjectRequestFromDataverse);
+      },
+      async getById(id: string) {
+        const result = await ProjectRequestsService.get(id);
+        return result.data ? mapProjectRequestFromDataverse(result.data) : null;
+      },
+    },
+  };
 }
 ```
+
+Prototype mode is not just a visual sandbox. It is the moment where the UX is allowed to challenge the draft data model before that model becomes expensive to change.
 
 ### Mode 2: Connected Mode (Real Connectors via Power Platform)
 

@@ -111,6 +111,7 @@ function mergeRequiredScripts() {
   const required = {
     dev: 'concurrently "vite --port 3000" "pac code run"',
     'dev:local': devLocal,
+    'prototype:seed': 'node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json',
     typecheck: 'tsc --noEmit',
     prebuild: 'node scripts/patch-datasources-info.mjs',
     build: 'npm run typecheck && vite build',

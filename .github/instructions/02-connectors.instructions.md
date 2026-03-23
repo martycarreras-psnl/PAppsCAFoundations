@@ -64,75 +64,70 @@ When you run `pac code generate`, the CLI:
 
 ## Working with Generated Code
 
+Before connector registration, prototype UX should depend on domain contracts and a mock provider. After connector registration, generated services should be adapted into those same contracts rather than becoming the contract themselves.
+
+### Provider Boundary First
+
+Use this layering:
+
+1. `src/types/**` for domain models used by the UI
+2. `src/services/data-contracts.ts` for repository or provider interfaces
+3. `src/services/mock-*.ts` for prototype mode implementations
+4. `src/generated/**` plus adapter files for real implementations
+
+This keeps the mock-to-real swap localized and prevents generated connector shapes from leaking through the app.
+
 ### The Golden Rule: Never Edit Generated Files
 
 Generated files will be overwritten on the next `pac code generate`. Instead:
 
-**Wrap services with custom hooks:**
+**Adapt services behind repository contracts:**
 
 ```typescript
-// src/hooks/useProjects.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// src/services/real-project-repository.ts
 import { SqlService } from '@/generated/services/SqlService';
-import type { Project } from '@/generated/models/Project';
+import type { Project } from '@/types/domain-models';
+import type { ProjectRepository } from '@/services/data-contracts';
 
-// Query key factory — centralizes cache key management
-const projectKeys = {
-  all: ['projects'] as const,
-  byId: (id: string) => ['projects', id] as const,
-  byStatus: (status: string) => ['projects', 'status', status] as const,
-};
-
-export function useProjects(status?: string) {
-  return useQuery({
-    queryKey: status ? projectKeys.byStatus(status) : projectKeys.all,
-    queryFn: () => SqlService.getProjects({ $filter: status ? `status eq '${status}'` : undefined }),
-    staleTime: 5 * 60 * 1000, // 5 minutes — connectors are not free; avoid unnecessary calls
-  });
-}
-
-export function useProject(id: string) {
-  return useQuery({
-    queryKey: projectKeys.byId(id),
-    queryFn: () => SqlService.getProject(id),
-    enabled: !!id, // Don't fetch until we have an ID
-  });
-}
-
-export function useCreateProject() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (newProject: Omit<Project, 'id'>) =>
-      SqlService.createProject(newProject),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    },
-  });
-}
-```
-
-**Extend models with computed properties:**
-
-```typescript
-// src/types/ProjectExtended.ts
-import type { Project } from '@/generated/models/Project';
-
-export interface ProjectWithComputed extends Project {
-  isOverdue: boolean;
-  daysRemaining: number;
-}
-
-export function enrichProject(project: Project): ProjectWithComputed {
-  const dueDate = new Date(project.dueDate);
-  const now = new Date();
+export function createRealProjectRepository(): ProjectRepository {
   return {
-    ...project,
-    isOverdue: dueDate < now,
-    daysRemaining: Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    async list() {
+      const result = await SqlService.getProjects();
+      return (result.data || []).map(mapProjectFromConnector);
+    },
+    async getById(id: string) {
+      const result = await SqlService.getProject(id);
+      return result.data ? mapProjectFromConnector(result.data) : null;
+    },
+    async save(input) {
+      const result = input.id
+        ? await SqlService.updateProject(input.id, mapProjectToConnector(input))
+        : await SqlService.createProject(mapProjectToConnector(input));
+      if (result.error) throw result.error;
+      return mapProjectFromConnector(result.data);
+    },
   };
 }
 ```
+
+Then let hooks consume the contract:
+
+```typescript
+// src/hooks/useProjects.ts
+import { useQuery } from '@tanstack/react-query';
+import { createAppDataProvider } from '@/services/providerFactory';
+
+const provider = createAppDataProvider();
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: () => provider.projects.list(),
+  });
+}
+```
+
+Generated connector types are useful inputs to the adapter layer. They should not dictate the shape of the app-facing model during prototype-first development.
 
 ## Connector-Specific Patterns
 

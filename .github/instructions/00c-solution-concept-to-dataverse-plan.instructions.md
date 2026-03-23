@@ -21,7 +21,7 @@ This phase starts after the business narrative has been decomposed and refined e
 - Candidate ownership and access patterns
 - Candidate lifecycle and choice domains
 - Candidate automation and approval boundaries
-- A handoff path into the Dataverse planning artifact workflow
+- A handoff path into prototype validation and then the Dataverse planning artifact workflow
 
 **Stop conditions:**
 - If the workflow model is still unstable, stop and continue solution shaping first
@@ -126,7 +126,15 @@ Do not assume reporting can always be layered on later without model impact.
 
 ## Handoff Into Dataverse Planning
 
-Once the conceptual model is strong enough, hand off into the existing Dataverse planning artifact workflow.
+Once the conceptual model is strong enough, validate it through a mock-backed UX prototype before freezing the schema plan.
+
+Use:
+
+1. `00d-prototype-validation.instructions.md` to build a clickable prototype against domain contracts and mock providers
+2. `scripts/seed-prototype-assets.mjs` to seed prototype-facing assets from `dataverse/planning-payload.json` when helpful
+3. `dataverse/prototype-feedback.md` to capture what the prototype changes in the eventual data model
+
+After the prototype findings have been folded back into the planning payload, hand off into the Dataverse planning artifact workflow.
 
 Use:
 

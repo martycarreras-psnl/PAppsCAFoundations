@@ -9,6 +9,21 @@ import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS, getRootDir
 import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN } from '../lib/shell.mjs';
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
+import {
+  copyFoundationFiles,
+  createMinimalProject,
+  mergePackageJsonScripts,
+  writeConfig,
+  writeStarterFiles,
+} from '../lib/scaffold-foundations.mjs';
+
+export {
+  copyFoundationFiles,
+  createMinimalProject,
+  mergePackageJsonScripts,
+  writeConfig,
+  writeStarterFiles,
+} from '../lib/scaffold-foundations.mjs';
 
 export default async function stepScaffold() {
   ui.stepHeader(7, TOTAL_STEPS, 'Scaffolding Your Code App');
@@ -100,10 +115,10 @@ export default async function stepScaffold() {
     : ui.warn('Some dev packages failed to install');
 
   // ── Config files ──
-  writeConfig(projectDir, appName);
+  writeConfig(projectDir, ui);
 
   // ── Merge required scripts into package.json ──
-  mergePackageJsonScripts(projectDir, appName);
+  mergePackageJsonScripts(projectDir, ui);
 
   // ── Folder structure ──
   ui.line('Creating folder structure...');
@@ -118,54 +133,10 @@ export default async function stepScaffold() {
   ui.ok('Folder structure created');
 
   // ── Starter files ──
-  writeStarterFiles(projectDir, appName);
+  writeStarterFiles(projectDir, appName, ui);
 
   // ── Copy instruction files ──
-  ui.line('Copying instruction files...');
-  const instrDir = join(ROOT, '.github', 'instructions');
-  const destInstrDir = join(projectDir, '.github', 'instructions');
-  if (existsSync(instrDir)) {
-    for (const f of readdirSync(instrDir).filter((n) => n.endsWith('.md'))) {
-      try {
-        copyFileSync(join(instrDir, f), join(destInstrDir, f));
-      } catch { /* skip */ }
-    }
-    ui.ok('Instruction files copied');
-  } else {
-    ui.warn('No instruction files found in foundations repo');
-  }
-
-  // ── Copy helper scripts ──
-  const scriptsDir = join(ROOT, 'scripts');
-  if (existsSync(scriptsDir)) {
-    mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs']) {
-      const src = join(scriptsDir, f);
-      if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
-    }
-    const schemaPlanExample = join(scriptsDir, 'schema-plan.example.json');
-    const planningPayload = join(projectDir, 'dataverse', 'planning-payload.json');
-    if (existsSync(schemaPlanExample) && !existsSync(planningPayload)) {
-      copyFileSync(schemaPlanExample, planningPayload);
-      ui.ok('dataverse/planning-payload.json seeded from schema plan example');
-    }
-    ui.ok('Helper scripts copied');
-  }
-
-  const versionFile = join(ROOT, '.foundations-version.json');
-  if (existsSync(versionFile)) {
-    copyFileSync(versionFile, join(projectDir, '.foundations-version.json'));
-    ui.ok('.foundations-version.json copied');
-  }
-
-  // ── Copy credential files ──
-  for (const f of ['.env.local', '.env', '.env.template']) {
-    const src = join(ROOT, f);
-    if (existsSync(src)) {
-      copyFileSync(src, join(projectDir, f));
-      ui.ok(`${f} copied`);
-    }
-  }
+  copyFoundationFiles(ROOT, projectDir, ui);
 
   // ── pac code init ──
   ui.line('');
@@ -196,9 +167,19 @@ export default async function stepScaffold() {
   ui.line('Now let\'s set up connectors for your app.');
   ui.line('The wizard will create connection references in your solution');
   ui.line('so they travel with it across environments.');
+  ui.line('If your UX and data model are still moving, skip this for now and stay in prototype mode.');
   ui.line('');
 
-  await setupConnectors(pac, projectDir);
+  const setupConnectorsNow = await confirm({
+    message: 'Add connectors now?',
+    default: false,
+  });
+
+  if (setupConnectorsNow) {
+    await setupConnectors(pac, projectDir);
+  } else {
+    ui.line('Skipping connector setup for now. Re-run Step 7 or add data sources later after prototype review.');
+  }
 
   // ── Git initialization ──
   ui.line('');
@@ -292,7 +273,9 @@ A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeSc
 
 \`\`\`bash
 npm install
-npm run dev          # Start local dev server (Vite)
+npm run dev:local    # Prototype mode with mock providers
+npm run prototype:seed  # Regenerate prototype assets after editing dataverse/planning-payload.json
+npm run dev          # Connected mode (Vite + pac code run)
 \`\`\`
 
 ### Build & Deploy
@@ -314,7 +297,9 @@ ${appName.toLowerCase().replace(/\\s+/g, '-')}/
 │   ├── pages/             # Route-level pages
 │   ├── hooks/             # Custom React hooks
 │   ├── generated/         # Auto-generated connector SDK (do not edit)
-│   ├── services/          # Business logic & data layer
+│   ├── services/          # Provider contracts, mock providers, real adapters
+│   ├── mockData/          # Prototype data generated from planning payload
+│   ├── types/             # Domain contracts used by the UI
 │   └── App.tsx            # Root component
 ├── .github/instructions/  # GitHub Copilot instruction files
 ├── .power/                # Power Platform metadata
@@ -738,255 +723,3 @@ async function ensureUserAuthForCodeCommands(pac) {
   return true;
 }
 
-// ─────────── Helpers ───────────
-
-function createMinimalProject(dir, appName) {
-  mkdirSync(join(dir, 'src'), { recursive: true });
-  mkdirSync(join(dir, 'public'), { recursive: true });
-
-  const kebab = appName.toLowerCase().replace(/ /g, '-');
-
-  writeFileSync(join(dir, 'index.html'), `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Code App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-`);
-
-  const crossPlatformDevLocal = IS_WIN
-    ? 'set VITE_USE_MOCK=true && vite --port 3000'
-    : 'VITE_USE_MOCK=true vite --port 3000';
-
-  writeFileSync(join(dir, 'package.json'), JSON.stringify({
-    name: kebab,
-    private: true,
-    version: '1.0.0',
-    type: 'module',
-    scripts: {
-      dev: 'concurrently "vite --port 3000" "pac code run"',
-      'dev:local': crossPlatformDevLocal,
-      typecheck: 'tsc --noEmit',
-      prebuild: 'node scripts/patch-datasources-info.mjs',
-      build: 'npm run typecheck && vite build',
-      preview: 'vite preview',
-      lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
-      format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
-      test: 'vitest run',
-      'test:watch': 'vitest',
-      'test:e2e': 'playwright test',
-      'setup:auth': 'node scripts/setup-auth.mjs',
-      pac: 'node scripts/op-pac.mjs',
-      deploy: 'npm run build && pac code push',
-      'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
-      'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
-      'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
-      'sync:foundations': 'node scripts/sync-foundations.mjs',
-    },
-  }, null, 2) + '\n');
-}
-
-function writeConfig(dir, appName) {
-  // tsconfig.json
-  ui.line('Writing tsconfig.json...');
-  writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({
-    compilerOptions: {
-      target: 'ES2020',
-      lib: ['ES2020', 'DOM', 'DOM.Iterable'],
-      module: 'ESNext',
-      moduleResolution: 'bundler',
-      jsx: 'react-jsx',
-      strict: true,
-      verbatimModuleSyntax: false,
-      noUnusedLocals: true,
-      noUnusedParameters: true,
-      noFallthroughCasesInSwitch: true,
-      skipLibCheck: true,
-      esModuleInterop: true,
-      resolveJsonModule: true,
-      isolatedModules: true,
-      rootDir: '.',
-      outDir: './dist',
-      paths: { '@/*': ['./src/*'] },
-    },
-    include: ['src/**/*', '.power/**/*'],
-    exclude: ['node_modules', 'dist'],
-  }, null, 2) + '\n');
-  ui.ok('tsconfig.json');
-
-  // vite.config.ts
-  ui.line('Writing vite.config.ts...');
-  writeFileSync(join(dir, 'vite.config.ts'), `import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? './' : '/',
-  plugins: [react()],
-  server: { port: 3000 },
-  resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
-  },
-}));
-`);
-  ui.ok('vite.config.ts (port 3000)');
-
-  // .prettierrc
-  writeFileSync(join(dir, '.prettierrc'), '{ "singleQuote": true, "trailingComma": "all", "printWidth": 100 }\n');
-  ui.ok('.prettierrc');
-}
-
-/**
- * Read the existing package.json (from degit template or createMinimalProject),
- * merge in the required Foundations scripts, and write it back.
- * This ensures prebuild, deploy, setup:auth, etc. are always present
- * regardless of how the template was sourced.
- */
-function mergePackageJsonScripts(dir, appName) {
-  const pkgPath = join(dir, 'package.json');
-  let pkg = {};
-  if (existsSync(pkgPath)) {
-    try { pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')); } catch { /* start fresh */ }
-  }
-
-  const crossPlatformDevLocal = IS_WIN
-    ? 'set VITE_USE_MOCK=true && vite --port 3000'
-    : 'VITE_USE_MOCK=true vite --port 3000';
-
-  // Scripts that Foundations requires — merges over template defaults
-  const requiredScripts = {
-    dev: 'concurrently "vite --port 3000" "pac code run"',
-    'dev:local': crossPlatformDevLocal,
-    typecheck: 'tsc --noEmit',
-    prebuild: 'node scripts/patch-datasources-info.mjs',
-    build: 'npm run typecheck && vite build',
-    preview: 'vite preview',
-    lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
-    format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
-    test: 'vitest run',
-    'test:watch': 'vitest',
-    'test:e2e': 'playwright test',
-    'setup:auth': 'node scripts/setup-auth.mjs',
-    pac: 'node scripts/op-pac.mjs',
-    deploy: 'npm run build && pac code push',
-    'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
-    'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
-    'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
-    'sync:foundations': 'node scripts/sync-foundations.mjs',
-  };
-
-  pkg.scripts = { ...(pkg.scripts || {}), ...requiredScripts };
-
-  // Ensure type: module
-  if (!pkg.type) pkg.type = 'module';
-
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-  ui.ok('package.json scripts merged (prebuild, deploy, dev, etc.)');
-}
-
-function writeStarterFiles(dir, appName) {
-  ui.line('Writing starter files...');
-
-  // src/main.tsx
-  writeFileSync(join(dir, 'src', 'main.tsx'), `import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
-import { App } from './App';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 5 * 60 * 1000 },
-  },
-});
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <FluentProvider theme={webLightTheme}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </FluentProvider>
-    </QueryClientProvider>
-  </StrictMode>,
-);
-`);
-  ui.ok('src/main.tsx');
-
-  // src/App.tsx
-  // Escape the dollar sign so it doesn't get interpreted
-  writeFileSync(join(dir, 'src', 'App.tsx'), `import { makeStyles, Title1, Text, tokens } from '@fluentui/react-components';
-
-const useStyles = makeStyles({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
-  },
-});
-
-export function App() {
-  const styles = useStyles();
-
-  return (
-    <div className={styles.container}>
-      <Title1>${appName}</Title1>
-      <Text>Your Code App is ready. Start building!</Text>
-    </div>
-  );
-}
-`);
-  ui.ok('src/App.tsx');
-
-  // .gitignore
-  writeFileSync(join(dir, '.gitignore'), `# Secrets
-.env.local
-.env.*.local
-
-# Power Platform
-.pac/
-auth.json
-
-# Dependencies
-node_modules/
-
-# Build
-dist/
-
-# Tests
-coverage/
-test-results/
-playwright-report/
-
-# IDE
-.vscode/settings.json
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Solution zips
-solution/*.zip
-
-# Wizard state
-.wizard-state.json
-
-# Temp
-*.tmp
-*.log
-`);
-  ui.ok('.gitignore');
-}

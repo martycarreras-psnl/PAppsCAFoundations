@@ -773,7 +773,7 @@
         <span class="callout-icon">🧠</span>
         <div>
           <strong>This is optional, but it is part of the formula for a top-notch app.</strong>
-          If the user already knows exactly what they are building, the wizard can get them moving quickly. If the problem, workflows, approvals, reporting, Teams touchpoints, or Copilot usage are still emerging, the planning layer helps Copilot refine the scope before schema and connectors become expensive to change.
+          If the user already knows exactly what they are building, the wizard can get them moving quickly. If the problem, workflows, approvals, reporting, Teams touchpoints, or Copilot usage are still emerging, the planning layer helps Copilot refine the scope before schema and connectors become expensive to change. The new prototype checkpoint sits between conceptual planning and Dataverse provisioning so the UX can influence the final data model.
         </div>
       </div>
 
@@ -796,6 +796,12 @@
           <p>Once the scope is stable, Copilot derives candidate entities, relationships, ownership patterns, and lifecycle states, then hands off into the Dataverse planning artifact workflow.</p>
           <p style="margin-top:12px;"><code>00c-solution-concept-to-dataverse-plan.instructions.md</code></p>
         </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#ede6ff; color:#4f2d7f;">4</div>
+          <h3>Prototype Before Schema</h3>
+          <p>Generate domain contracts and mock providers from the planning payload, build the UX in prototype mode, and capture what that prototype changes in the eventual schema.</p>
+          <p style="margin-top:12px;"><code>00d-prototype-validation.instructions.md</code></p>
+        </div></div>
       </div>
 
       <div class="callout callout-success">
@@ -804,6 +810,7 @@
           <strong>Use the wizard to get operational fast.</strong>
           <strong>Use the planning layer to get the business fit right.</strong>
           Together, they help teams avoid premature schema decisions, guessed connectors, weak approval models, and late-stage rework.
+          <div style="margin-top:8px;"><a href="prototype-golden-path.md">Open the prototype-first golden path</a></div>
         </div>
       </div>
     </section>
@@ -848,7 +855,7 @@
 
     <section class="section" id="wizard-overview">
       <h2 class="section-title">The Setup Wizard</h2>
-      <p class="section-subtitle">Two steps to get operational fast. For non-trivial apps, pair it with the planning layer before locking in schema and connectors.</p>
+      <p class="section-subtitle">Two steps to get operational fast. For non-trivial apps, pair it with the planning layer and prototype checkpoint before locking in schema and connectors.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
@@ -861,7 +868,7 @@
           <strong>Step 2 — Run the wizard:</strong>
           <pre style="margin-top:8px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
           <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
-          <p style="margin-top:8px;"><strong>Want a stronger business fit?</strong> After the wizard gives you a working foundation, use the narrative-first planning instructions to refine the business scope before finalizing Dataverse schema, connectors, approvals, or agent behavior.</p>
+          <p style="margin-top:8px;"><strong>Want a stronger business fit?</strong> After the wizard gives you a working foundation, use the narrative-first planning instructions and prototype checkpoint before finalizing Dataverse schema, connectors, approvals, or agent behavior.</p>
           <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
         </div>
       </div>
@@ -1114,8 +1121,9 @@
               <li>Writes starter files: <code>main.tsx</code>, <code>App.tsx</code> with Fluent UI + TanStack Query providers</li>
               <li>Copies all instruction files from the foundations repo</li>
               <li>Includes the narrative-first planning instructions so you can refine the business scope before hardening schema and connector choices</li>
+              <li>Seeds prototype contracts, mock providers, and <code>dataverse/prototype-feedback.md</code> from the planning payload</li>
               <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
-              <li>Optionally sets up connectors and connection references after the solution direction is clear</li>
+              <li>Lets you skip connector setup if the prototype and planning payload still need refinement</li>
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
@@ -1135,7 +1143,7 @@
 
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
-              <div>If your app concept is still evolving, do not treat Step 7 as permission to guess at tables, workflows, or connectors. The planning layer exists to help Copilot elaborate the business problem first.</div>
+              <div>If your app concept is still evolving, do not treat Step 7 as permission to guess at tables, workflows, or connectors. Use prototype mode and the feedback artifact first, then bind connectors after the planning payload is stable.</div>
             </div>
           </div></div>
         </div>
@@ -1163,7 +1171,9 @@
             </div>
             <p>Then displays a complete summary of everything that was set up and what to do next:</p>
             <pre>cd ../your-app
-npm run dev          ← start local dev server (port 3000)
+npm run dev:local    ← prototype with mock providers
+npm run prototype:seed ← refresh prototype assets after editing the planning payload
+npm run dev          ← connected mode once real providers exist
 pac code push        ← deploy changes to Power Platform</pre>
           </div></div>
         </div>
@@ -1268,13 +1278,13 @@ pac auth select --name MyAppUser</pre>
     <!-- Local Development -->
     <section class="section" id="ref-localdev">
       <h2 class="section-title">Local Development with Vite</h2>
-      <p class="section-subtitle">Two modes: Prototype (mock data, no Power Platform) and Connected (real connectors). Always start with Prototype mode.</p>
+      <p class="section-subtitle">Two modes: Prototype (mock providers, no Power Platform) and Connected (real connectors). Always start with Prototype mode.</p>
 
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">⚡</div>
           <h3>Prototype Mode</h3>
-          <p>Vite only. Mock data. No auth, no connections, no Power Platform needed. Build UI fast.</p>
+          <p>Vite only. Domain contracts plus mock providers. No auth, no connections, no Power Platform needed. Build UI fast and let the UX challenge the data model.</p>
           <pre style="margin-top:12px;">npm run dev:local</pre>
         </div></div>
         <div class="card"><div class="card-body">
@@ -1290,6 +1300,7 @@ pac auth select --name MyAppUser</pre>
         <thead><tr><th>Phase</th><th>Command</th><th>What Runs</th><th>Data Source</th></tr></thead>
         <tbody>
           <tr><td>Prototyping / UI</td><td><code>npm run dev:local</code></td><td>Vite only</td><td>Mock data</td></tr>
+          <tr><td>Refresh prototype assets</td><td><code>npm run prototype:seed</code></td><td>Node script</td><td>Planning payload</td></tr>
           <tr><td>Integration</td><td><code>npm run dev</code></td><td>Vite + <code>pac code run</code></td><td>Real connectors</td></tr>
           <tr><td>Unit Tests</td><td><code>npm run test</code></td><td>Vitest</td><td>Mock data (MSW)</td></tr>
           <tr><td>E2E Tests</td><td><code>npm run test:e2e</code></td><td>Vite + Playwright</td><td>Mock data</td></tr>
@@ -1299,7 +1310,7 @@ pac auth select --name MyAppUser</pre>
       </table></div>
 
       <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Prototype Mode — How It Works</h4>
-      <p><code>npm run dev:local</code> runs <code>VITE_USE_MOCK=true vite --port 3000</code>. Vite serves your app at <code>http://localhost:3000</code> with sub-second HMR — save a file, see it instantly.</p>
+      <p><code>npm run dev:local</code> runs <code>VITE_USE_MOCK=true vite --port 3000</code>. Vite serves your app at <code>http://localhost:3000</code> with sub-second HMR — save a file, see it instantly. Refresh prototype contracts and mock providers anytime with <code>npm run prototype:seed</code> after editing <code>dataverse/planning-payload.json</code>.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
@@ -1309,6 +1320,8 @@ pac auth select --name MyAppUser</pre>
         <span class="callout-icon">⚠️</span>
         <div><strong>What doesn't:</strong> Real connector calls, <code>PowerProvider</code> context, auth context, connection consent — these require <code>pac code run</code>.</div>
       </div>
+
+      <p style="margin-top:12px;">Need the full sequence from planning payload through prototype review to real providers? <a href="prototype-golden-path.md">Open the prototype-first golden path</a>.</p>
 
       <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Mock Data Pattern</h4>
       <p>Every hook that calls a connector checks <code>VITE_USE_MOCK</code> to decide whether to return mock data or make a real call:</p>

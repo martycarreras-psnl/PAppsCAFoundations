@@ -62,14 +62,18 @@ The planning flow is:
 1. **Decompose the business problem** — interpret the user's narrative, identify actors, workflows, outcomes, records, constraints, and key unknowns
 2. **Refine the solution scope** — challenge for approvals, automation, Teams and Microsoft 365 touchpoints, reporting, governance, and enterprise completeness
 3. **Convert to technical planning inputs** — derive candidate entities, relationships, ownership patterns, lifecycle states, and handoff inputs for Dataverse planning
+4. **Validate the model through a UX prototype** — generate domain contracts and mock providers, build the UX in prototype mode, and feed the findings back into the planning payload before schema provisioning
 
 The new instruction files are:
 
 - `00a-business-problem-decomposition.instructions.md`
 - `00b-scope-refinement-and-solution-shaping.instructions.md`
 - `00c-solution-concept-to-dataverse-plan.instructions.md`
+- `00d-prototype-validation.instructions.md`
 
-These files are intentionally not questionnaire-first. They teach Copilot how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into connectors, schema execution, and UI implementation.
+These files are intentionally not questionnaire-first. They teach Copilot how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into prototype validation, connectors, schema execution, and connected UI implementation.
+
+For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
 
 ### What the wizard does
 
@@ -79,8 +83,8 @@ These files are intentionally not questionnaire-first. They teach Copilot how to
 4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
 5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
-7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards
-8. **Builds, verifies, and optionally deploys** — first `pac code push` to Power Platform
+7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload
+8. **Builds, verifies, and optionally deploys** — while steering you toward mock-mode validation before real connector binding
 
 ### Already set up? Manual path
 
@@ -109,6 +113,7 @@ PAppsCAFoundations/
 │       ├── 00a-business-problem-decomposition.instructions.md   # Decompose freeform business narratives
 │       ├── 00b-scope-refinement-and-solution-shaping.instructions.md # Refine scope, automation, Teams, reporting, governance
 │       ├── 00c-solution-concept-to-dataverse-plan.instructions.md    # Convert refined scope into Dataverse planning inputs
+│       ├── 00d-prototype-validation.instructions.md            # Validate UX with mock data before schema hardens
 │       ├── 01-scaffold.instructions.md            # Solution-first rules, project structure, tech stack
 │       ├── 02-connectors.instructions.md          # Data sources, Dataverse, SQL, O365, Custom APIs
 │       ├── 03-components.instructions.md          # React + Fluent UI v9 patterns, state management
@@ -130,6 +135,7 @@ PAppsCAFoundations/
 │   ├── register-dataverse-data-sources.mjs # Cross-platform Dataverse table registration via PAC
 │   ├── register-dataverse-data-sources.sh  # Register planned tables with pac and regenerate SDK
 │   ├── schema-plan.example.json            # Starter Dataverse planning artifact
+│   ├── seed-prototype-assets.mjs           # Generate domain contracts, mock providers, and feedback artifacts
 │   ├── sync-foundations.mjs                # Cross-platform template sync entry point
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
@@ -154,9 +160,13 @@ Most files use `applyTo` scopes so Copilot only loads the relevant instructions 
 
 ## Dataverse Helper Flow
 
-Foundations now includes a reusable Dataverse execution layer that sits between schema planning and connector generation:
+Foundations now includes a reusable Dataverse execution layer that sits after prototype validation and before connector generation:
 
-Before this technical flow begins for a non-trivial app, use the narrative-first planning instructions to refine the business scope and derive the conceptual model. The Dataverse helper flow assumes those planning decisions already exist.
+Before this technical flow begins for a non-trivial app, use the narrative-first planning instructions to refine the business scope, derive the conceptual model, and validate that model through a mock-backed UX prototype. The Dataverse helper flow assumes those planning decisions have already been pressure-tested.
+
+```bash
+node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json
+```
 
 ```bash
 node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
@@ -165,6 +175,8 @@ node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.
 ```
 
 This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
+
+If you want the full recommended sequence from planning payload to mock UX to real providers, follow [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
 
 The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
 

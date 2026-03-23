@@ -136,9 +136,11 @@ export default async function stepVerifyAndDeploy() {
   ui.line('');
   ui.line("What's next:");
   ui.line(`  cd ${projectDir}`);
-  ui.line('  npm run dev:local    <- prototype with mock data (no auth needed)');
-  ui.line('  npm run dev          <- connected mode (Vite + pac code run)');
-  ui.line('  pac code push        <- deploy changes to Power Platform');
+  ui.line('  npm run dev:local       <- prototype with mock providers (no auth needed)');
+  ui.line('  npm run prototype:seed  <- refresh domain contracts + mock assets after editing the planning payload');
+  ui.line('  review dataverse/prototype-feedback.md and update the planning payload');
+  ui.line('  npm run dev             <- connected mode once real providers exist');
+  ui.line('  pac code push           <- deploy changes to Power Platform');
   ui.line('');
   ui.line('To add connectors later:');
   ui.line('  node wizard/index.mjs --from 7    (re-run connector setup)');

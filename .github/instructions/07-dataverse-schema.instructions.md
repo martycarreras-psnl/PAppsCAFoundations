@@ -22,6 +22,8 @@ If the app requirements still exist only as a rough narrative or brainstorming d
 
 This file assumes the business problem has already been decomposed, refined, and translated into a conceptual plan that is ready to become a Dataverse planning artifact.
 
+For non-trivial apps, that planning artifact should also have been pressure-tested by the prototype-validation phase. If the UX has not yet been validated with representative mock data and stakeholder review, strongly consider returning to `00d-prototype-validation.instructions.md` before freezing tables and relationships.
+
 **Inputs required:**
 - Publisher prefix
 - Solution unique name
