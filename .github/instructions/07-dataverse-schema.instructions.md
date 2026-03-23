@@ -1143,7 +1143,7 @@ If you import out of order, the dependent solution will fail with a "missing dep
 Use `pac solution check` before every import to catch dependency issues:
 
 ```bash
-pac solution check --path ./solution/solution.zip --outputDirectory ./solution-check-results
+pac solution check --path ./solution/solution-unmanaged.zip --outputDirectory ./solution-check-results
 ```
 
 ---

@@ -361,12 +361,40 @@ In the Power Apps Maker Portal: Inside your solution → "Add existing" → "Tab
 
 Your solution should be exported and stored in source control alongside your Code App code. This gives you version history for both the code and the platform artifacts:
 
+**Canonical on-demand workflow:**
+
+```bash
+# Export from the dev environment, rebuild solution-source/, and pack a managed artifact
+node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev
+
+# If you only want the unmanaged export + refreshed source tree
+node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only
+```
+
+This script is the preferred entry point because it keeps the repo state consistent:
+
+1. `solution/solution-unmanaged.zip` is exported from dev
+2. `solution-source/` is rebuilt from that unmanaged zip so stale files are removed
+3. `solution/solution-managed.zip` is packed from `solution-source/` unless `--unmanaged-only` is used
+
+**What goes into Git:**
+
+- Commit `solution-source/`
+- Leave `solution/*.zip` uncommitted; those binary artifacts are gitignored
+
+**Equivalent manual PAC flow:**
+
 ```bash
 # Export the unmanaged solution from your dev environment
-pac solution export --path ./solution/solution.zip --name YourSolutionName --managed false
+pac auth select --name "Dev"
+pac solution export --path ./solution/solution-unmanaged.zip --name YourSolutionName --managed false
 
 # Unpack into individual files for meaningful git diffs
-pac solution unpack --zipfile ./solution/solution.zip --folder ./solution-source/ --process-canvas-apps
+rm -rf ./solution-source/
+pac solution unpack --zipfile ./solution/solution-unmanaged.zip --folder ./solution-source/ --process-canvas-apps
+
+# Optional: build the managed deployment artifact from the unpacked source
+pac solution pack --zipfile ./solution/solution-managed.zip --folder ./solution-source/ --type Managed
 
 # The unpacked folder structure is human-readable:
 # solution-source/
@@ -402,8 +430,7 @@ npm run build
 pac code push
 
 # Step 2: Export, pack as managed, and import the solution to the target environment
-pac solution export --path ./solution/solution.zip --name YourSolutionName
-pac solution pack --zipfile ./solution/solution-managed.zip --folder ./solution-source/ --type Managed
+node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev
 
 # Import managed solution to the target environment (switch to target auth profile — no browser popup)
 pac auth select --name "Test"

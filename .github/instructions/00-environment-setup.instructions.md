@@ -227,7 +227,8 @@ Add npm scripts that use it:
   "scripts": {
     "pac": "node scripts/op-pac.mjs",
     "deploy": "npm run build && node scripts/op-pac.mjs code push",
-    "solution:export": "node scripts/op-pac.mjs solution export --path ./solution/solution.zip --name YourSolutionName",
+      "solution:export": "node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev",
+      "solution:export:unmanaged": "node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only",
     "solution:import": "node scripts/op-pac.mjs solution import --path ./solution/solution-managed.zip"
   }
 }
@@ -239,8 +240,17 @@ Now developers can run:
 npm run deploy                    # Build + deploy, secrets injected automatically
 npm run pac -- org who            # Any pac command with secrets
 npm run pac -- auth list          # Check auth profiles
-npm run solution:export           # Export solution with secrets
+npm run solution:export           # Export unmanaged + unpack source + pack managed
+npm run solution:export:unmanaged # Export unmanaged + refresh solution-source only
 ```
+
+The export helper is the canonical on-demand workflow for storing a solution in source control. It does three things in one command:
+
+1. Exports `./solution/solution-unmanaged.zip` from the selected dev environment
+2. Rebuilds `./solution-source/` from that unmanaged zip
+3. Packs `./solution/solution-managed.zip` from `solution-source/` unless `--unmanaged-only` is passed
+
+Commit `solution-source/`. Do not commit `solution/*.zip`; those files are binary build artifacts and are gitignored.
 
 **Why `op run` is better than exporting env vars:**
 

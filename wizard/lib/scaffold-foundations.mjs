@@ -52,6 +52,8 @@ export function createMinimalProject(dir, appName) {
       'test:e2e': 'playwright test',
       'setup:auth': 'node scripts/setup-auth.mjs',
       pac: 'node scripts/op-pac.mjs',
+      'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev',
+      'solution:export:unmanaged': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only',
       deploy: 'npm run build && pac code push',
       'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
       'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
@@ -138,6 +140,8 @@ export function mergePackageJsonScripts(dir, logger = noopLogger) {
     'test:e2e': 'playwright test',
     'setup:auth': 'node scripts/setup-auth.mjs',
     pac: 'node scripts/op-pac.mjs',
+    'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev',
+    'solution:export:unmanaged': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only',
     deploy: 'npm run build && pac code push',
     'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
     'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
@@ -333,7 +337,7 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
   const scriptsDir = join(rootDir, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs', 'seed-prototype-assets.mjs']) {
+    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'export-solution.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs', 'seed-prototype-assets.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }

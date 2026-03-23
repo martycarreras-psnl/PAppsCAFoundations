@@ -152,6 +152,7 @@ PAppsCAFoundations/
 ├── scripts/
 │   ├── op-pac.mjs                          # Cross-platform 1Password wrapper for pac commands
 │   ├── op-pac.sh                           # Legacy Bash wrapper for pac commands
+│   ├── export-solution.mjs                 # Export unmanaged, refresh solution-source, optionally pack managed
 │   ├── setup-auth.mjs                      # Cross-platform auth setup (1Password or .env.local)
 │   ├── setup-auth.sh                       # Legacy Bash auth setup
 │   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
@@ -214,6 +215,8 @@ That path is designed for the point where the planning payload is stable enough 
 The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
 
 The same rule now applies to auth helpers: prefer `node scripts/setup-auth.mjs` and `node scripts/op-pac.mjs` as the canonical cross-platform entry points.
+
+For solution ALM, prefer `node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev` as the canonical export path. It exports `solution/solution-unmanaged.zip`, rebuilds `solution-source/` for Git, and packs `solution/solution-managed.zip` for downstream import. Commit `solution-source/`; the zip files are gitignored build artifacts.
 
 ## Staying Updated
 

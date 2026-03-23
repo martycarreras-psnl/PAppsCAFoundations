@@ -118,6 +118,8 @@ function mergeRequiredScripts() {
     deploy: 'npm run build && pac code push',
     'setup:auth': 'node scripts/setup-auth.mjs',
     pac: 'node scripts/op-pac.mjs',
+    'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev',
+    'solution:export:unmanaged': 'node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only',
     'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
     'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
     'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
