@@ -99,6 +99,10 @@ test('seed-prototype-assets generates domain contracts, hooks, and feedback arti
   assert.match(hooks, /export function useProjectRequest\(/);
   assert.match(hooks, /prototypeQueryKeys/);
 
+  const mockData = readProjectFile(projectDir, 'src/mockData/projectRequest.ts');
+  assert.match(mockData, /id: 'mock-projectRequests-1'/);
+  assert.match(mockData, /name: 'Project Request 1'/);
+
   const realProvider = readProjectFile(projectDir, 'src/services/real-data-provider.ts');
   assert.match(realProvider, /Implement projectRequests\.list\(\)/);
   assert.match(realProvider, /Implement projectRequests\.save\(\)/);

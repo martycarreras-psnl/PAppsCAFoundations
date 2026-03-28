@@ -175,8 +175,8 @@ function buildEntity(table) {
 }
 
 function sampleValue(field, entity, index) {
-  if (field.fieldName === 'id') return `mock-${entity.collectionName}-${index + 1}`;
-  if (field.fieldName === 'name') return `${entity.displayName} ${index + 1}`;
+  if (field.fieldName === 'id') return `'mock-${entity.collectionName}-${index + 1}'`;
+  if (field.fieldName === 'name') return `'${entity.displayName.replace(/'/g, "\\'")} ${index + 1}'`;
   if (field.type === 'number[]') return `[100000000, 100000001]`;
   if (field.type === 'number') return `${100000000 + index}`;
   if (field.type === 'boolean') return index % 2 === 0 ? 'true' : 'false';
