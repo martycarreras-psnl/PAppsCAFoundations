@@ -4,12 +4,13 @@ import { writeFileSync, readFileSync, existsSync, appendFileSync, mkdirSync, cop
 import { join } from 'node:path';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
-import { pacPath, hasCommand, runSafe } from '../lib/shell.mjs';
+import { pacPath, hasCommand, runSafeCapture } from '../lib/shell.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { encrypt } from '../lib/crypto.mjs';
 import {
   buildPacProfileName,
   getWizardStateSnapshot,
+  resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
 
@@ -60,6 +61,8 @@ export default async function stepAuthSetup() {
   ui.line('');
   const pac = pacPath();
   const dateStr = new Date().toISOString().slice(0, 10);
+  const opBin = hasOp ? 'op' : null;
+  let persistedCredentialValues = null;
 
   if (authMode === '1password') {
     // ── 1Password setup ──
@@ -95,9 +98,6 @@ export default async function stepAuthSetup() {
     writeFileSync(join(ROOT, '.env'), envContent, 'utf-8');
     ui.ok('Wrote .env with 1Password references');
 
-    // PAC auth profiles
-    if (pac) createProfiles(pac, devUrl, testUrl, prodUrl, clientId, secret, tenantId);
-
   } else {
     // ── .env.local setup ──
     let envContent = `# .env.local — DO NOT commit to Git.\n`;
@@ -125,9 +125,22 @@ export default async function stepAuthSetup() {
       writeFileSync(gitignorePath, '.env.local\n', 'utf-8');
       ui.ok('Created .gitignore with .env.local');
     }
+  }
 
-    // PAC auth profiles
-    if (pac) createProfiles(pac, devUrl, testUrl, prodUrl, clientId, secret, tenantId);
+  try {
+    persistedCredentialValues = resolveCredentialValues({ rootDir: ROOT, opBin });
+  } catch (error) {
+    ui.fail(`Could not resolve persisted credentials: ${error.message}`);
+    process.exit(1);
+  }
+
+  if (pac) {
+    try {
+      createProfiles(pac, persistedCredentialValues);
+    } catch (error) {
+      ui.fail(error.message);
+      process.exit(1);
+    }
   }
 
   // ── Install pre-commit hook ──
@@ -155,11 +168,7 @@ export default async function stepAuthSetup() {
         wizardState: getWizardStateSnapshot(stateGet),
         targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'),
         profileType: 'spn',
-        credentialValues: {
-          PP_ENV_DEV: devUrl,
-          PP_ENV_TEST: testUrl,
-          PP_ENV_PROD: prodUrl,
-        },
+        credentialValues: persistedCredentialValues,
         powerConfigPath: join(ROOT, 'power.config.json'),
         requireCredentialMatch: true,
         requirePowerConfig: false,
@@ -177,7 +186,18 @@ export default async function stepAuthSetup() {
   setCompletedStep(4);
 }
 
-function createProfiles(pac, devUrl, testUrl, prodUrl, clientId, secret, tenantId) {
+function createProfiles(pac, credentialValues) {
+  const tenantId = credentialValues.PP_TENANT_ID;
+  const clientId = credentialValues.PP_APP_ID;
+  const secret = credentialValues.PP_CLIENT_SECRET;
+  const devUrl = credentialValues.PP_ENV_DEV || '';
+  const testUrl = credentialValues.PP_ENV_TEST || '';
+  const prodUrl = credentialValues.PP_ENV_PROD || '';
+
+  if (!tenantId || !clientId || !secret || !devUrl) {
+    throw new Error('Resolved credentials are incomplete. Expected PP_TENANT_ID, PP_APP_ID, PP_CLIENT_SECRET, and PP_ENV_DEV to be present.');
+  }
+
   ui.line('');
   ui.line('Creating PAC auth profiles...');
   createPacProfile(pac, 'dev', devUrl, clientId, secret, tenantId);
@@ -192,15 +212,30 @@ function createPacProfile(pac, targetKey, url, appId, secret, tenant) {
     profileType: 'spn',
     url,
   });
-  const result = runSafe(pac, [
+  const { ok, stderr, stdout } = runSafeCapture(pac, [
     'auth', 'create', '--name', profileName, '--environment', url,
     '--applicationId', appId, '--clientSecret', secret, '--tenant', tenant,
   ]);
-  if (result !== null) {
+  if (ok) {
     ui.ok(`${profileName} profile created`);
   } else {
-    ui.fail(`${profileName} profile failed — check credentials`);
+    throw new Error(formatPacAuthCreateError(profileName, url, stderr || stdout));
   }
+}
+
+function formatPacAuthCreateError(profileName, url, output = '') {
+  const trimmed = String(output || '').trim();
+  const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const detail = lines.find((line) => /^Error:/i.test(line)) || lines.at(-1) || 'pac auth create failed without a readable error message.';
+
+  return [
+    `${profileName} profile failed to create for ${url}.`,
+    `PAC reported: ${detail}`,
+    'Check these values before retrying:',
+    '1. The app registration is added as an Application User in the target environment.',
+    '2. The client secret is current and has not expired or been rotated.',
+    '3. The selected credential source points at the intended environment URL for this target.',
+  ].join('\n');
 }
 
 function installPreCommitHook(root) {
