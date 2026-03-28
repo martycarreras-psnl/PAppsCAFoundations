@@ -122,21 +122,34 @@ export function resolveCredentialValues({ rootDir, opBin }) {
       throw new Error('1Password references exist in .env, but the op CLI is not available to resolve them.');
     }
 
+    // Parse .env and resolve each op:// reference individually via `op read`.
+    // We avoid `op run --env-file` because 1Password's secret-concealment
+    // feature replaces values with "<concealed by 1Password>" in subprocess
+    // output, which silently breaks credential resolution.
     const envPath = join(rootDir, '.env');
-    const script = [
-      'const keys = ["PP_TENANT_ID", "PP_APP_ID", "PP_CLIENT_SECRET", "PP_ENV_DEV", "PP_ENV_TEST", "PP_ENV_PROD"];',
-      'const out = {};',
-      'for (const key of keys) { if (process.env[key]) out[key] = process.env[key]; }',
-      'process.stdout.write(JSON.stringify(out));',
-    ].join(' ');
+    const rawValues = parseEnvFile(envPath);
+    const out = {};
 
-    const output = execFileSync(opBin, ['run', `--env-file=${envPath}`, '--', process.execPath, '-e', script], {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'inherit'],
-      cwd: rootDir,
-    });
+    for (const key of ['PP_TENANT_ID', 'PP_APP_ID', 'PP_CLIENT_SECRET', 'PP_ENV_DEV', 'PP_ENV_TEST', 'PP_ENV_PROD']) {
+      const ref = rawValues[key];
+      if (!ref) continue;
 
-    return JSON.parse(output);
+      if (/^op:\/\//.test(ref)) {
+        try {
+          out[key] = execFileSync(opBin, ['read', ref], {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+            cwd: rootDir,
+          }).trim();
+        } catch {
+          // Field not found in 1Password — skip optional fields (TEST/PROD)
+        }
+      } else {
+        out[key] = ref;
+      }
+    }
+
+    return out;
   }
 
   const envLocalPath = join(rootDir, '.env.local');
