@@ -652,12 +652,38 @@
     <!-- Hero -->
     <section class="hero" id="hero-section">
       <h1>Power Apps Code Apps</h1>
-      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and follow the intended sequence: plan first, prototype second, connect real systems later.</p>
+      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and follow the intended sequence: plan first, prototype second, connect later.</p>
       <div class="hero-actions">
         <a href="https://github.com/macarrer_microsoft/PAppsCAFoundations/generate" class="btn btn-primary" target="_blank" rel="noopener">📋 Use This Template</a>
         <a href="#wizard-overview" class="btn btn-outline">🧙 Run the Wizard</a>
         <a href="#planning-layer" class="btn btn-outline">🧠 Planning Layer</a>
         <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
+      </div>
+    </section>
+
+    <section class="section" id="start-here">
+      <h2 class="section-title">Start Here</h2>
+      <p class="section-subtitle">The README and the Guide describe the same workflow. Pick the format that matches how you want to onboard.</p>
+
+      <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📝</div>
+          <h3>Start in the README</h3>
+          <p>Use the concise text version if you want the shortest path through cloning, running the wizard, and understanding the repo structure.</p>
+          <p style="margin-top:12px;"><a href="../README.md">Open README.md</a></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧭</div>
+          <h3>Stay in the Guide</h3>
+          <p>Use this page if you want the same procedure with richer context, step breakdowns, portal links, and operational cautions in one place.</p>
+          <p style="margin-top:12px;"><a href="#wizard-overview">Jump to the setup wizard</a></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔁</div>
+          <h3>Need the Full Delivery Path?</h3>
+          <p>Use the prototype-first golden path when you want the end-to-end sequence from business planning through schema hardening and real providers.</p>
+          <p style="margin-top:12px;"><a href="prototype-golden-path.md">Open the prototype-first golden path</a></p>
+        </div></div>
       </div>
     </section>
 
@@ -861,7 +887,7 @@
 
     <section class="section" id="wizard-overview">
       <h2 class="section-title">The Setup Wizard</h2>
-      <p class="section-subtitle">Two steps to get operational fast. For non-trivial apps, pair it with the planning layer and prototype checkpoint before locking in schema and connectors.</p>
+      <p class="section-subtitle">This is the same quick-start flow described in the README. For non-trivial apps, pair it with the planning layer and prototype checkpoint before locking in schema and connectors.</p>
 
       <div class="callout callout-success">
         <span class="callout-icon">✅</span>
@@ -1045,7 +1071,7 @@
             </ul>
             <div class="callout callout-success">
               <span class="callout-icon">✅</span>
-              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD. <strong>However, <code>pac code</code> commands (push, add-data-source) require user auth</strong> — the wizard handles this switch automatically in Step 7.</div>
+              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD. <strong>However, <code>pac code</code> commands (push, add-data-source) require user auth</strong> — the wizard handles this switch automatically in the later connected-mode steps.</div>
             </div>
           </div></div>
         </div>
@@ -1380,7 +1406,7 @@ export function useProjects() {
       <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
         <li>PAC auth profiles created (<code>pac org who</code> shows org, no popup)</li>
         <li>Data source added: <code>pac code add-data-source</code></li>
-        <li>SDK generated: <code>pac code generate</code></li>
+        <li>At least one data source added with <code>pac code add-data-source</code> so <code>src/generated/</code> exists</li>
         <li><code>power.config.json</code> exists next to <code>package.json</code></li>
       </ul>
 
@@ -1422,7 +1448,7 @@ export default defineConfig(({ command }) =&gt; ({
           <tr><td>Port 3000 already in use</td><td><code>lsof -ti:3000 | xargs kill -9</code></td></tr>
           <tr><td><code>pac code run</code> fails</td><td>Check <code>pac org who</code>, avoid PAC v2.3.2, confirm <code>power.config.json</code></td></tr>
           <tr><td>HMR not refreshing</td><td>Verify <code>react()</code> plugin in vite.config.ts, clear cache: <code>rm -rf node_modules/.vite</code></td></tr>
-          <tr><td>Mock data shape mismatch</td><td>Regenerate models: <code>pac code generate</code>, compare with <code>src/generated/models/</code></td></tr>
+          <tr><td>Mock data shape mismatch</td><td>Re-run <code>pac code add-data-source</code> for the affected table or connector, then compare with <code>src/generated/models/</code></td></tr>
         </tbody>
       </table></div>
 

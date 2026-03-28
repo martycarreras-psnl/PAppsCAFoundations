@@ -552,7 +552,7 @@ The agent's topics and knowledge must be configured to handle this input format 
 
 ### Generated service missing `ExecuteCopilotAsyncV2`
 
-- Regenerate: `pac code generate`
+- Re-run `pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>` to refresh the generated service
 - If still missing, check your PAC CLI version — update if needed: `dotnet tool update -g Microsoft.PowerApps.CLI.Tool`
 
 ### Property casing inconsistencies

@@ -53,9 +53,6 @@ pac code add-data-source -a dataverse -t <logical_table_name>
 
 # Non-Dataverse connectors
 pac code add-data-source -a <connector_api_id> -c <connection_id>
-
-# After adding, generate typed TypeScript services
-pac code generate
 ```
 
 When a developer is ready to bind a non-Dataverse connector, first try to discover existing connections in the environment:
@@ -77,7 +74,7 @@ When you run `pac code add-data-source`, the CLI:
 2. Scaffolds connection reference metadata
 3. Prepares the connector for consent flow at runtime
 
-When you run `pac code generate`, the CLI:
+As part of `pac code add-data-source`, the CLI:
 1. Reads the connector's OpenAPI definition
 2. Generates strongly-typed TypeScript service classes and model interfaces
 3. Places everything under `src/generated/`
@@ -99,7 +96,7 @@ This keeps the mock-to-real swap localized and prevents generated connector shap
 
 ### The Golden Rule: Never Edit Generated Files
 
-Generated files will be overwritten on the next `pac code generate`. Instead:
+Generated files will be overwritten the next time connector output is refreshed by `pac code add-data-source`. Instead:
 
 **Adapt services behind repository contracts:**
 
@@ -239,7 +236,6 @@ For custom APIs, start by defining your OpenAPI spec and registering it as a cus
 
 ```bash
 pac code add-data-source  # Select your custom connector from the list
-pac code generate          # Generates typed services from the OpenAPI spec
 ```
 
 The generated service will have methods matching your API's operations. Wrap them with hooks just like built-in connectors.

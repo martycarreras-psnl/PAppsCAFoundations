@@ -59,6 +59,4 @@ for (const table of dataverseTables) {
   execFileSync(pacBin, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { stdio: 'inherit' });
 }
 
-console.log('>>> Regenerating TypeScript SDK');
-execFileSync(pacBin, ['code', 'generate'], { stdio: 'inherit' });
-console.log('Dataverse data sources registered successfully.');
+console.log('Dataverse data sources registered successfully. Generated connector output was refreshed during registration.');

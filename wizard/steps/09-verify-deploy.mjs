@@ -148,6 +148,7 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  — or manually —');
   ui.line('  pac code add-data-source -a dataverse -t <table_logical_name>');
   ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
+  ui.line('  generated files in src/generated/** refresh during add-data-source');
   ui.line('');
   ui.line('Connection references travel with your solution.');
   ui.line('Map them to actual connections in Power Apps Maker Portal after import.');

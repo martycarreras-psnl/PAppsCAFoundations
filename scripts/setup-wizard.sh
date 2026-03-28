@@ -1071,8 +1071,7 @@ HTMLEOF
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && pac code push",
-    "generate": "pac code generate"
+    "deploy": "npm run build && pac code push"
   }
 }
 PKGEOF
@@ -1330,14 +1329,9 @@ GIEOF
     echo "  Running interactive data source picker..."
     "$pac_cmd" code add-data-source 2>/dev/null || \
       echo "  ⚠ pac code add-data-source failed. Run it manually later."
-
-    echo ""
-    echo "  Generating TypeScript SDK from data source..."
-    "$pac_cmd" code generate 2>/dev/null || \
-      echo "  ⚠ pac code generate failed. Run it manually later."
   else
     echo "  Skipping data sources for now."
-    echo "  To add later: pac code add-data-source && pac code generate"
+    echo "  To add later: pac code add-data-source"
   fi
 
   # Git initialization
@@ -1489,12 +1483,9 @@ Data sources are managed via Power Platform connectors. To add a new data source
 \`\`\`bash
 # Add a Dataverse table
 ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${readme_prefix}_tablename
-
-# Regenerate TypeScript SDK
-~/.dotnet/tools/pac code generate
 \`\`\`
 
-> **Never edit files in \`src/generated/\`** — they are overwritten on every \`pac code generate\`.
+> **Never edit files in \`src/generated/\`** — PAC refreshes them when connector output is regenerated.
 
 ## GitHub Copilot Instructions
 
@@ -1631,7 +1622,7 @@ step_verify_and_deploy() {
   echo ""
   echo "  To add a data source later:"
   echo "    pac code add-data-source"
-  echo "    pac code generate"
+  echo "    # generated files in src/generated/** refresh during add-data-source"
   echo ""
   echo "  To set up CI/CD:"
   echo "    See .github/instructions/04-deployment.instructions.md"

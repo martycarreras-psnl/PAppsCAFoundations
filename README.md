@@ -4,6 +4,10 @@ A **GitHub template repository** with opinionated, comprehensive GitHub Copilot 
 
 ## Quick Start
 
+Use this README when you want the shortest text path through the repo.
+Use [docs/guide.html](docs/guide.html) when you want the same flow as a visual walkthrough.
+Use [docs/prototype-golden-path.md](docs/prototype-golden-path.md) when you want the full prototype-first sequence from planning through real providers.
+
 ### Step 1: Get the code
 
 **Option A — Use this template (recommended)**
@@ -38,9 +42,11 @@ That's it. The wizard walks you through everything — tool checks, naming, Powe
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
 
+If you prefer a visual walkthrough of the same sequence, open [docs/guide.html](docs/guide.html).
+
 ## Methodology
 
-Foundations now assumes a deliberate sequence for non-trivial apps:
+Foundations now assumes a deliberate sequence for non-trivial apps: plan first, prototype second, connect later.
 
 1. Plan the business workflow
 2. Prototype the UX against mock providers
@@ -99,7 +105,7 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 
 1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
 2. **Collects project identity** — publisher prefix, solution name, app name
-3. **Guides you through Power Apps portal steps** — tells you exactly what to click and type, using the values you just entered
+3. **Guides you through the remaining portal-only steps** — App Registration, Application User setup, feature toggles, and other values the wizard cannot create for you
 4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
 5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
@@ -126,6 +132,8 @@ See `00-environment-setup.instructions.md` for details.
 Once you have the code on your machine, open [docs/guide.html](docs/guide.html) in your browser for an interactive visual walkthrough — tech stack overview, naming conventions, Power Apps Maker Portal links, and a detailed breakdown of each wizard step all in one page.
 
 The short version is: plan first, prototype second, connect later.
+
+If you started in the guide and want the concise repo overview, come back here to [README.md](README.md).
 
 ## What's Inside
 
@@ -200,7 +208,7 @@ node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
 node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
 ```
 
-This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source` before running `pac code generate`.
+This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source`, which refreshes the generated connector output as each table is added.
 
 If you want the full recommended sequence from planning payload to mock UX to real providers, follow [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
 

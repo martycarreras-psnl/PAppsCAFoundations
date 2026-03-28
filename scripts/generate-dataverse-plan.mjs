@@ -125,7 +125,6 @@ function main() {
     dataverseTables,
     pacCommands: [
       ...dataverseTables.map((table) => `~/.dotnet/tools/pac code add-data-source -a dataverse -t ${table}`),
-      '~/.dotnet/tools/pac code generate',
     ],
   };
 

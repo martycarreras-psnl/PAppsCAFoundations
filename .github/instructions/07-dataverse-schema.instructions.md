@@ -77,7 +77,7 @@ node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.
 
 - `validate-schema-plan.mjs` checks the planning artifact before any provisioning work starts
 - `generate-dataverse-plan.mjs` emits normalized execution plans for tables, relationships, and connector registration
-- `register-dataverse-data-sources.mjs` consumes the generated registration plan and runs `pac code add-data-source` in order, followed by `pac code generate`
+- `register-dataverse-data-sources.mjs` consumes the generated registration plan and runs `pac code add-data-source` in order, refreshing generated connector output as each table is registered
 
 Prefer the `.mjs` entry points for cross-platform automation. The `.sh` variant exists for Bash-heavy environments but is not the canonical path for Windows.
 
@@ -122,7 +122,7 @@ Every schema bootstrap script must follow this exact order. Reversing any step c
 6. Security Role — "<App Name> Collaborator" with Collaborator-level privileges on all custom tables
 7. PublishAllXml (makes ALL schema changes visible to the runtime)
 8. pac code add-data-source -a dataverse -t <table> (registers each table)
-9. pac code generate (generates TypeScript SDK from registered tables)
+9. Generated connector output refreshes as each `pac code add-data-source` command completes
 ```
 
 Skipping step 7 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pac code add-data-source` until published.
@@ -1181,8 +1181,7 @@ After publishing, register each table with your Code App so the TypeScript SDK i
 ~/.dotnet/tools/pac code add-data-source -a dataverse -t agtpo_agentidea
 # ... one command per table
 
-# Then regenerate the TypeScript SDK
-~/.dotnet/tools/pac code generate
+# Generated files in src/generated/ refresh during each add-data-source run
 ```
 
 This creates/updates:
@@ -1190,7 +1189,7 @@ This creates/updates:
 - `src/generated/models/<Table>Model.ts` — TypeScript interfaces
 - `.power/schemas/` — schema metadata
 
-**Never edit files in `src/generated/`** — they're regenerated on every `pac code generate`.
+**Never edit files in `src/generated/`** — they're regenerated when `pac code add-data-source` refreshes connector output.
 
 ### Step 3: Install/update the SDK package
 
@@ -1245,7 +1244,6 @@ echo ""
 echo "Now run these commands in your project directory:"
 echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_project"
 echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_agentidea"
-echo "  ~/.dotnet/tools/pac code generate"
 echo "  npm install @microsoft/power-apps@^1.0.3"
 ```
 
@@ -1255,7 +1253,7 @@ After completing the schema phase, return all of the following:
 
 1. **Actions performed** — option sets, tables, columns, relationships, roles, publish, data-source registration
 2. **Artifacts updated** — schema plan file, setup scripts, generated SDK files
-3. **Validation result** — publish succeeded, `pac code add-data-source` succeeded, `pac code generate` succeeded
+3. **Validation result** — publish succeeded, `pac code add-data-source` succeeded, and generated connector output is current
 4. **Generated plan artifacts** — `provision-tables.plan.json`, `provision-relationships.plan.json`, and `register-datasources.plan.json` are current for the checked-in planning payload
 4. **Next phase recommendation** — connector integration or UI implementation
 
@@ -1298,6 +1296,6 @@ Before writing any setup script or creating any schema manually, answer these qu
 **Publishing & Registration:**
 - [ ] Does the script call `PublishAllXml` after all schema changes (including the security role)?
 - [ ] Is `pac code add-data-source -a dataverse -t <table>` run for every table the app needs?
-- [ ] Is `pac code generate` run after adding data sources?
+- [ ] Is generated connector output current after adding data sources?
 - [ ] Is the setup script idempotent (safe to re-run on an environment that already has the schema)?
 - [ ] Are generated TypeScript types regenerated after any schema change?

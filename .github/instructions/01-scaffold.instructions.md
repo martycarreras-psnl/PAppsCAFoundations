@@ -134,7 +134,7 @@ pac solution add-reference --component-name yourprefix_ProjectTask --component-t
 ```
 
 ### The `generated/` folder is sacrosanct
-Files under `src/generated/` are produced by `pac code add-data-source` and `pac code generate`. Never modify them by hand. If the connector schema changes, regenerate — do not patch. If you need to extend a generated type, create a wrapper in `src/types/` that extends it:
+Files under `src/generated/` are produced when `pac code add-data-source` registers a connector or Dataverse table. Never modify them by hand. If the connector schema changes, re-add or refresh the data source — do not patch generated files. If you need to extend a generated type, create a wrapper in `src/types/` that extends it:
 
 ```typescript
 // src/types/ProjectExtended.ts
@@ -251,8 +251,8 @@ npm run dev:local
 #     references and help discover existing connections.
 node wizard/index.mjs --from 8
 
-# 11. Generate typed services from the connector
-pac code generate
+# 11. Confirm the connector registration produced or refreshed src/generated/**
+#     If a table or connector is missing, re-run pac code add-data-source for it.
 
 # 12. Verify your solution contains the Code App and connection references
 #     Open Power Apps Maker Portal → Solutions → YourSolution
@@ -284,8 +284,7 @@ Every project must define these scripts:
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && pac code push",
-    "generate": "pac code generate"
+    "deploy": "npm run build && pac code push"
   }
 }
 ```
@@ -419,7 +418,7 @@ Once you've built the UI and want to connect to real data, switch to connected m
 **Prerequisites for connected mode:**
 - PAC auth profiles created (see `00-environment-setup.instructions.md`)
 - At least one data source added via `pac code add-data-source`
-- TypeScript SDK generated via `pac code generate`
+- TypeScript SDK refreshed by `pac code add-data-source`
 - Active connection to the target environment: `pac auth select --name "Dev"`
 
 ```bash
@@ -521,7 +520,7 @@ npm run dev:local
 - Clear the Vite cache: `rm -rf node_modules/.vite && npm run dev:local`
 
 **Mock data shape doesn't match real data:**
-- Run `pac code generate` to regenerate TypeScript models
+- Re-run `pac code add-data-source` for the affected table or connector to refresh TypeScript models
 - Compare `src/generated/models/` types against your mock data
 - Remember: choice/picklist fields are **integers** (100000000), not strings
 

@@ -52,7 +52,4 @@ for table in "${DATAVERSE_TABLES[@]}"; do
   "$PAC_BIN" code add-data-source -a dataverse -t "$table"
 done
 
-echo ">>> Regenerating TypeScript SDK"
-"$PAC_BIN" code generate
-
-echo "Dataverse data sources registered successfully."
+echo "Dataverse data sources registered successfully. Generated connector output was refreshed during registration."

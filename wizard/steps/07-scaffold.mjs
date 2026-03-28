@@ -346,12 +346,9 @@ Manual fallback:
 
 # Add a non-Dataverse connector once you know the Connection ID
 ~/.dotnet/tools/pac code add-data-source -a shared_office365users -c <connection_id>
-
-# Regenerate TypeScript SDK
-~/.dotnet/tools/pac code generate
 \`\`\`
 
-> **Never edit files in \`src/generated/\`** — they are overwritten on every \`pac code generate\`.
+> **Never edit files in \`src/generated/\`** — PAC refreshes them when connector output is regenerated.
 
 ## GitHub Copilot Instructions
 
@@ -370,7 +367,7 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run pac -- <args>\` | Run pac with 1Password-injected credentials when using op:// references |
 | \`npm run validate:schema-plan\` | Validate the Dataverse planning artifact before provisioning |
 | \`npm run generate:dataverse-plan\` | Generate normalized Dataverse execution plans from the planning artifact |
-| \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and regenerate the SDK |
+| \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and refresh generated connector output |
 | \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
 
 ## Staying Updated
