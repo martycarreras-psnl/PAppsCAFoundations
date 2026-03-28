@@ -133,8 +133,7 @@ export default async function stepVerifyAndDeploy() {
   } else if (!buildOk || !distExists) {
     ui.line('');
     ui.line('Skipping deploy — build did not succeed. Fix errors, then:');
-    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);
-  }
+    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);  ui.line('  (reminder: pac code push requires a user auth profile, not SPN)');  }
 
   // ── Summary ──
   ui.completeBanner();
@@ -156,7 +155,7 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  review dataverse/prototype-feedback.md and update the planning payload');
   ui.line('  node wizard/index.mjs --from 8  <- bind real connectors when ready');
   ui.line('  npm run dev             <- connected mode once real providers exist');
-  ui.line('  pac code push           <- deploy changes to Power Platform');
+  ui.line('  pac code push           <- deploy (requires user auth profile, not SPN)');
   ui.line('');
   ui.line('To add connectors later:');
   ui.line('  node wizard/index.mjs --from 8    (re-run connector setup)');

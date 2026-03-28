@@ -96,21 +96,26 @@ If any item is missing, do not deploy.
 
 ## Manual Deployment (Dev Environment Only)
 
-For quick iteration during development, deploy directly from your machine. Authentication is handled by the Service Principal auth profile you configured during initial setup (see `00-environment-setup.instructions.md`) — no browser popup required:
+For quick iteration during development, deploy directly from your machine.
+
+> **SPN auth does not work for `pac code push`.** The BAP checkAccess API rejects service principal tokens. You must use a user (interactive) auth profile. The wizard creates one automatically during steps 7–9. If you need to create one manually:
 
 ```bash
-# Verify you're connected to the right environment (no browser popup)
-pac org who
+# One-time: create a user auth profile for your dev environment
+pac auth create --name pp-myrepo-d-u-abcd1234 --environment https://your-org-dev.crm.dynamics.com --deviceCode
 
-# If you need to switch environments:
-pac auth select --name "Dev"
+# Select the user profile (NOT the SPN profile)
+pac auth select --name pp-myrepo-d-u-abcd1234
+
+# Verify you're connected to the right environment
+pac org who
 
 # Build and deploy
 npm run build
 pac code push
 ```
 
-If `pac code push` opens a browser window, your auth profile is not configured correctly. Re-run the setup in `00-environment-setup.instructions.md` — specifically, ensure you created the profile with `--applicationId`, `--clientSecret`, and `--tenant` flags.
+The SPN profile you created during initial setup is still used for `pac solution export/import`, `pac org who`, and CI/CD pipeline operations. Keep both profiles — switch between them as needed.
 
 This manual flow is acceptable for personal dev environments only. Test and production deployments must go through CI/CD.
 

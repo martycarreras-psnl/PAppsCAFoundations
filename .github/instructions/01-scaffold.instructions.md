@@ -289,6 +289,8 @@ Every project must define these scripts:
 }
 ```
 
+> **Auth note for `deploy`:** The `pac code push` in the deploy script requires a **user (interactive) auth profile** to be active — SPN auth is rejected by the BAP API. Select your repo-scoped user profile before running `npm run deploy`. The wizard creates this profile automatically; for manual setup see `00-environment-setup.instructions.md`.
+
 ## Local Development with Vite
 
 Local development has two modes depending on where you are in the development lifecycle. Start with **Prototype Mode** — it requires zero Power Platform configuration and gets you building UI immediately. Graduate to **Connected Mode** when the prototype has influenced the final planning payload and you're ready to bind real providers.

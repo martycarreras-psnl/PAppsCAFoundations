@@ -168,12 +168,15 @@ console.log('  Setup complete!');
 console.log('================================================');
 console.log('');
 console.log('Daily usage:');
+console.log('  SPN profiles are ready for pac solution export/import and pac org who.');
+console.log('');
+console.log('  ⚠ pac code push requires user (interactive) auth — SPN is rejected.');
+console.log('  The wizard creates a user profile automatically during steps 7-9.');
+console.log('  Or create one manually:');
+console.log('    pac auth create --name <profile> --environment <url> --deviceCode');
 if (use1Password) {
-  console.log("  Profiles are ready - 'pac code push' works without op run.");
-  console.log('  For ephemeral mode: npm run pac -- code push');
+  console.log('');
   console.log('  Re-run this script after secret rotation.');
-} else {
-  console.log("  'pac code push' works directly - no browser popup.");
 }
 console.log('');
 console.log('  Switch environments:  pac auth select --name <repo-scoped-profile>');

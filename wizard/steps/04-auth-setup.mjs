@@ -1,10 +1,10 @@
 // wizard/steps/04-auth-setup.mjs — Credential storage, PAC profiles, connection verification
-import { select, input, password } from '@inquirer/prompts';
+import { select, input, password, confirm } from '@inquirer/prompts';
 import { writeFileSync, readFileSync, existsSync, appendFileSync, mkdirSync, copyFileSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
-import { pacPath, hasCommand, runSafeCapture } from '../lib/shell.mjs';
+import { pacPath, hasCommand, runSafeCapture, runSafeLive } from '../lib/shell.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { encrypt } from '../lib/crypto.mjs';
 import {
@@ -179,6 +179,48 @@ export default async function stepAuthSetup() {
     } catch (error) {
       ui.fail(error.message);
       process.exit(1);
+    }
+
+    // ── Offer to create user (interactive) auth profile ──
+    // pac code commands (push, add-data-source, run) reject SPN tokens.
+    // Creating the user profile now prevents a confusing auth failure in steps 7-9.
+    ui.line('');
+    ui.warn('All pac code commands (push, add-data-source, run) require user auth — SPN is rejected.');
+    ui.line('  Creating a user auth profile now avoids a confusing failure later.');
+    ui.line('');
+    const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
+    const userProfileName = buildPacProfileName({ rootDir: ROOT, targetKey, profileType: 'user', url: devUrl });
+    const createUser = await confirm({ message: 'Create a user (interactive) auth profile now?', default: true });
+    if (createUser) {
+      ui.line('');
+      ui.line('Opening browser for sign-in...');
+      let userOk = runSafeLive(pac, [
+        'auth', 'create', '--name', userProfileName,
+        '--environment', devUrl,
+      ]);
+      if (!userOk) {
+        ui.warn('Browser sign-in failed. Trying device code flow...');
+        ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
+        ui.line('');
+        userOk = runSafeLive(pac, [
+          'auth', 'create', '--name', userProfileName,
+          '--environment', devUrl, '--deviceCode',
+        ]);
+      }
+      if (userOk) {
+        ui.ok(`User profile ${userProfileName} created — pac code commands will work.`);
+        // Switch back to SPN profile for steps 5-6 (publisher/solution creation via Dataverse API)
+        const spnProfileName = buildPacProfileName({ rootDir: ROOT, targetKey, profileType: 'spn', url: devUrl });
+        runSafeCapture(pac, ['auth', 'select', '--name', spnProfileName]);
+        ui.ok(`Switched back to SPN profile for next steps.`);
+      } else {
+        ui.warn(`Could not create user profile. You can create it later before step 7:`);
+        ui.line(`  ${pac} auth create --name ${userProfileName} --environment ${devUrl} --deviceCode`);
+      }
+    } else {
+      ui.line('');
+      ui.line('You can create it later before running pac code commands:');
+      ui.line(`  ${pac} auth create --name ${userProfileName} --environment ${devUrl} --deviceCode`);
     }
   }
 
