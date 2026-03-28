@@ -173,7 +173,7 @@ PAppsCAFoundations/
 │   ├── sync-foundations.mjs                # Cross-platform template sync entry point
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
-│   └── setup-wizard.sh                     # Guided legacy setup wizard (bash)
+│   └── setup-wizard.sh                     # Bash wrapper that delegates to the Node wizard
 ├── wizard/                                 # Cross-platform Node.js setup wizard
 │   ├── index.mjs                           # Entry point + step orchestrator
 │   ├── lib/                                # Shared helpers (state, UI, shell, validation)
@@ -220,11 +220,11 @@ node wizard/index.mjs --from 8
 
 That path is designed for the point where the planning payload is stable enough that connection references and connection IDs are no longer guesses.
 
-The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available for Bash-based environments.
+The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available as thin wrappers to those Node entry points so downstream repos do not drift into alternate behavior.
 
 The same rule now applies to auth helpers: prefer `node scripts/setup-auth.mjs` and `node scripts/op-pac.mjs` as the canonical cross-platform entry points.
 
-For solution ALM, prefer `node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev` as the canonical export path. It exports `solution/solution-unmanaged.zip`, rebuilds `solution-source/` for Git, and packs `solution/solution-managed.zip` for downstream import. Commit `solution-source/`; the zip files are gitignored build artifacts.
+For solution ALM, prefer `node scripts/export-solution.mjs --name YourSolutionName --target dev` as the canonical export path. PAC profile selection is now repo-scoped and target-verified inside the helper instead of relying on generic profile names. It exports `solution/solution-unmanaged.zip`, rebuilds `solution-source/` for Git, and packs `solution/solution-managed.zip` for downstream import. Commit `solution-source/`; the zip files are gitignored build artifacts.
 
 ## Staying Updated
 

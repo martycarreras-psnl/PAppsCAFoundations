@@ -713,9 +713,9 @@
 │   └── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide</span>
 ├── <span class="folder">scripts/</span>
 │   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># 1Password wrapper for pac</span>
-│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Auth profile creation</span>
+│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Bash wrapper to the Node auth helper</span>
 │   ├── <span class="file">sync-foundations.sh</span>                 <span class="comment"># Pull latest from template repo</span>
-│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Legacy bash wizard (macOS/Linux)</span>
+│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Bash wrapper to the Node wizard</span>
 ├── <span class="folder">wizard/</span>                                 <span class="comment"># ← THE MAIN EVENT</span>
 │   ├── <span class="file">index.mjs</span>                           <span class="comment"># Cross-platform Node.js setup wizard</span>
 │   ├── <span class="folder">lib/</span>                                <span class="comment"># Shared helpers (state, UI, shell)</span>
@@ -1065,8 +1065,8 @@
               <li>Otherwise, choose <strong>1Password</strong> or <strong>.env.local</strong> for secret storage</li>
               <li>Writes credential files (<code>op://</code> references or encrypted values)</li>
               <li>Ensures <code>.env.local</code> is in <code>.gitignore</code></li>
-              <li>Creates PAC auth profiles for each environment: <code>pac auth create --name "Dev" ...</code></li>
-              <li>Runs <code>pac org who</code> to verify — should show your App Registration name, not a human user</li>
+              <li>Creates repo-scoped PAC auth profiles for each environment instead of machine-global <code>Dev/Test/Prod</code> names</li>
+              <li>Runs <code>pac org who</code> to verify the selected profile matches the wizard target environment and should show your App Registration name, not a human user</li>
               <li>Installs a pre-commit hook to prevent accidental secret leaks</li>
             </ul>
             <div class="callout callout-success">
@@ -1218,8 +1218,8 @@
               <li><code>npm run build</code> — verifies <code>dist/index.html</code> exists</li>
               <li>Checks <code>power.config.json</code> for <code>appId</code> to determine first vs. subsequent push</li>
               <li><strong>First push:</strong> Creates a user (interactive) auth profile via browser sign-in — SPN auth cannot create new apps</li>
-              <li><strong>Subsequent pushes:</strong> Uses whatever auth is active (SPN works fine)</li>
-              <li><strong>Offers to deploy</strong> with <code>pac code push</code></li>
+              <li><strong>Subsequent pushes:</strong> Force-selects and verifies the expected repo-scoped PAC profile before continuing</li>
+              <li><strong>Offers to deploy</strong> through the verified PAC flow instead of trusting the active machine profile</li>
             </ol>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
@@ -1231,7 +1231,7 @@ npm run dev:local    ← prototype with mock providers
 npm run prototype:seed ← refresh prototype assets after editing the planning payload
 npm run dev          ← connected mode once real providers exist
 node wizard/index.mjs --from 8 ← bind real connectors when ready
-pac code push        ← deploy changes to Power Platform</pre>
+npm run deploy       ← deploy changes after the app has been registered</pre>
           </div></div>
         </div>
 
@@ -1287,9 +1287,9 @@ pac code add-data-source -a shared_sharepointonline -c &lt;YOUR_CONNECTION_ID&gt
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
         <div>
-          <strong>Must use user (interactive) auth.</strong> All <code>pac code</code> commands are rejected when using service principal auth. Switch to a user profile first:
-          <pre style="margin-top:8px;">pac auth create --name MyAppUser --environment https://org-dev.crm.dynamics.com
-pac auth select --name MyAppUser</pre>
+          <strong>Must use user (interactive) auth.</strong> All <code>pac code</code> commands are rejected when using service principal auth. Use the repo-scoped interactive profile for the current environment, for example:
+          <pre style="margin-top:8px;">pac auth create --name papps:my-repo:dev:user:org-dev.crm.dynamics.com --environment https://org-dev.crm.dynamics.com --deviceCode
+pac auth select --name papps:my-repo:dev:user:org-dev.crm.dynamics.com</pre>
         </div>
       </div>
 
@@ -1475,7 +1475,7 @@ pac code add-data-source -a dataverse -t myprefix_project
 pac code add-data-source -a shared_office365users -c &lt;CONNECTION_ID&gt;</pre>
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
-        <div><strong>All <code>pac code</code> commands require user (interactive) auth.</strong> SPN auth is rejected by the BAP checkAccess API. Switch auth profiles: <code>pac auth select --name MyAppUser</code></div>
+        <div><strong>All <code>pac code</code> commands require user (interactive) auth.</strong> SPN auth is rejected by the BAP checkAccess API. Switch to the repo-scoped interactive profile for the current target environment before running them.</div>
       </div>
 
       <h4>Wrapping Generated Code with TanStack Query</h4>
@@ -1541,7 +1541,7 @@ export function useProjects() {
         <span class="callout-icon">⚠️</span>
         <div><strong>First push requires user auth.</strong> The initial <code>pac code push</code> creates the app and needs interactive sign-in. After that, SPN auth works for CI/CD. See <a href="#enable-code-apps">Enable Code Apps</a>.</div>
       </div>
-      <pre>npm run build &amp;&amp; pac code push</pre>
+      <pre>npm run deploy</pre>
 
       <h4>GitHub Secrets Required</h4>
       <div class="table-wrap"><table>
@@ -1784,9 +1784,9 @@ if (response.data.completed) {
       </table></div>
       <div class="card" style="margin-top: var(--s3); border-left: 3px solid var(--orange);">
         <div class="card-body">
-          <strong>⚠ SPN auth note:</strong> <code>pac code push</code> requires Power Platform API access that service principal (SPN) auth often lacks. If push fails with a <code>checkAccess</code> permission error, switch to interactive auth:
-          <pre style="margin-top: var(--s2);">pac auth create --name DevInteractive --environment &lt;your-env-url&gt; --interactive
-pac auth select --name DevInteractive
+          <strong>⚠ SPN auth note:</strong> <code>pac code push</code> requires Power Platform API access that service principal (SPN) auth lacks for first-push and <code>pac code</code> mutation flows. Use the repo-scoped interactive profile for that environment, then push:
+          <pre style="margin-top: var(--s2);">pac auth create --name papps:my-repo:dev:user:org-dev.crm.dynamics.com --environment &lt;your-env-url&gt; --deviceCode
+pac auth select --name papps:my-repo:dev:user:org-dev.crm.dynamics.com
 pac code push</pre>
         </div>
       </div>
