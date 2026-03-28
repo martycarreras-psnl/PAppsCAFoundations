@@ -58,13 +58,19 @@ Options:
   --auth-profile <name>    PAC auth profile to select before export (for example: Dev)
   --output-dir <path>      Folder for zip artifacts (default: ./solution)
   --source-dir <path>      Folder for unpacked source (default: ./solution-source)
-  --unmanaged-only         Export and unpack unmanaged only; skip managed pack
+  --include-managed        Also pack a managed zip (not needed if using Power Platform Pipelines)
+  --skip-version-bump      Skip the automatic build-number increment
   --help                   Show this message
 
 Behavior:
   1. Exports unmanaged to solution/solution-unmanaged.zip
   2. Rebuilds solution-source/ from that unmanaged zip
-  3. Packs solution/solution-managed.zip from solution-source/ unless --unmanaged-only is set
+  3. Bumps the solution build version (e.g. 1.0.3.0 → 1.0.4.0) unless --skip-version-bump
+  4. Packs solution/solution-managed.zip only if --include-managed is set
+
+Promotion to test/prod:
+  Use Power Platform Pipelines (admin center) to deploy managed solutions.
+  The pipeline handles the unmanaged → managed conversion automatically.
 
 What to commit:
   Commit solution-source/.
@@ -76,10 +82,11 @@ function parseArgs(argv) {
   const options = {
     outputDir: path.resolve('solution'),
     sourceDir: path.resolve('solution-source'),
-    unmanagedOnly: false,
+    includeManaged: false,
     authProfile: null,
     targetKey: 'dev',
     solutionName: null,
+    skipVersionBump: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -90,8 +97,18 @@ function parseArgs(argv) {
       continue;
     }
 
+    if (arg === '--include-managed') {
+      options.includeManaged = true;
+      continue;
+    }
+
     if (arg === '--unmanaged-only') {
-      options.unmanagedOnly = true;
+      // Legacy flag — unmanaged-only is now the default; accept silently
+      continue;
+    }
+
+    if (arg === '--skip-version-bump') {
+      options.skipVersionBump = true;
       continue;
     }
 
@@ -206,7 +223,33 @@ console.log(`Refreshing unpacked source in ${options.sourceDir}`);
 fs.rmSync(options.sourceDir, { recursive: true, force: true });
 runPac(['solution', 'unpack', '--zipfile', unmanagedZip, '--folder', options.sourceDir, '--process-canvas-apps']);
 
-if (!options.unmanagedOnly) {
+// ── Auto-bump build version ──
+if (!options.skipVersionBump) {
+  const solutionXml = path.join(options.sourceDir, 'Other', 'Solution.xml');
+  if (fs.existsSync(solutionXml)) {
+    const xml = fs.readFileSync(solutionXml, 'utf8');
+    const versionMatch = xml.match(/<Version>([\d.]+)<\/Version>/);
+    if (versionMatch) {
+      const oldVersion = versionMatch[1];
+      const parts = oldVersion.split('.').map(Number);
+      // Bump the build segment (index 2): 1.0.3.0 → 1.0.4.0
+      parts[2] = (parts[2] || 0) + 1;
+      const newVersion = parts.join('.');
+      const updatedXml = xml.replace(
+        `<Version>${oldVersion}</Version>`,
+        `<Version>${newVersion}</Version>`,
+      );
+      fs.writeFileSync(solutionXml, updatedXml, 'utf8');
+      console.log(`  Solution version: ${oldVersion} → ${newVersion}`);
+    } else {
+      console.log('  Could not parse version from Solution.xml — skipping bump.');
+    }
+  } else {
+    console.log('  Solution.xml not found after unpack — skipping version bump.');
+  }
+}
+
+if (options.includeManaged) {
   console.log(`Packing managed solution to ${managedZip}`);
   runPac(['solution', 'pack', '--zipfile', managedZip, '--folder', options.sourceDir, '--type', 'Managed']);
 }
@@ -215,7 +258,7 @@ console.log('');
 console.log('Solution export complete.');
 console.log(`  Unmanaged zip: ${path.relative(process.cwd(), unmanagedZip)}`);
 console.log(`  Source to commit: ${path.relative(process.cwd(), options.sourceDir)}`);
-if (!options.unmanagedOnly) {
+if (options.includeManaged) {
   console.log(`  Managed zip: ${path.relative(process.cwd(), managedZip)}`);
 }
 console.log('  Commit solution-source/ and leave solution/*.zip uncommitted.');

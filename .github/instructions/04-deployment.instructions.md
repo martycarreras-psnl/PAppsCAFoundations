@@ -98,7 +98,7 @@ If any item is missing, do not deploy.
 
 For quick iteration during development, deploy directly from your machine.
 
-> **SPN auth does not work for `pac code push`.** The BAP checkAccess API rejects service principal tokens. You must use a user (interactive) auth profile. The wizard creates one automatically during steps 7–9. If you need to create one manually:
+> **SPN auth does not work for `pac code push`.** The BAP checkAccess API rejects service principal tokens. You need a **user** auth profile instead. The wizard creates one automatically during steps 7–9. **This is a one-time setup** — after the initial device-code sign-in, PAC CLI caches a refresh token that auto-renews (~90 days), so subsequent pushes work silently with no browser prompt.
 
 ```bash
 # One-time: create a user auth profile for your dev environment
@@ -110,12 +110,12 @@ pac auth select --name pp-myrepo-d-u-abcd1234
 # Verify you're connected to the right environment
 pac org who
 
-# Build and deploy
+# Build and deploy — no sign-in prompt after the profile is created
 npm run build
 pac code push
 ```
 
-The SPN profile you created during initial setup is still used for `pac solution export/import`, `pac org who`, and CI/CD pipeline operations. Keep both profiles — switch between them as needed.
+The SPN profile you created during initial setup is still used for `pac solution export/import`, `pac org who`, and other non-`pac code` operations. Keep both profiles — switch between them as needed.
 
 This manual flow is acceptable for personal dev environments only. Test and production deployments must go through CI/CD.
 
@@ -166,33 +166,28 @@ jobs:
 
 ### Deploy Pipeline (After Merge)
 
-This pipeline deploys to the target environment after code is merged:
+This pipeline exports the unmanaged solution from dev, bumps the version, and commits the refreshed source back to the repo. Promotion to test and production is handled by **Power Platform Pipelines** (managed deployments configured in the admin center) — not by this GitHub pipeline.
+
+> **Why not `pac code push` in CI/CD?** The BAP checkAccess API rejects SPN tokens for `pac code push`. Solution export sidesteps this entirely because the Code App is embedded inside the solution. Push to dev locally (user profile, one-time setup), then let the pipeline export and version-track the result.
 
 ```yaml
 # .github/workflows/deploy.yml
-name: Deploy
+name: Export Solution
 
 on:
   push:
     branches: [main]
 
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: 'development'
-        type: choice
-        options:
-          - development
-          - test
-          - production
+
+env:
+  SOLUTION_NAME: YourSolutionName  # Replace with your solution unique name
 
 jobs:
-  deploy:
+  export:
+    name: Export and version-track solution from dev
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'development' }}
-
+    environment: development
     steps:
       - uses: actions/checkout@v4
 
@@ -202,12 +197,11 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-      - run: npm run build
 
       - name: Install Power Platform CLI
         uses: microsoft/powerplatform-actions/actions-install@v1
 
-      - name: Authenticate
+      - name: Authenticate to dev
         uses: microsoft/powerplatform-actions/who-am-i@v1
         with:
           environment-url: ${{ vars.POWER_PLATFORM_URL }}
@@ -215,22 +209,55 @@ jobs:
           client-secret: ${{ secrets.PP_CLIENT_SECRET }}
           tenant-id: ${{ secrets.PP_TENANT_ID }}
 
-      - name: Deploy Code App
-        run: pac code push
-        env:
-          PAC_CLI_SPN_APP_ID: ${{ secrets.PP_APP_ID }}
-          PAC_CLI_SPN_CLIENT_SECRET: ${{ secrets.PP_CLIENT_SECRET }}
-          PAC_CLI_SPN_TENANT_ID: ${{ secrets.PP_TENANT_ID }}
-          PAC_CLI_ENVIRONMENT_URL: ${{ vars.POWER_PLATFORM_URL }}
+      - name: Export unmanaged solution
+        run: |
+          mkdir -p solution
+          pac solution export \
+            --path ./solution/solution-unmanaged.zip \
+            --name ${{ env.SOLUTION_NAME }} \
+            --managed false
+
+      - name: Unpack and bump version
+        run: |
+          rm -rf ./solution-source/
+          pac solution unpack \
+            --zipfile ./solution/solution-unmanaged.zip \
+            --folder ./solution-source/ \
+            --process-canvas-apps
+
+          # Auto-increment the build segment (1.0.3.0 → 1.0.4.0)
+          node -e "
+            const fs = require('fs');
+            const p = './solution-source/Other/Solution.xml';
+            let xml = fs.readFileSync(p,'utf8');
+            const m = xml.match(/<Version>([\\d.]+)<\\/Version>/);
+            if (m) {
+              const parts = m[1].split('.').map(Number);
+              parts[2] = (parts[2]||0) + 1;
+              const nv = parts.join('.');
+              xml = xml.replace('<Version>'+m[1]+'</Version>','<Version>'+nv+'</Version>');
+              fs.writeFileSync(p, xml, 'utf8');
+              console.log('Solution version: '+m[1]+' → '+nv);
+            }
+          "
+
+      - name: Commit solution source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add solution-source/
+          git diff --cached --quiet || git commit -m "chore: export solution v$(grep -oP '(?<=<Version>)[\d.]+' solution-source/Other/Solution.xml)"
+          git push
 ```
 
-> **Known limitation:** `pac code push` is rejected with SPN auth (the BAP API requires user tokens for all Code App mutations). This pipeline YAML is the intended target state — Microsoft has indicated SPN support for `pac code push` is on the roadmap. Until it ships, use one of these workarounds:
->
-> 1. **Solution export/import** — Export the solution containing the Code App from dev (SPN works for `pac solution export`), then import the managed solution to test/prod.
-> 2. **Self-hosted runner with cached user token** — Use `pac auth create --deviceCode` on a self-hosted runner to create a persistent user profile. The token lasts ~90 days before re-auth is needed.
-> 3. **Manual push from developer machine** — For small teams, pushing from a local machine with an active user profile is acceptable for dev environments.
->
-> The recommended production path is option 1 (solution export/import), which also ensures your Code App, tables, connection references, and security roles all travel together as a managed solution.
+**What this pipeline does:**
+1. Authenticates to dev (SPN), exports the unmanaged solution containing the Code App
+2. Unpacks it and auto-increments the build version
+3. Commits the refreshed `solution-source/` back to the repo so the version history is tracked in Git
+
+**Promotion to test/prod** is handled by [Power Platform Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/pipelines) — configure them in the Power Platform admin center to deploy managed solutions from dev to higher environments. This keeps the managed/unmanaged boundary clean: dev is always unmanaged, higher environments get managed through the platform's native deployment mechanism.
+
+> **SPN auth works for all pipeline steps.** No user tokens, no browser prompts, no expiring refresh tokens.
 
 ### Required GitHub Secrets
 
@@ -269,9 +296,9 @@ Maintain at least three environments:
 
 | Environment | Purpose | Deployment |
 |-------------|---------|------------|
-| **Development** | Day-to-day coding, experimentation | Auto-deploy on merge to `main` |
-| **Test/QA** | Validation, UAT, stakeholder demos | Manual trigger or auto-deploy on release branch |
-| **Production** | End users | Manual trigger with approval gate |
+| **Development** | Day-to-day coding, experimentation | `pac code push` (user profile, silent) |
+| **Test/QA** | Validation, UAT, stakeholder demos | Power Platform Pipelines (managed) |
+| **Production** | End users | Power Platform Pipelines (managed, with approval) |
 
 ### GitHub Environments with Protection Rules
 
@@ -377,18 +404,19 @@ Your solution should be exported and stored in source control alongside your Cod
 **Canonical on-demand workflow:**
 
 ```bash
-# Export from the dev environment, rebuild solution-source/, and pack a managed artifact
-node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev
+# Export from dev, bump version, rebuild solution-source/
+node scripts/export-solution.mjs --name YourSolutionName
 
-# If you only want the unmanaged export + refreshed source tree
-node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only
+# If you also need a managed zip (not needed if using Power Platform Pipelines)
+node scripts/export-solution.mjs --name YourSolutionName --include-managed
 ```
 
 This script is the preferred entry point because it keeps the repo state consistent:
 
 1. `solution/solution-unmanaged.zip` is exported from dev
 2. `solution-source/` is rebuilt from that unmanaged zip so stale files are removed
-3. `solution/solution-managed.zip` is packed from `solution-source/` unless `--unmanaged-only` is used
+3. Build version is auto-incremented in `Solution.xml`
+4. `solution/solution-managed.zip` is packed only if `--include-managed` is set
 
 **What goes into Git:**
 
@@ -435,29 +463,36 @@ git commit -m "Export solution with updated ProjectTask table schema"
 
 ### Deploying the Full Solution (Code App + Artifacts)
 
-For a complete deployment, you push both the Code App and the solution:
+The standard deployment cycle:
 
 ```bash
-# Step 1: Build and push the Code App code
+# Step 1: Push the Code App to dev (user profile — one-time setup, silent after)
 npm run build
 pac code push
 
-# Step 2: Export, pack as managed, and import the solution to the target environment
-node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev
+# Step 2: Export the full solution from dev (SPN profile) — auto-bumps version
+node scripts/export-solution.mjs --name YourSolutionName
 
-# Import managed solution to the target environment (switch to target auth profile — no browser popup)
-pac auth select --name "Test"
-pac solution import --path ./solution/solution-managed.zip --activate-plugins
+# Step 3: Commit the refreshed solution source
+git add solution-source/
+git commit -m "chore: export solution after code push"
+git push
+
+# Step 4: Promote to test/prod via Power Platform Pipelines
+#   Configure in Power Platform admin center → Pipelines
+#   Deploys managed solution from dev to higher environments
 ```
+
+The CI pipeline (above) automates steps 2–3 on every merge to main.
 
 **Managed vs. Unmanaged solutions:**
 
 | Type | Use In | Why |
 |------|--------|-----|
-| **Unmanaged** | Development environment only | Allows editing, iteration, and schema changes |
+| **Unmanaged** | Development environment | Allows editing, iteration, and schema changes |
 | **Managed** | Test, staging, and production | Locks artifacts from accidental modification; supports clean uninstall |
 
-Always deploy managed solutions to non-development environments. This prevents someone from accidentally modifying a table schema directly in production.
+Always deploy managed solutions to non-development environments. Power Platform Pipelines handle the unmanaged-to-managed conversion automatically when promoting across environments.
 
 ### Connection References
 
@@ -628,21 +663,26 @@ pac connection-reference update \
 
 ### Solution Versioning
 
-Increment the solution version before each export. Follow semantic versioning:
+The **build** segment (3rd number) is auto-incremented on every export — both by the deploy pipeline and by the local `export-solution.mjs` script. You never need to bump it manually.
+
+For **major** or **minor** changes, bump those segments manually before exporting:
 
 ```bash
-# Increment the version (stored in Solution.xml)
-# Major.Minor.Build.Revision — e.g., 1.2.0.0 → 1.3.0.0
-
-# Via CLI:
-pac solution version --strategy solution --value 1.3.0.0
+# Manual bump: edit solution-source/Other/Solution.xml directly,
+# or use pac solution version:
+pac solution version --strategy solution --value 2.0.0.0 --solutionPath ./solution-source
 ```
 
-| Change Type | Version Bump | Example |
-|-------------|-------------|---------|
-| New table or major feature | Minor | 1.2.0.0 → 1.3.0.0 |
-| New column, option set value, or bug fix | Build | 1.2.0.0 → 1.2.1.0 |
-| Breaking schema change | Major | 1.2.0.0 → 2.0.0.0 |
+To skip the auto-bump (e.g., re-export without incrementing):
+```bash
+node scripts/export-solution.mjs --name YourSolutionName --skip-version-bump
+```
+
+| Change Type | Segment | Who Bumps | Example |
+|-------------|---------|-----------|---------|
+| Every export/deploy | Build (3rd) | **Automatic** | 1.2.3.0 → 1.2.4.0 |
+| New table or major feature | Minor (2nd) | Developer | 1.2.4.0 → 1.3.0.0 |
+| Breaking schema change | Major (1st) | Developer | 1.3.0.0 → 2.0.0.0 |
 
 ### Common Solution Pitfalls
 

@@ -12,7 +12,7 @@ This is the first file a team lead reads. Developers read it to understand how a
 
 Without this setup, every `pac solution export`, `pac solution import`, and `pac org who` triggers an interactive browser window asking the developer to sign in. This breaks CI/CD entirely (no browser in a pipeline) and creates friction for developers who deploy multiple times a day. The fix is a Service Principal (App Registration) that authenticates non-interactively using a client ID and secret.
 
-> **Critical SPN limitation for `pac code` commands:** All `pac code` subcommands (`pac code push`, `pac code add-data-source`, `pac code run`) require **user (interactive) auth** — the Power Platform BAP checkAccess API rejects service principal tokens for these operations. SPN auth works for everything else (`pac org who`, `pac solution export/import`, `pac auth list`, etc.). The wizard handles this automatically by creating a separate repo-scoped interactive profile when needed. If you're working outside the wizard, create a user profile with `pac auth create --name <profile> --environment <url> --deviceCode` and select it before running any `pac code` command.
+> **Critical SPN limitation for `pac code` commands:** All `pac code` subcommands (`pac code push`, `pac code add-data-source`, `pac code run`) require a **user** auth profile — the Power Platform BAP checkAccess API rejects service principal tokens for these operations. SPN auth works for everything else (`pac org who`, `pac solution export/import`, `pac auth list`, etc.). **This is a one-time setup:** create a user profile once with `pac auth create --name <profile> --environment <url> --deviceCode`, and all subsequent `pac code` commands work silently — the cached refresh token auto-renews (~90 days). The wizard handles this automatically by creating a repo-scoped user profile when needed.
 
 ## Step 1: Create the Azure App Registration
 
@@ -450,7 +450,7 @@ rm ./test-export.zip
 
 If any of these prompt a browser window, the auth profile was not created correctly. Re-run `pac auth create` with the `--applicationId`, `--clientSecret`, and `--tenant` flags.
 
-> **Note:** This SPN verification covers `pac solution` and `pac org` commands. `pac code push` requires a **separate user (interactive) auth profile** — see the SPN limitation callout at the top of this file. The wizard creates the interactive profile automatically during steps 7–9.
+> **Note:** This SPN verification covers `pac solution` and `pac org` commands. `pac code push` requires a **user** auth profile (not SPN) — see the callout at the top of this file. Create the profile once; after that, pushes work silently via cached refresh token. The wizard creates this profile automatically during steps 7–9.
 
 ## Client Secret Rotation
 
@@ -501,7 +501,7 @@ Client secrets expire. Plan for rotation:
 ### General PAC CLI Issues
 
 **"pac code push fails with 'does not have permission to access' or checkAccess error"**
-→ This is expected. All `pac code` commands require user (interactive) auth — SPN tokens are rejected by the BAP API. Create a user auth profile: `pac auth create --name <profile> --environment <url> --deviceCode`, then select it and retry.
+→ This means you’re using an SPN (Application) auth profile. All `pac code` commands require a user profile. Create one once: `pac auth create --name <profile> --environment <url> --deviceCode`, select it, and retry. After this one-time setup, subsequent pushes work with no sign-in prompt.
 
 **"pac auth create succeeded but pac code push still opens a browser"**
 → You may have multiple auth profiles and the wrong one is active. Run `pac auth list` and select the correct repo-scoped profile.

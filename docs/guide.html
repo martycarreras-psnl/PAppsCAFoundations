@@ -880,9 +880,9 @@
         </div>
       </div>
 
-      <h4>First Push Auth Requirement</h4>
-      <p>The very first <code>pac code push</code> for a new app <strong>must use user (interactive) auth</strong>, not a service principal. This is because the app doesn't have an <code>appId</code> yet, and the BAP API's <code>checkAccess</code> endpoint rejects SPN tokens during app creation.</p>
-      <p>The BAP checkAccess API rejects service principal tokens for <strong>all</strong> <code>pac code push</code> calls — not just the first push. User (interactive) auth is always required for <code>pac code push</code>. The wizard handles this automatically. For CI/CD, see the deployment instructions for workarounds.</p>
+      <h4>Auth for <code>pac code push</code></h4>
+      <p><code>pac code push</code> requires a <strong>user</strong> auth profile — the BAP checkAccess API rejects SPN tokens. <strong>This is a one-time setup:</strong> create a user profile via device-code sign-in, and all subsequent pushes work silently. PAC CLI caches a refresh token that auto-renews (~90 days).</p>
+      <p>For <strong>CI/CD to test/production</strong>, use <strong>solution export/import</strong> instead of <code>pac code push</code>. Solution export and import both accept SPN auth and deploy the Code App, tables, connection references, and security roles as one atomic unit. See the deployment instructions for the full pipeline.</p>
     </section>
 
     <section class="section" id="wizard-overview">
@@ -1071,7 +1071,7 @@
             </ul>
             <div class="callout callout-success">
               <span class="callout-icon">✅</span>
-              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD. <strong>However, <code>pac code</code> commands (push, add-data-source) require user auth</strong> — the wizard handles this switch automatically in the later connected-mode steps.</div>
+              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD (solution export/import). <strong><code>pac code</code> commands (push, add-data-source) need a user profile</strong> — created once via the wizard (one-time sign-in, then silent). The wizard handles this automatically in the later connected-mode steps.</div>
             </div>
           </div></div>
         </div>
@@ -1165,7 +1165,7 @@
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
-                <strong>All <code>pac code</code> commands require user (interactive) auth.</strong> The BAP checkAccess API rejects SPN tokens. The wizard detects SPN auth and automatically switches to a user profile before running <code>pac code add-data-source</code>.
+                <strong><code>pac code</code> commands need a user auth profile</strong> (not SPN). The wizard detects SPN auth and automatically switches to a user profile before running <code>pac code add-data-source</code>. This user profile only needs to be created once — subsequent calls work silently.
                 <p style="margin-top:8px;">When you do re-run connector setup, the wizard first tries <code>pac connection list</code>, filters to the selected connector API ID, and lets you choose from discovered connections. Manual Connection ID entry is only the fallback.</p>
               </div>
             </div>
@@ -1199,7 +1199,7 @@
             </ol>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
-              <div>This step still requires user auth for <code>pac code add-data-source</code>. The wizard will switch away from SPN auth automatically when needed.</div>
+              <div>This step uses a user auth profile for <code>pac code add-data-source</code>. The wizard switches from SPN automatically when needed. If the profile already exists, no sign-in is required.</div>
             </div>
           </div></div>
         </div>
@@ -1217,8 +1217,8 @@
             <ol>
               <li><code>npm run build</code> — verifies <code>dist/index.html</code> exists</li>
               <li>Checks <code>power.config.json</code> for <code>appId</code> to determine first vs. subsequent push</li>
-              <li><strong>First push:</strong> Creates a user (interactive) auth profile via browser sign-in — SPN auth cannot push Code Apps</li>
-              <li><strong>Subsequent pushes:</strong> Also require user auth — SPN is rejected for all <code>pac code push</code> calls</li>
+              <li><strong>First push:</strong> Creates a user auth profile via browser sign-in (one-time)</li>
+              <li><strong>Subsequent pushes:</strong> Work silently — the cached refresh token auto-renews (~90 days)</li>
               <li><strong>Offers to deploy</strong> through the verified PAC flow instead of trusting the active machine profile</li>
             </ol>
             <div class="callout callout-warn">
@@ -1287,7 +1287,7 @@ pac code add-data-source -a shared_sharepointonline -c &lt;YOUR_CONNECTION_ID&gt
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
         <div>
-          <strong>Must use user (interactive) auth.</strong> All <code>pac code</code> commands are rejected when using service principal auth. Use the repo-scoped interactive profile for the current environment, for example:
+          <strong>Requires a user auth profile</strong> (SPN is not supported for <code>pac code</code> commands). Create one once — it works silently after that:
           <pre style="margin-top:8px;">pac auth create --name pp-myrepo-d-u-1a2b3c4d --environment https://org-dev.crm.dynamics.com --deviceCode
 pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
         </div>
@@ -1475,7 +1475,7 @@ pac code add-data-source -a dataverse -t myprefix_project
 pac code add-data-source -a shared_office365users -c &lt;CONNECTION_ID&gt;</pre>
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
-        <div><strong>All <code>pac code</code> commands require user (interactive) auth.</strong> SPN auth is rejected by the BAP checkAccess API. Switch to the repo-scoped interactive profile for the current target environment before running them.</div>
+        <div><strong><code>pac code</code> commands need a user auth profile</strong> (not SPN). Create the profile once, then all subsequent calls work silently. Switch to your repo-scoped user profile for the current environment before running them.</div>
       </div>
 
       <h4>Wrapping Generated Code with TanStack Query</h4>

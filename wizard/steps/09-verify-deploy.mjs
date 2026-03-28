@@ -76,7 +76,8 @@ export default async function stepVerifyAndDeploy() {
       ui.ok('App already registered (appId found in power.config.json).');
     }
     ui.line('');
-    ui.warn('pac code push requires user (interactive) auth — SPN is rejected for ALL pushes.');
+    ui.warn('pac code push requires a user auth profile (SPN is not supported).');
+    ui.line('  Once created, the profile works silently — no sign-in on subsequent pushes.');
     ui.line('');
 
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
@@ -111,7 +112,7 @@ export default async function stepVerifyAndDeploy() {
   } else if (!buildOk || !distExists) {
     ui.line('');
     ui.line('Skipping deploy — build did not succeed. Fix errors, then:');
-    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);  ui.line('  (reminder: pac code push requires a user auth profile, not SPN)');  }
+    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);  ui.line('  (reminder: pac code push requires a user auth profile — create once, works silently afterward)');  }
 
   // ── Summary ──
   ui.completeBanner();
@@ -133,7 +134,7 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  review dataverse/prototype-feedback.md and update the planning payload');
   ui.line('  node wizard/index.mjs --from 8  <- bind real connectors when ready');
   ui.line('  npm run dev             <- connected mode once real providers exist');
-  ui.line('  pac code push           <- deploy (requires user auth profile, not SPN)');
+  ui.line('  pac code push           <- deploy (uses cached user auth — no sign-in needed)');
   ui.line('');
   ui.line('To add connectors later:');
   ui.line('  node wizard/index.mjs --from 8    (re-run connector setup)');
@@ -400,10 +401,10 @@ async function ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, proje
     const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: envUrl });
 
     ui.line('');
-    ui.line('No verified repo-scoped interactive profile was found for this environment.');
-    ui.line('A browser sign-in is required to push Code Apps.');
-    ui.line('Your browser will open — sign in with a user who has');
-    ui.line('System Administrator or System Customizer role.');
+    ui.line('No user auth profile was found for this environment.');
+    ui.line('A one-time browser sign-in is needed to create the profile.');
+    ui.line('After this, all subsequent pushes work silently (the refresh token auto-renews ~90 days).');
+    ui.line('Sign in with a user who has System Administrator or System Customizer role.');
     ui.line('');
     ui.line(`Environment: ${envUrl}`);
     ui.line(`Profile: ${profileName}`);
