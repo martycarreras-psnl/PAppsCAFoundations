@@ -224,6 +224,14 @@ jobs:
           PAC_CLI_ENVIRONMENT_URL: ${{ vars.POWER_PLATFORM_URL }}
 ```
 
+> **Known limitation:** `pac code push` is rejected with SPN auth (the BAP API requires user tokens for all Code App mutations). This pipeline YAML is the intended target state — Microsoft has indicated SPN support for `pac code push` is on the roadmap. Until it ships, use one of these workarounds:
+>
+> 1. **Solution export/import** — Export the solution containing the Code App from dev (SPN works for `pac solution export`), then import the managed solution to test/prod.
+> 2. **Self-hosted runner with cached user token** — Use `pac auth create --deviceCode` on a self-hosted runner to create a persistent user profile. The token lasts ~90 days before re-auth is needed.
+> 3. **Manual push from developer machine** — For small teams, pushing from a local machine with an active user profile is acceptable for dev environments.
+>
+> The recommended production path is option 1 (solution export/import), which also ensures your Code App, tables, connection references, and security roles all travel together as a managed solution.
+
 ### Required GitHub Secrets
 
 Configure these in your repository settings (Settings → Secrets and variables → Actions):

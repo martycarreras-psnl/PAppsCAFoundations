@@ -72,15 +72,11 @@ export default async function stepVerifyAndDeploy() {
       ui.line('  3. Find "Code components for canvas apps" → toggle ON');
       ui.line('  4. Find "Allow publishing of canvas apps with code components" → toggle ON');
       ui.line('  5. Save and wait ~1 minute for it to propagate');
-      ui.line('');
-      ui.line('The first push also MUST use user (interactive) auth because');
-      ui.line('the BAP checkAccess API rejects service principal tokens.');
-      ui.line('');
-      ui.line('After the first push succeeds, SPN auth will work for CI/CD.');
     } else {
       ui.ok('App already registered (appId found in power.config.json).');
-      ui.line('SPN or user auth both work for subsequent pushes.');
     }
+    ui.line('');
+    ui.warn('pac code push requires user (interactive) auth — SPN is rejected for ALL pushes.');
     ui.line('');
 
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
@@ -88,46 +84,28 @@ export default async function stepVerifyAndDeploy() {
       const wizardState = getWizardStateSnapshot(stateGet);
       const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
 
-      if (isFirstPush) {
-        // First push: require user auth
-        const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
-        if (profileReady) {
-          ui.line('');
-          ui.line('Deploying (first push — creating app)...');
-          const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solDisplayName, credentialValues);
-          if (success) {
-            ui.ok('Deployed! Your app is live.');
-            ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
-            // Safety net: ensure app is in solution even if -s flag was ignored
-            await addAppToSolution(pac, projectDir, solUniqueName);
-          }
-        } else {
-          const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
-          ui.warn('Could not establish user auth. Deploy manually:');
-          ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl}`);
-          ui.line(`  ${pac} auth select --name ${profileName}`);
-          ui.line(`  cd ${projectDir} && ${pac} code push`);
-        }
-      } else {
-        verifyPacContext(pac, rootDir, projectDir, credentialValues, 'spn', true, true);
+      // ALL pac code push calls require user auth — SPN is always rejected
+      const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
+      if (profileReady) {
         ui.line('');
-        ui.line('Deploying...');
-        const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'spn', projectDir, solDisplayName, credentialValues);
+        ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
+        const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solDisplayName, credentialValues);
         if (success) {
-          ui.ok('Deployed! Your app is updated.');
+          ui.ok(isFirstPush ? 'Deployed! Your app is live.' : 'Deployed! Your app is updated.');
           await addAppToSolution(pac, projectDir, solUniqueName);
         }
+      } else {
+        const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
+        ui.warn('Could not establish user auth. Deploy manually:');
+        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --deviceCode`);
+        ui.line(`  ${pac} auth select --name ${profileName}`);
+        ui.line(`  cd ${projectDir} && ${pac} code push`);
       }
     } else {
       ui.line('');
-      if (isFirstPush) {
-        const profileName = buildPacProfileName({ rootDir, targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'), profileType: 'user', url: devUrl });
-        ui.line('Deploy later (first push needs user auth):');
-        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl}`);
-        ui.line(`  ${pac} auth select --name ${profileName}`);
-      } else {
-        ui.line('Deploy later:');
-      }
+      const profileName = buildPacProfileName({ rootDir, targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'), profileType: 'user', url: devUrl });
+      ui.line('Deploy later (requires user auth profile):');
+      ui.line(`  ${pac} auth select --name ${profileName}`);
       ui.line(`  cd ${projectDir} && ${pac} code push`);
     }
   } else if (!buildOk || !distExists) {

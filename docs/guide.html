@@ -882,7 +882,7 @@
 
       <h4>First Push Auth Requirement</h4>
       <p>The very first <code>pac code push</code> for a new app <strong>must use user (interactive) auth</strong>, not a service principal. This is because the app doesn't have an <code>appId</code> yet, and the BAP API's <code>checkAccess</code> endpoint rejects SPN tokens during app creation.</p>
-      <p>After the first push succeeds and <code>power.config.json</code> is populated with an <code>appId</code>, <strong>SPN auth works fine</strong> for all subsequent pushes (including CI/CD).</p>
+      <p>The BAP checkAccess API rejects service principal tokens for <strong>all</strong> <code>pac code push</code> calls — not just the first push. User (interactive) auth is always required for <code>pac code push</code>. The wizard handles this automatically. For CI/CD, see the deployment instructions for workarounds.</p>
     </section>
 
     <section class="section" id="wizard-overview">
@@ -1217,8 +1217,8 @@
             <ol>
               <li><code>npm run build</code> — verifies <code>dist/index.html</code> exists</li>
               <li>Checks <code>power.config.json</code> for <code>appId</code> to determine first vs. subsequent push</li>
-              <li><strong>First push:</strong> Creates a user (interactive) auth profile via browser sign-in — SPN auth cannot create new apps</li>
-              <li><strong>Subsequent pushes:</strong> Force-selects and verifies the expected repo-scoped PAC profile before continuing</li>
+              <li><strong>First push:</strong> Creates a user (interactive) auth profile via browser sign-in — SPN auth cannot push Code Apps</li>
+              <li><strong>Subsequent pushes:</strong> Also require user auth — SPN is rejected for all <code>pac code push</code> calls</li>
               <li><strong>Offers to deploy</strong> through the verified PAC flow instead of trusting the active machine profile</li>
             </ol>
             <div class="callout callout-warn">
@@ -1539,7 +1539,7 @@ export function useProjects() {
       <h4>Manual Deploy (Dev Only)</h4>
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <div><strong>First push requires user auth.</strong> The initial <code>pac code push</code> creates the app and needs interactive sign-in. After that, SPN auth works for CI/CD. See <a href="#enable-code-apps">Enable Code Apps</a>.</div>
+        <div><strong>All pushes require user auth.</strong> <code>pac code push</code> is rejected with SPN auth for both first and subsequent pushes. The wizard creates a user profile automatically. For CI/CD, see <a href="#enable-code-apps">Enable Code Apps</a> and the deployment instructions for workarounds.</div>
       </div>
       <pre>npm run deploy</pre>
 
