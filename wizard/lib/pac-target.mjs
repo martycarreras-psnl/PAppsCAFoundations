@@ -304,7 +304,12 @@ export function verifyTargetConsistency({
     errors.push('power.config.json is required for this command, but the file does not exist.');
   }
 
-  if (powerConfigInfo?.exists) {
+  // Only compare power.config.json metadata when the caller explicitly requires it.
+  // Steps that don't depend on power.config.json (like auth setup) should not fail
+  // because a stale power.config.json happens to exist from a previous run.
+  const checkPowerConfig = powerConfigInfo?.exists && (requirePowerConfig || requirePowerConfigTarget);
+
+  if (checkPowerConfig) {
     if (powerConfigInfo.parseError) {
       errors.push(`power.config.json could not be parsed: ${powerConfigInfo.parseError}`);
     }
