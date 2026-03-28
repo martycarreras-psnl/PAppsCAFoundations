@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 import path from 'node:path';
+import { loadState } from '../wizard/lib/state.mjs';
+import {
+  getWizardStateSnapshot,
+  resolveCredentialValues,
+  selectAndVerifyPacProfile,
+} from '../wizard/lib/pac-target.mjs';
 
 const planPath = path.resolve(process.argv[2] || 'dataverse/register-datasources.plan.json');
 
@@ -47,6 +53,9 @@ if (!fs.existsSync(pacBin)) {
 const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
 const dataverseTables = Array.isArray(plan.dataverseTables) ? plan.dataverseTables.filter(Boolean) : [];
 
+const loadedState = loadState();
+const credentialValues = resolveCredentialValues({ rootDir: process.cwd(), opBin: process.env.OP_BIN });
+
 if (dataverseTables.length === 0) {
   fail(`no Dataverse tables were found in ${planPath}`);
 }
@@ -55,6 +64,30 @@ console.log(`Using PAC CLI: ${pacBin}`);
 console.log(`Registration plan: ${planPath}`);
 
 for (const table of dataverseTables) {
+  selectAndVerifyPacProfile({
+    pac: pacBin,
+    rootDir: process.cwd(),
+    wizardState: getWizardStateSnapshot((key, fallback) => ({
+      WIZARD_TARGET_ENV: process.env.WIZARD_TARGET_ENV || loadedState.WIZARD_TARGET_ENV || 'dev',
+      PP_ENV_DEV: loadedState.PP_ENV_DEV || credentialValues.PP_ENV_DEV || '',
+      PP_ENV_TEST: loadedState.PP_ENV_TEST || credentialValues.PP_ENV_TEST || '',
+      PP_ENV_PROD: loadedState.PP_ENV_PROD || credentialValues.PP_ENV_PROD || '',
+    }[key] ?? fallback)),
+    targetKey: process.env.WIZARD_TARGET_ENV || loadedState.WIZARD_TARGET_ENV || 'dev',
+    profileType: 'user',
+    credentialValues,
+    powerConfigPath: path.resolve('power.config.json'),
+    requireCredentialMatch: true,
+    requirePowerConfig: true,
+    requirePowerConfigTarget: true,
+    runSafeImpl: (file, args) => {
+      try {
+        return execFileSync(file, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      } catch {
+        return null;
+      }
+    },
+  });
   console.log(`>>> Registering Dataverse table: ${table}`);
   execFileSync(pacBin, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { stdio: 'inherit' });
 }

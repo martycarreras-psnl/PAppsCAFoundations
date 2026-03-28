@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
+import { loadState } from '../wizard/lib/state.mjs';
+import {
+  getWizardStateSnapshot,
+  resolveCredentialValues,
+  selectAndVerifyPacProfile,
+} from '../wizard/lib/pac-target.mjs';
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -71,6 +77,7 @@ function parseArgs(argv) {
     sourceDir: path.resolve('solution-source'),
     unmanagedOnly: false,
     authProfile: null,
+    targetKey: 'dev',
     solutionName: null,
   };
 
@@ -95,6 +102,12 @@ function parseArgs(argv) {
 
     if (arg === '--auth-profile') {
       options.authProfile = argv[index + 1] || null;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--target') {
+      options.targetKey = String(argv[index + 1] || 'dev').toLowerCase();
       index += 1;
       continue;
     }
@@ -134,6 +147,14 @@ if (!pacBin) {
 
 const opBin = resolveCommand('op', 'OP_BIN');
 const use1PasswordWrapper = Boolean(opBin) && hasOpReferences();
+const loadedState = loadState();
+const credentialValues = resolveCredentialValues({ rootDir: process.cwd(), opBin });
+const wizardState = getWizardStateSnapshot((key, fallback) => ({
+  WIZARD_TARGET_ENV: process.env.WIZARD_TARGET_ENV || loadedState.WIZARD_TARGET_ENV || options.targetKey || 'dev',
+  PP_ENV_DEV: loadedState.PP_ENV_DEV || credentialValues.PP_ENV_DEV || '',
+  PP_ENV_TEST: loadedState.PP_ENV_TEST || credentialValues.PP_ENV_TEST || '',
+  PP_ENV_PROD: loadedState.PP_ENV_PROD || credentialValues.PP_ENV_PROD || '',
+}[key] ?? fallback));
 
 function runPac(args) {
   if (use1PasswordWrapper) {
@@ -145,8 +166,31 @@ function runPac(args) {
 }
 
 if (options.authProfile) {
+  if (!/^papps:/.test(options.authProfile)) {
+    fail(`Refusing to use non-repo-scoped PAC profile: ${options.authProfile}`);
+  }
   console.log(`Selecting PAC auth profile: ${options.authProfile}`);
   runPac(['auth', 'select', '--name', options.authProfile]);
+} else {
+  selectAndVerifyPacProfile({
+    pac: pacBin,
+    rootDir: process.cwd(),
+    wizardState,
+    targetKey: options.targetKey,
+    profileType: 'spn',
+    credentialValues,
+    powerConfigPath: path.resolve('power.config.json'),
+    requireCredentialMatch: true,
+    requirePowerConfig: false,
+    requirePowerConfigTarget: false,
+    runSafeImpl: (file, args) => {
+      try {
+        return execFileSync(file, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      } catch {
+        return null;
+      }
+    },
+  });
 }
 
 fs.mkdirSync(options.outputDir, { recursive: true });

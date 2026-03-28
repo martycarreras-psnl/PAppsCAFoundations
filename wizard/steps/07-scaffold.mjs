@@ -6,7 +6,7 @@ import {
 import { join, resolve } from 'node:path';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
-import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN } from '../lib/shell.mjs';
+import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN, hasCommand } from '../lib/shell.mjs';
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
@@ -17,6 +17,13 @@ import {
   writeConfig,
   writeStarterFiles,
 } from '../lib/scaffold-foundations.mjs';
+import {
+  buildPacProfileName,
+  getWizardStateSnapshot,
+  quarantinePowerConfig,
+  resolveCredentialValues,
+  selectAndVerifyPacProfile,
+} from '../lib/pac-target.mjs';
 
 export {
   copyFoundationFiles,
@@ -144,18 +151,49 @@ export default async function stepScaffold() {
   ui.line('Registering Code App in Power Platform...');
   const pac = pacPath();
   if (pac) {
-    const initOk = runSafe(pac, [
-      'code', 'init',
-      '--displayName', appName,
-      '--buildPath', './dist',
-      '--fileEntryPoint', 'index.html',
-    ], { cwd: projectDir });
-    if (initOk !== null) {
-      ui.ok('power.config.json created');
-    } else {
+    try {
+      const credentialValues = resolvePacCredentialValues(ROOT);
+      verifyPacMutationTarget({
+        pac,
+        rootDir: ROOT,
+        projectDir,
+        credentialValues,
+        profileType: 'spn',
+        requirePowerConfig: false,
+        requirePowerConfigTarget: false,
+      });
+
+      const initOk = runSafe(pac, [
+        'code', 'init',
+        '--displayName', appName,
+        '--buildPath', './dist',
+        '--fileEntryPoint', 'index.html',
+      ], { cwd: projectDir });
+      if (initOk === null) {
+        throw new Error('pac code init failed before a valid power.config.json could be produced.');
+      }
+
+      verifyPacMutationTarget({
+        pac,
+        rootDir: ROOT,
+        projectDir,
+        credentialValues,
+        profileType: 'spn',
+        requirePowerConfig: true,
+        requirePowerConfigTarget: true,
+      });
+      ui.ok('power.config.json created and verified');
+    } catch (error) {
+      const powerConfigPath = join(projectDir, 'power.config.json');
+      if (existsSync(powerConfigPath)) {
+        const quarantinePath = quarantinePowerConfig(powerConfigPath);
+        ui.warn(`Quarantined invalid power.config.json at ${quarantinePath}`);
+      }
+      ui.warn(error.message);
       ui.warn('pac code init failed. You can run it manually later:');
       ui.line(`  cd ${projectDir}`);
       ui.line(`  pac code init --displayName "${appName}" --buildPath "./dist" --fileEntryPoint "index.html"`);
+      process.exit(1);
     }
   } else {
     ui.warn('PAC CLI not found — skipping pac code init.');
@@ -425,8 +463,10 @@ const COMMON_CONNECTORS = [
 ];
 
 export async function setupConnectors(pac, projectDir) {
+  const rootDir = getRootDir();
   const prefix = stateGet('PUBLISHER_PREFIX');
   const solutionName = stateGet('SOLUTION_UNIQUE_NAME');
+  const credentialValues = resolvePacCredentialValues(rootDir);
 
   // Try to recover the client secret for Dataverse API calls
   let hasApiAccess = false;
@@ -526,7 +566,7 @@ export async function setupConnectors(pac, projectDir) {
     ui.line('');
 
     // Detect SPN auth and switch to user auth before running any pac code commands
-    const authSwitched = await ensureUserAuthForCodeCommands(pac);
+    const authSwitched = await ensureUserAuthForCodeCommands(pac, rootDir, projectDir, credentialValues);
     if (!authSwitched) {
       ui.warn('Cannot add data sources without user auth.');
       ui.line('  Switch to user auth and re-run: node wizard/index.mjs --from 8');
@@ -549,7 +589,7 @@ export async function setupConnectors(pac, projectDir) {
         if (!table.trim()) break;
         const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
         ui.line(`  Running: pac ${args.join(' ')}`);
-        const ok = runPacCodeDataSource(pac, args, projectDir);
+        const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
         if (ok) {
           ui.ok(`${table.trim()} — data source added`);
         } else {
@@ -583,7 +623,7 @@ export async function setupConnectors(pac, projectDir) {
         }
         const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
         ui.line(`  Running: pac ${args.join(' ')}`);
-        const ok = runPacCodeDataSource(pac, args, projectDir);
+        const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
         if (ok) {
           ui.ok(`${connector.name} — data source added`);
         } else {
@@ -668,8 +708,17 @@ const BAP_PERMISSION_RE = /does not have permission to access|checkAccess|HTTP e
  * PAC CLI may exit 0 but log a 403 error when SPN auth is active.
  * Returns true only if the command succeeded without BAP errors.
  */
-function runPacCodeDataSource(pac, args, cwd) {
-  const { ok, stderr } = runSafeCapture(pac, args, { cwd });
+function runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues) {
+  verifyPacMutationTarget({
+    pac,
+    rootDir,
+    projectDir,
+    credentialValues,
+    profileType: 'user',
+    requirePowerConfig: true,
+    requirePowerConfigTarget: true,
+  });
+  const { ok, stderr } = runSafeCapture(pac, args, { cwd: projectDir });
   if (!ok) return false;
   // PAC may exit 0 despite 403 — check stderr for BAP rejection
   if (BAP_PERMISSION_RE.test(stderr)) {
@@ -685,63 +734,39 @@ function runPacCodeDataSource(pac, args, cwd) {
  * ALL pac code commands require user (interactive) auth — the BAP
  * checkAccess API rejects service principal tokens.
  */
-async function ensureUserAuthForCodeCommands(pac) {
-  const devUrl = stateGet('PP_ENV_DEV', '').replace(/\/+$/, '');
-
-  // Check current auth profile
-  const authList = runSafe(pac, ['auth', 'list']);
-  if (!authList) return true; // can't determine — proceed and let it fail
-
-  // Find the active profile (marked with *)
-  const lines = authList.split('\n');
-  let activeIsUser = false;
-  let activeIsSPN = false;
-
-  for (const line of lines) {
-    if (!/\*/.test(line.substring(0, 15))) continue; // not the active profile
-    if (/\bUser\b/i.test(line)) activeIsUser = true;
-    if (/\bApplication\b/i.test(line)) activeIsSPN = true;
-    break;
-  }
-
-  if (activeIsUser) return true; // already on user auth
-
-  if (activeIsSPN) {
-    ui.warn('Active PAC profile uses service principal (SPN) auth.');
-    ui.line('  All `pac code` commands require user (interactive) auth.');
-    ui.line('  The BAP checkAccess API rejects SPN tokens for these operations.');
-    ui.line('');
-
-    // Try to find an existing User profile for this environment
-    for (const line of lines) {
-      const indexMatch = line.match(/^\[(\d+)\]/);
-      if (!indexMatch) continue;
-      if (!/\bUser\b/i.test(line)) continue;
-      if (devUrl && !line.replace(/\/+/g, '/').includes(devUrl.replace(/\/+/g, '/'))) continue;
-
-      const idx = indexMatch[1];
-      const selectOk = runSafe(pac, ['auth', 'select', '--index', idx]);
-      if (selectOk !== null) {
-        ui.ok(`Switched to existing User auth profile (index ${idx})`);
-        return true;
-      }
-    }
-
-    // No User profile — create one
-    ui.line('No user-based auth profile found for this environment.');
-    ui.line('A browser sign-in is required for pac code commands.');
-    ui.line('');
-
-    const proceed = await confirm({ message: 'Sign in with a user account now?', default: true });
+async function ensureUserAuthForCodeCommands(pac, rootDir, projectDir, credentialValues) {
+  try {
+    verifyPacMutationTarget({
+      pac,
+      rootDir,
+      projectDir,
+      credentialValues,
+      profileType: 'user',
+      requirePowerConfig: true,
+      requirePowerConfigTarget: true,
+    });
+    return true;
+  } catch {
+    const proceed = await confirm({ message: 'Create the repo-scoped interactive PAC profile for pac code commands now?', default: true });
     if (!proceed) return false;
 
-    const profileName = stateGet('APP_NAME', 'CodeApp').replace(/\\s+/g, '') + 'User';
+    const wizardState = getWizardStateSnapshot(stateGet);
+    const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
+    const targetStateKey = targetKey === 'test' ? 'PP_ENV_TEST' : targetKey === 'prod' ? 'PP_ENV_PROD' : 'PP_ENV_DEV';
+    const targetUrl = wizardState[targetStateKey];
+    const expectedProfileName = buildPacProfileName({
+      rootDir,
+      targetKey,
+      profileType: 'user',
+      url: targetUrl,
+    });
+
     ui.line('');
-    ui.line('Opening browser for sign-in...');
+    ui.line(`Creating interactive profile ${expectedProfileName}...`);
     let createOk = runSafeLive(pac, [
       'auth', 'create',
-      '--name', profileName,
-      '--environment', devUrl,
+      '--name', expectedProfileName,
+      '--environment', targetUrl,
     ]);
 
     if (!createOk) {
@@ -750,29 +775,55 @@ async function ensureUserAuthForCodeCommands(pac) {
       ui.line('');
       createOk = runSafeLive(pac, [
         'auth', 'create',
-        '--name', profileName,
-        '--environment', devUrl,
+        '--name', expectedProfileName,
+        '--environment', targetUrl,
         '--deviceCode',
       ]);
     }
 
     if (!createOk) {
-      ui.warn('Could not establish user auth.');
+      ui.warn('Could not establish the repo-scoped interactive PAC profile.');
       return false;
     }
 
-    runSafe(pac, ['auth', 'select', '--name', profileName]);
-    const who = runSafe(pac, ['org', 'who']);
-    if (who) {
+    try {
+      verifyPacMutationTarget({
+        pac,
+        rootDir,
+        projectDir,
+        credentialValues,
+        profileType: 'user',
+        requirePowerConfig: true,
+        requirePowerConfigTarget: true,
+      });
       ui.ok('User auth verified');
       return true;
+    } catch (error) {
+      ui.warn(error.message);
+      return false;
     }
-
-    ui.warn('Auth created but verification failed. Proceeding anyway...');
-    return true;
   }
+}
 
-  // Unknown auth type — proceed and let it fail naturally
-  return true;
+function resolvePacCredentialValues(rootDir) {
+  return resolveCredentialValues({
+    rootDir,
+    opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+  });
+}
+
+function verifyPacMutationTarget({ pac, rootDir, projectDir, credentialValues, profileType, requirePowerConfig, requirePowerConfigTarget }) {
+  return selectAndVerifyPacProfile({
+    pac,
+    rootDir,
+    wizardState: getWizardStateSnapshot(stateGet),
+    targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'),
+    profileType,
+    credentialValues,
+    powerConfigPath: join(projectDir, 'power.config.json'),
+    requireCredentialMatch: true,
+    requirePowerConfig,
+    requirePowerConfigTarget,
+  });
 }
 

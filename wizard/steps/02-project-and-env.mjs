@@ -63,6 +63,7 @@ export default async function stepProjectAndEnv() {
   }
   devUrl = devUrl.trim().replace(/\/$/, '');
   stateSet('PP_ENV_DEV', devUrl);
+  stateSet('WIZARD_TARGET_ENV', 'dev');
 
   // ── Test URL (optional) ──
   ui.line('');

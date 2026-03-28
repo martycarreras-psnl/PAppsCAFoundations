@@ -7,6 +7,11 @@ import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '.
 import { pacPath, hasCommand, runSafe } from '../lib/shell.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { encrypt } from '../lib/crypto.mjs';
+import {
+  buildPacProfileName,
+  getWizardStateSnapshot,
+  selectAndVerifyPacProfile,
+} from '../lib/pac-target.mjs';
 
 export default async function stepAuthSetup() {
   ui.stepHeader(4, TOTAL_STEPS, 'Setting Up Authentication');
@@ -142,20 +147,29 @@ export default async function stepAuthSetup() {
   // ── Verify connection ──
   if (pac) {
     ui.line('');
-    ui.line('Verifying connection to Dev environment...');
-    runSafe(pac, ['auth', 'select', '--name', 'Dev']);
-    const who = runSafe(pac, ['org', 'who']);
-    if (who) {
+    ui.line('Verifying connection to the wizard target environment...');
+    try {
+      const verification = selectAndVerifyPacProfile({
+        pac,
+        rootDir: ROOT,
+        wizardState: getWizardStateSnapshot(stateGet),
+        targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'),
+        profileType: 'spn',
+        credentialValues: {
+          PP_ENV_DEV: devUrl,
+          PP_ENV_TEST: testUrl,
+          PP_ENV_PROD: prodUrl,
+        },
+        powerConfigPath: join(ROOT, 'power.config.json'),
+        requireCredentialMatch: true,
+        requirePowerConfig: false,
+        requirePowerConfigTarget: false,
+      });
       ui.ok('Connected successfully!');
-      console.log(who.split('\n').map((l) => `  ${l}`).join('\n'));
-    } else {
-      ui.warn('Connection verification failed.');
-      ui.line('Common causes:');
-      ui.line('  • App Registration not registered as Application User');
-      ui.line('  • Incorrect Tenant ID, Client ID, or Client Secret');
-      ui.line('  • Environment URL is wrong');
-      ui.line('');
-      ui.line('The wizard will continue — you can fix this and re-run later.');
+      console.log(verification.whoInfo.raw.split('\n').map((l) => `  ${l}`).join('\n'));
+    } catch (error) {
+      ui.fail(error.message);
+      process.exit(1);
     }
   }
 
@@ -166,20 +180,26 @@ export default async function stepAuthSetup() {
 function createProfiles(pac, devUrl, testUrl, prodUrl, clientId, secret, tenantId) {
   ui.line('');
   ui.line('Creating PAC auth profiles...');
-  createPacProfile(pac, 'Dev', devUrl, clientId, secret, tenantId);
-  if (testUrl) createPacProfile(pac, 'Test', testUrl, clientId, secret, tenantId);
-  if (prodUrl) createPacProfile(pac, 'Prod', prodUrl, clientId, secret, tenantId);
+  createPacProfile(pac, 'dev', devUrl, clientId, secret, tenantId);
+  if (testUrl) createPacProfile(pac, 'test', testUrl, clientId, secret, tenantId);
+  if (prodUrl) createPacProfile(pac, 'prod', prodUrl, clientId, secret, tenantId);
 }
 
-function createPacProfile(pac, name, url, appId, secret, tenant) {
+function createPacProfile(pac, targetKey, url, appId, secret, tenant) {
+  const profileName = buildPacProfileName({
+    rootDir: getRootDir(),
+    targetKey,
+    profileType: 'spn',
+    url,
+  });
   const result = runSafe(pac, [
-    'auth', 'create', '--name', name, '--environment', url,
+    'auth', 'create', '--name', profileName, '--environment', url,
     '--applicationId', appId, '--clientSecret', secret, '--tenant', tenant,
   ]);
   if (result !== null) {
-    ui.ok(`${name} profile created`);
+    ui.ok(`${profileName} profile created`);
   } else {
-    ui.fail(`${name} profile failed — check credentials`);
+    ui.fail(`${profileName} profile failed — check credentials`);
   }
 }
 

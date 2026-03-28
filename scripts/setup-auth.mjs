@@ -5,6 +5,13 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 import { decrypt, isEncrypted } from '../wizard/lib/crypto.mjs';
+import { loadState } from '../wizard/lib/state.mjs';
+import {
+  buildPacProfileName,
+  getWizardStateSnapshot,
+  resolveCredentialValues,
+  selectAndVerifyPacProfile,
+} from '../wizard/lib/pac-target.mjs';
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -38,36 +45,6 @@ function resolvePacBin() {
   return resolveCommand('pac', 'PAC_BIN');
 }
 
-function parseEnvFile(filePath) {
-  const contents = fs.readFileSync(filePath, 'utf8');
-  const values = {};
-
-  for (const rawLine of contents.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) {
-      continue;
-    }
-
-    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-
-    let value = match[2].trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    values[match[1]] = value;
-  }
-
-  return values;
-}
-
-function hasOpReferences() {
-  const envPath = path.resolve('.env');
-  return fs.existsSync(envPath) && /^PP_.*=op:\/\//m.test(fs.readFileSync(envPath, 'utf8'));
-}
-
 function requireKeys(values, keys) {
   for (const key of keys) {
     if (!values[key]) {
@@ -84,25 +61,6 @@ function runPacDirect(pacBin, args, envOverrides) {
   runCommand(pacBin, args, { env: { ...process.env, ...envOverrides } });
 }
 
-function resolveValuesWithOp(opBin) {
-  const script = [
-    'const required = ["PP_TENANT_ID", "PP_APP_ID", "PP_CLIENT_SECRET", "PP_ENV_DEV", "PP_ENV_TEST", "PP_ENV_PROD"];',
-    'const resolved = {};',
-    'for (const key of required) { if (process.env[key]) resolved[key] = process.env[key]; }',
-    'for (const key of ["PP_TENANT_ID", "PP_APP_ID", "PP_CLIENT_SECRET", "PP_ENV_DEV"]) {',
-    '  if (!resolved[key]) { process.stderr.write(`Missing ${key}\\n`); process.exit(1); }',
-    '}',
-    'process.stdout.write(JSON.stringify(resolved));',
-  ].join(' ');
-
-  const output = execFileSync(opBin, ['run', '--env-file=.env', '--', process.execPath, '-e', script], {
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'inherit'],
-  });
-
-  return JSON.parse(output);
-}
-
 console.log('================================================');
 console.log('  Power Apps Code Apps - Auth Profile Setup');
 console.log('================================================');
@@ -114,20 +72,18 @@ if (!pacBin) {
 }
 
 const opBin = resolveCommand('op', 'OP_BIN');
-const use1Password = Boolean(opBin) && hasOpReferences();
 let resolvedValues = null;
+let use1Password = false;
 
-if (use1Password) {
-  console.log('[1Password] Detected op:// secret references in .env');
-  resolvedValues = resolveValuesWithOp(opBin);
-} else if (fs.existsSync(path.resolve('.env.local'))) {
-  console.log('[.env.local] Using credentials from .env.local');
-  resolvedValues = parseEnvFile(path.resolve('.env.local'));
-  if (resolvedValues.PP_CLIENT_SECRET && isEncrypted(resolvedValues.PP_CLIENT_SECRET)) {
+try {
+  resolvedValues = resolveCredentialValues({ rootDir: process.cwd(), opBin });
+  use1Password = Boolean(opBin) && fs.existsSync(path.resolve('.env')) && /^PP_.*=op:\/\//m.test(fs.readFileSync(path.resolve('.env'), 'utf8'));
+  console.log(use1Password ? '[1Password] Detected op:// secret references in .env' : '[.env.local] Using credentials from .env.local');
+  if (!use1Password && resolvedValues.PP_CLIENT_SECRET && isEncrypted(resolvedValues.PP_CLIENT_SECRET)) {
     resolvedValues.PP_CLIENT_SECRET = decrypt(resolvedValues.PP_CLIENT_SECRET);
     console.log('  (client secret decrypted from encrypted storage)');
   }
-} else {
+} catch {
   fail([
     'No credential source found.',
     '',
@@ -142,6 +98,8 @@ if (use1Password) {
   ].join('\n'));
 }
 
+const loadedState = loadState();
+
 console.log('');
 console.log('Validating credentials...');
 
@@ -152,27 +110,57 @@ console.log('');
 console.log('Creating PAC auth profiles...');
 
 function createProfile(name, environment) {
+  const profileName = buildPacProfileName({
+    rootDir: process.cwd(),
+    targetKey: name,
+    profileType: 'spn',
+    url: environment,
+  });
   runPacDirect(
     pacBin,
-    ['auth', 'create', '--name', name, '--environment', environment, '--applicationId', resolvedValues.PP_APP_ID, '--clientSecret', resolvedValues.PP_CLIENT_SECRET, '--tenant', resolvedValues.PP_TENANT_ID],
+    ['auth', 'create', '--name', profileName, '--environment', environment, '--applicationId', resolvedValues.PP_APP_ID, '--clientSecret', resolvedValues.PP_CLIENT_SECRET, '--tenant', resolvedValues.PP_TENANT_ID],
     resolvedValues,
   );
 
-  console.log(`  OK ${name} profile created`);
+  console.log(`  OK ${profileName} profile created`);
 }
 
-createProfile('Dev', resolvedValues.PP_ENV_DEV);
+createProfile('dev', resolvedValues.PP_ENV_DEV);
 if (resolvedValues.PP_ENV_TEST) {
-  createProfile('Test', resolvedValues.PP_ENV_TEST);
+  createProfile('test', resolvedValues.PP_ENV_TEST);
 }
 if (resolvedValues.PP_ENV_PROD) {
-  createProfile('Prod', resolvedValues.PP_ENV_PROD);
+  createProfile('prod', resolvedValues.PP_ENV_PROD);
 }
 
 console.log('');
 console.log('Verifying connection...');
-runPacDirect(pacBin, ['auth', 'select', '--name', 'Dev']);
-runPacDirect(pacBin, ['org', 'who']);
+const wizardState = getWizardStateSnapshot((key, fallback) => ({
+  WIZARD_TARGET_ENV: process.env.WIZARD_TARGET_ENV || loadedState.WIZARD_TARGET_ENV || 'dev',
+  PP_ENV_DEV: loadedState.PP_ENV_DEV || resolvedValues.PP_ENV_DEV || '',
+  PP_ENV_TEST: loadedState.PP_ENV_TEST || resolvedValues.PP_ENV_TEST || '',
+  PP_ENV_PROD: loadedState.PP_ENV_PROD || resolvedValues.PP_ENV_PROD || '',
+}[key] ?? fallback));
+const verification = selectAndVerifyPacProfile({
+  pac: pacBin,
+  rootDir: process.cwd(),
+  wizardState,
+  targetKey: wizardState.WIZARD_TARGET_ENV,
+  profileType: 'spn',
+  credentialValues: resolvedValues,
+  powerConfigPath: path.resolve('power.config.json'),
+  requireCredentialMatch: true,
+  requirePowerConfig: false,
+  requirePowerConfigTarget: false,
+  runSafeImpl: (file, args) => {
+    try {
+      return execFileSync(file, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...resolvedValues } }).trim();
+    } catch {
+      return null;
+    }
+  },
+});
+console.log(verification.whoInfo.raw);
 
 console.log('');
 console.log('================================================');
@@ -188,7 +176,7 @@ if (use1Password) {
   console.log("  'pac code push' works directly - no browser popup.");
 }
 console.log('');
-console.log('  Switch environments:  pac auth select --name <Dev|Test|Prod>');
+console.log('  Switch environments:  pac auth select --name <repo-scoped-profile>');
 console.log('  Check connection:     pac org who');
 console.log('  List profiles:        pac auth list');
 console.log('');

@@ -1,10 +1,17 @@
 // wizard/steps/09-verify-deploy.mjs — Build, verify & deploy
 import { confirm, input } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
-import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
-import { pacPath, runLive, runSafe, runSafeLive, runSafeCapture, run } from '../lib/shell.mjs';
+import { stateGet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
+import { pacPath, runLive, runSafe, runSafeLive, runSafeCapture, run, hasCommand } from '../lib/shell.mjs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  buildPacProfileName,
+  getWizardStateSnapshot,
+  quarantinePowerConfig,
+  resolveCredentialValues,
+  selectAndVerifyPacProfile,
+} from '../lib/pac-target.mjs';
 
 export default async function stepVerifyAndDeploy() {
   ui.stepHeader(9, TOTAL_STEPS, 'Build, Verify & Deploy');
@@ -19,6 +26,11 @@ export default async function stepVerifyAndDeploy() {
   const prodUrl = stateGet('PP_ENV_PROD', '');
   const authMode = stateGet('AUTH_MODE');
   const pac = pacPath();
+  const rootDir = getRootDir();
+  const credentialValues = resolveCredentialValues({
+    rootDir,
+    opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+  });
 
   // ── Build ──
   ui.line('Building project...');
@@ -73,15 +85,16 @@ export default async function stepVerifyAndDeploy() {
 
     const deploy = await confirm({ message: 'Push to Power Platform now?', default: true });
     if (deploy) {
-      const profileName = stateGet('APP_NAME', 'DevInteractive').replace(/\s+/g, '');
+      const wizardState = getWizardStateSnapshot(stateGet);
+      const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
 
       if (isFirstPush) {
         // First push: require user auth
-        const profileReady = await ensureInteractiveAuth(pac, profileName, devUrl);
+        const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
         if (profileReady) {
           ui.line('');
           ui.line('Deploying (first push — creating app)...');
-          const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solDisplayName);
+          const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solDisplayName, credentialValues);
           if (success) {
             ui.ok('Deployed! Your app is live.');
             ui.line('power.config.json now contains the appId — future pushes can use SPN auth.');
@@ -89,16 +102,17 @@ export default async function stepVerifyAndDeploy() {
             await addAppToSolution(pac, projectDir, solUniqueName);
           }
         } else {
+          const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
           ui.warn('Could not establish user auth. Deploy manually:');
           ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl}`);
           ui.line(`  ${pac} auth select --name ${profileName}`);
           ui.line(`  cd ${projectDir} && ${pac} code push`);
         }
       } else {
-        // Subsequent push: use whatever auth is active
+        verifyPacContext(pac, rootDir, projectDir, credentialValues, 'spn', true, true);
         ui.line('');
         ui.line('Deploying...');
-        const success = await attemptPushWithRetry(pac, profileName, devUrl, projectDir, solDisplayName);
+        const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'spn', projectDir, solDisplayName, credentialValues);
         if (success) {
           ui.ok('Deployed! Your app is updated.');
           await addAppToSolution(pac, projectDir, solUniqueName);
@@ -107,9 +121,10 @@ export default async function stepVerifyAndDeploy() {
     } else {
       ui.line('');
       if (isFirstPush) {
+        const profileName = buildPacProfileName({ rootDir, targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'), profileType: 'user', url: devUrl });
         ui.line('Deploy later (first push needs user auth):');
-        ui.line(`  ${pac} auth create --name <ProfileName> --environment ${devUrl}`);
-        ui.line(`  ${pac} auth select --name <ProfileName>`);
+        ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl}`);
+        ui.line(`  ${pac} auth select --name ${profileName}`);
       } else {
         ui.line('Deploy later:');
       }
@@ -173,11 +188,15 @@ const DUPLICATE_APP_RE = /already created an application with this name.*Existin
  * Attempt pac code push, detect known errors, and offer guided retry.
  * Returns true on success, false on permanent failure.
  */
-async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solDisplayName, maxRetries = 3) {
+async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projectDir, solDisplayName, credentialValues, maxRetries = 3) {
+  const wizardState = getWizardStateSnapshot(stateGet);
+  const envUrl = wizardState.PP_ENV_DEV;
+  const profileName = buildPacProfileName({ rootDir, targetKey, profileType, url: envUrl });
   const pushArgs = ['code', 'push'];
   if (solDisplayName) pushArgs.push('-s', solDisplayName);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    verifyPacContext(pac, rootDir, projectDir, credentialValues, profileType, true, true);
     const { ok, stdout, stderr } = runSafeCapture(pac, pushArgs, { cwd: projectDir });
     const combined = `${stdout}\n${stderr}`;
     if (stdout) process.stdout.write(stdout);
@@ -258,7 +277,7 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solDis
           '--environment', envUrl,
         ]);
         if (createOk) {
-          runSafe(pac, ['auth', 'select', '--name', profileName]);
+          verifyPacContext(pac, rootDir, projectDir, credentialValues, 'user', true, true);
           ui.ok('Auth profile refreshed');
         } else {
           ui.warn('Auth refresh failed. Retrying push with existing profile...');
@@ -280,7 +299,7 @@ async function attemptPushWithRetry(pac, profileName, envUrl, projectDir, solDis
 
       if (attempt >= maxRetries) break;
 
-      const authOk = await ensureInteractiveAuth(pac, profileName, envUrl);
+      const authOk = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
       if (!authOk) {
         ui.warn('Could not establish user auth.');
         break;
@@ -395,83 +414,74 @@ async function addAppToSolution(pac, projectDir, solutionName) {
  * Key: Type column = "Application" (SPN) vs "User" (interactive).
  * Environment URL may have a trailing slash.
  */
-async function ensureInteractiveAuth(pac, profileName, envUrl) {
-  const envUrlNorm = envUrl.replace(/\/+$/, '');
+async function ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues) {
+  try {
+    verifyPacContext(pac, rootDir, projectDir, credentialValues, 'user', true, true);
+    return true;
+  } catch {
+    const envUrl = wizardState.PP_ENV_DEV;
+    const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: envUrl });
 
-  // Parse pac auth list to find a User-type profile for our environment
-  const authListOutput = runSafe(pac, ['auth', 'list']);
-  if (authListOutput) {
-    const lines = authListOutput.split('\n');
-    for (const line of lines) {
-      const indexMatch = line.match(/^\[(\d+)\]/);
-      if (!indexMatch) continue;
-
-      // Must be Type=User, NOT Application
-      if (!/\bUser\b/i.test(line)) continue;
-
-      // Must target our environment (normalize trailing slash)
-      if (!line.replace(/\/+/g, '/').includes(envUrlNorm.replace(/\/+/g, '/'))) continue;
-
-      const idx = indexMatch[1];
-      const selectOk = runSafe(pac, ['auth', 'select', '--index', idx]);
-      if (selectOk !== null) {
-        ui.ok(`Selected existing User auth profile (index ${idx})`);
-        return true;
-      }
-    }
-  }
-
-  // No User profile for this environment — create one
-  ui.line('');
-  ui.line('No user-based auth profile found for this environment.');
-  ui.line('A browser sign-in is required to push Code Apps.');
-  ui.line('Your browser will open — sign in with a user who has');
-  ui.line('System Administrator or System Customizer role.');
-  ui.line('');
-  ui.line(`Environment: ${envUrl}`);
-  ui.line('');
-
-  const proceed = await confirm({ message: 'Sign in now?', default: true });
-  if (!proceed) return false;
-
-  ui.line('');
-  ui.line('Opening browser for sign-in...');
-  // Default pac auth create (no --deviceCode) opens a browser dialog.
-  // Falls back to device code if the browser flow fails.
-  let createOk = runSafeLive(pac, [
-    'auth', 'create',
-    '--name', profileName,
-    '--environment', envUrl,
-  ]);
-
-  if (!createOk) {
-    // Browser dialog may not work on headless/remote — try device code
-    ui.warn('Browser sign-in failed. Trying device code flow...');
-    ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
     ui.line('');
-    createOk = runSafeLive(pac, [
+    ui.line('No verified repo-scoped interactive profile was found for this environment.');
+    ui.line('A browser sign-in is required to push Code Apps.');
+    ui.line('Your browser will open — sign in with a user who has');
+    ui.line('System Administrator or System Customizer role.');
+    ui.line('');
+    ui.line(`Environment: ${envUrl}`);
+    ui.line(`Profile: ${profileName}`);
+    ui.line('');
+
+    const proceed = await confirm({ message: 'Sign in now?', default: true });
+    if (!proceed) return false;
+
+    ui.line('');
+    ui.line('Opening browser for sign-in...');
+    let createOk = runSafeLive(pac, [
       'auth', 'create',
       '--name', profileName,
       '--environment', envUrl,
-      '--deviceCode',
     ]);
+
+    if (!createOk) {
+      ui.warn('Browser sign-in failed. Trying device code flow...');
+      ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
+      ui.line('');
+      createOk = runSafeLive(pac, [
+        'auth', 'create',
+        '--name', profileName,
+        '--environment', envUrl,
+        '--deviceCode',
+      ]);
+    }
+
+    if (!createOk) {
+      ui.warn('Auth creation failed.');
+      return false;
+    }
+
+    try {
+      verifyPacContext(pac, rootDir, projectDir, credentialValues, 'user', true, true);
+      ui.ok('User auth verified');
+      return true;
+    } catch (error) {
+      ui.warn(error.message);
+      return false;
+    }
   }
+}
 
-  if (!createOk) {
-    ui.warn('Auth creation failed.');
-    return false;
-  }
-
-  // Select the newly created profile
-  runSafe(pac, ['auth', 'select', '--name', profileName]);
-
-  // Verify it works
-  const verifyWho = runSafe(pac, ['org', 'who']);
-  if (verifyWho) {
-    ui.ok('User auth verified');
-    return true;
-  }
-
-  ui.warn('Auth created but verification failed.');
-  return false;
+function verifyPacContext(pac, rootDir, projectDir, credentialValues, profileType, requirePowerConfig, requirePowerConfigTarget) {
+  return selectAndVerifyPacProfile({
+    pac,
+    rootDir,
+    wizardState: getWizardStateSnapshot(stateGet),
+    targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'),
+    profileType,
+    credentialValues,
+    powerConfigPath: join(projectDir, 'power.config.json'),
+    requireCredentialMatch: true,
+    requirePowerConfig,
+    requirePowerConfigTarget,
+  });
 }
