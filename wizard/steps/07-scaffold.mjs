@@ -20,6 +20,8 @@ import {
 import {
   buildPacProfileName,
   getWizardStateSnapshot,
+  loadPowerConfigInfo,
+  parsePacOrgWho,
   quarantinePowerConfig,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
@@ -163,14 +165,36 @@ export default async function stepScaffold() {
         requirePowerConfigTarget: false,
       });
 
-      const initOk = runSafe(pac, [
-        'code', 'init',
-        '--displayName', appName,
-        '--buildPath', './dist',
-        '--fileEntryPoint', 'index.html',
-      ], { cwd: projectDir });
-      if (initOk === null) {
-        throw new Error('pac code init failed before a valid power.config.json could be produced.');
+      // ── Pre-quarantine stale power.config.json before pac code init ──
+      const powerConfigPath = join(projectDir, 'power.config.json');
+      let skipInit = false;
+      if (existsSync(powerConfigPath)) {
+        const existing = loadPowerConfigInfo(powerConfigPath);
+        const whoOut = runSafe(pac, ['org', 'who']);
+        const whoInfo = whoOut ? parsePacOrgWho(whoOut) : null;
+        if (existing.environmentId && whoInfo?.environmentId
+            && existing.environmentId === whoInfo.environmentId.toLowerCase()) {
+          ui.ok('power.config.json already exists and matches active environment — skipping pac code init');
+          skipInit = true;
+        } else {
+          const qPath = quarantinePowerConfig(powerConfigPath);
+          ui.warn(`Quarantined stale power.config.json (env ${existing.environmentId || 'unknown'}) at ${qPath}`);
+        }
+      }
+
+      if (!skipInit) {
+        const initResult = runSafeCapture(pac, [
+          'code', 'init',
+          '--displayName', appName,
+          '--buildPath', './dist',
+          '--fileEntryPoint', 'index.html',
+        ], { cwd: projectDir });
+        if (!initResult.ok) {
+          const detail = (initResult.stderr || '').trim();
+          throw new Error(
+            'pac code init failed.' + (detail ? `\n  PAC error: ${detail}` : ' No additional error details available.')
+          );
+        }
       }
 
       verifyPacMutationTarget({
