@@ -7,6 +7,7 @@ import { homedir, platform } from 'node:os';
 import { loadState } from '../wizard/lib/state.mjs';
 import {
   getWizardStateSnapshot,
+  isRepoScopedProfileName,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../wizard/lib/pac-target.mjs';
@@ -166,7 +167,7 @@ function runPac(args) {
 }
 
 if (options.authProfile) {
-  if (!/^papps:/.test(options.authProfile)) {
+  if (!isRepoScopedProfileName(options.authProfile)) {
     fail(`Refusing to use non-repo-scoped PAC profile: ${options.authProfile}`);
   }
   console.log(`Selecting PAC auth profile: ${options.authProfile}`);

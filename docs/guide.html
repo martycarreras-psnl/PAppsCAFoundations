@@ -1288,8 +1288,8 @@ pac code add-data-source -a shared_sharepointonline -c &lt;YOUR_CONNECTION_ID&gt
         <span class="callout-icon">🚨</span>
         <div>
           <strong>Must use user (interactive) auth.</strong> All <code>pac code</code> commands are rejected when using service principal auth. Use the repo-scoped interactive profile for the current environment, for example:
-          <pre style="margin-top:8px;">pac auth create --name papps:my-repo:dev:user:org-dev.crm.dynamics.com --environment https://org-dev.crm.dynamics.com --deviceCode
-pac auth select --name papps:my-repo:dev:user:org-dev.crm.dynamics.com</pre>
+          <pre style="margin-top:8px;">pac auth create --name pp-myrepo-d-u-1a2b3c4d --environment https://org-dev.crm.dynamics.com --deviceCode
+pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
         </div>
       </div>
 
@@ -1785,8 +1785,8 @@ if (response.data.completed) {
       <div class="card" style="margin-top: var(--s3); border-left: 3px solid var(--orange);">
         <div class="card-body">
           <strong>⚠ SPN auth note:</strong> <code>pac code push</code> requires Power Platform API access that service principal (SPN) auth lacks for first-push and <code>pac code</code> mutation flows. Use the repo-scoped interactive profile for that environment, then push:
-          <pre style="margin-top: var(--s2);">pac auth create --name papps:my-repo:dev:user:org-dev.crm.dynamics.com --environment &lt;your-env-url&gt; --deviceCode
-pac auth select --name papps:my-repo:dev:user:org-dev.crm.dynamics.com
+          <pre style="margin-top: var(--s2);">pac auth create --name pp-myrepo-d-u-1a2b3c4d --environment &lt;your-env-url&gt; --deviceCode
+pac auth select --name pp-myrepo-d-u-1a2b3c4d
 pac code push</pre>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, renameSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { decrypt, isEncrypted } from './crypto.mjs';
 import { runSafe } from './shell.mjs';
 
@@ -13,7 +14,10 @@ const TARGET_STATE_KEYS = {
 };
 
 const PROFILE_SCOPES = new Set(['spn', 'user']);
-const REPO_SCOPED_PROFILE_RE = /^papps:[a-z0-9-]+:(dev|test|prod):(spn|user):[a-z0-9.-]+$/;
+const REPO_SCOPED_PROFILE_RE = /^pp-[a-z0-9]{1,8}-[dtp]-[su]-[a-f0-9]{8}$/;
+const TARGET_CODES = { dev: 'd', test: 't', prod: 'p' };
+const PROFILE_CODES = { spn: 's', user: 'u' };
+const MAX_PAC_PROFILE_NAME_LENGTH = 30;
 
 export function normalizeUrl(url = '') {
   return String(url || '').trim().replace(/\/+$/, '').toLowerCase();
@@ -50,6 +54,19 @@ export function isRepoScopedProfileName(profileName) {
   return REPO_SCOPED_PROFILE_RE.test(String(profileName || ''));
 }
 
+function hashFragment(value, length = 8) {
+  return createHash('sha1').update(String(value || '')).digest('hex').slice(0, length);
+}
+
+function buildRepoToken(rootDir) {
+  const compactSlug = deriveRepoSlug(rootDir).replace(/-/g, '') || 'repo';
+  if (compactSlug.length <= 8) {
+    return compactSlug;
+  }
+
+  return `${compactSlug.slice(0, 5)}${hashFragment(compactSlug, 3)}`;
+}
+
 export function buildPacProfileName({ rootDir, targetKey, profileType, url }) {
   if (!TARGET_ENV_KEYS.includes(targetKey)) {
     throw new Error(`Unsupported target environment key: ${targetKey}`);
@@ -58,7 +75,19 @@ export function buildPacProfileName({ rootDir, targetKey, profileType, url }) {
     throw new Error(`Unsupported PAC profile scope: ${profileType}`);
   }
 
-  return `papps:${deriveRepoSlug(rootDir)}:${targetKey}:${profileType}:${deriveEnvHost(url)}`;
+  const name = [
+    'pp',
+    buildRepoToken(rootDir),
+    TARGET_CODES[targetKey],
+    PROFILE_CODES[profileType],
+    hashFragment(deriveEnvHost(url), 8),
+  ].join('-');
+
+  if (name.length > MAX_PAC_PROFILE_NAME_LENGTH) {
+    throw new Error(`Generated PAC profile name exceeds ${MAX_PAC_PROFILE_NAME_LENGTH} characters: ${name}`);
+  }
+
+  return name;
 }
 
 export function parseEnvFile(filePath) {

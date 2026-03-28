@@ -49,6 +49,8 @@ test('repo-scoped PAC profile names differ across repos on the same machine', ()
   });
 
   assert.notEqual(first, second);
+  assert.ok(first.length <= 30);
+  assert.ok(second.length <= 30);
   assert.equal(isRepoScopedProfileName(first), true);
   assert.equal(isRepoScopedProfileName(second), true);
 });
@@ -116,7 +118,10 @@ test('first-push interactive auth names are repo-scoped and environment-scoped',
     url: DEV_URL,
   });
 
-  assert.equal(profileName, 'papps:chief-of-staff:dev:user:repo-dev.crm.dynamics.com');
+  assert.ok(profileName.startsWith('pp-'));
+  assert.ok(profileName.includes('-d-u-'));
+  assert.ok(profileName.length <= 30);
+  assert.equal(isRepoScopedProfileName(profileName), true);
 });
 
 test('stale global Dev profiles are ignored when the repo-scoped profile is missing', () => {
