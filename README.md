@@ -73,6 +73,7 @@ Foundations is now evolving against an explicit 8-step robustness roadmap:
 3. Reusable Dataverse helper scripts
 4. Stricter three-layer architecture rules
 5. Testing as a deployment gate
+6. Built-in smoke tests that pass from the first scaffold
 6. Discovery helpers for human-in-the-loop tasks
 7. Separate npm CLI migration evaluation
 8. Foundations version traceability for downstream repos
@@ -109,7 +110,7 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
 5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
-7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload
+7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload. Includes a `vitest.config.ts`, test setup, and smoke tests that the wizard runs automatically to verify the scaffold is healthy before proceeding.
 8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable
 9. **Builds, verifies, and optionally deploys** — after prototype validation and connector binding are complete
 

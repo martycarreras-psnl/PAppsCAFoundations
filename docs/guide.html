@@ -1151,6 +1151,9 @@
               <li>Writes <code>vite.config.ts</code> with port 3000, <code>@/</code> path alias, and relative base path for deploy</li>
               <li>Creates the full folder structure (components, pages, hooks, utils, tests, etc.)</li>
               <li>Writes starter files: <code>main.tsx</code>, <code>App.tsx</code> with Fluent UI + TanStack Query providers</li>
+              <li>Writes <code>vitest.config.ts</code> with jsdom, jest-dom matchers, <code>@/</code> alias, and coverage thresholds</li>
+              <li>Creates smoke test infrastructure: <code>tests/setup/setup.ts</code>, <code>tests/setup/test-utils.tsx</code> (custom render with all providers), and <code>src/App.test.tsx</code></li>
+              <li>Runs <code>npm run test:smoke</code> automatically to verify the scaffold is healthy before proceeding</li>
               <li>Copies all instruction files from the foundations repo</li>
               <li>Includes the narrative-first planning instructions so you can refine the business scope before hardening schema and connector choices</li>
               <li>Seeds prototype contracts, mock providers, and <code>dataverse/prototype-feedback.md</code> from the planning payload</li>
@@ -1159,6 +1162,13 @@
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
             </ul>
+
+            <div class="callout callout-success">
+              <span class="callout-icon">✅</span>
+              <div>
+                <strong>Smoke tests pass from day one.</strong> Every scaffold includes <code>vitest.config.ts</code>, a test setup with provider wrappers, and <code>src/App.test.tsx</code> with three smoke tests. The wizard runs <code>npm run test:smoke</code> automatically during this step — if they pass, your scaffold is verified healthy. You can re-run anytime with <code>npm run test:smoke</code> or <code>npm run test</code>.
+              </div>
+            </div>
 
             <h4>Connector &amp; Data Source Setup</h4>
             <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later with <code>node wizard/index.mjs --from 8</code> once the planning payload and prototype are stable enough to bind real systems.</p>
