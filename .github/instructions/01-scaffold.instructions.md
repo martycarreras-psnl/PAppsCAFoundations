@@ -283,11 +283,14 @@ Every project must define these scripts:
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:smoke": "vitest run --reporter=verbose src/App.test.tsx",
     "test:e2e": "playwright test",
     "deploy": "npm run build && pac code push"
   }
 }
 ```
+
+The `test:smoke` script runs the built-in smoke tests that ship with every scaffold. These pass immediately after setup — the wizard verifies this during Step 7 before declaring success. If smoke tests fail, the scaffold is broken.
 
 > **Auth note for `deploy`:** The `pac code push` in the deploy script requires a **user (interactive) auth profile** to be active — SPN auth is rejected by the BAP API. Select your repo-scoped user profile before running `npm run deploy`. The wizard creates this profile automatically; for manual setup see `00-environment-setup.instructions.md`.
 

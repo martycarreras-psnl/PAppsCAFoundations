@@ -49,6 +49,7 @@ export function createMinimalProject(dir, appName) {
       format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
       test: 'vitest run',
       'test:watch': 'vitest',
+      'test:smoke': 'vitest run --reporter=verbose src/App.test.tsx',
       'test:e2e': 'playwright test',
       'setup:auth': 'node scripts/setup-auth.mjs',
       pac: 'node scripts/op-pac.mjs',
@@ -106,6 +107,39 @@ export default defineConfig(({ command }) => ({
 `);
   logger.ok('vite.config.ts (port 3000)');
 
+  logger.line('Writing vitest.config.ts...');
+  writeFileSync(join(dir, 'vitest.config.ts'), `import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup/setup.ts'],
+    css: true,
+    include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/generated/**', 'src/mockData/**', 'src/**/*.test.*'],
+      thresholds: {
+        branches: 70,
+        functions: 70,
+        lines: 70,
+        statements: 70,
+      },
+    },
+  },
+});
+`);
+  logger.ok('vitest.config.ts');
+
   writeFileSync(join(dir, '.prettierrc'), '{ "singleQuote": true, "trailingComma": "all", "printWidth": 100 }\n');
   logger.ok('.prettierrc');
 }
@@ -137,6 +171,7 @@ export function mergePackageJsonScripts(dir, logger = noopLogger) {
     format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
     test: 'vitest run',
     'test:watch': 'vitest',
+    'test:smoke': 'vitest run --reporter=verbose src/App.test.tsx',
     'test:e2e': 'playwright test',
     'setup:auth': 'node scripts/setup-auth.mjs',
     pac: 'node scripts/op-pac.mjs',
@@ -315,6 +350,86 @@ solution/*.zip
 *.log
 `);
   logger.ok('.gitignore');
+
+  // ── Smoke test infrastructure — ready to run from day one ──
+  writeSmokeTestFiles(dir, appName, logger);
+}
+
+export function writeSmokeTestFiles(dir, appName, logger = noopLogger) {
+  logger.line('Writing smoke test files...');
+
+  // tests/setup/setup.ts — Vitest setup with jest-dom matchers
+  mkdirSync(join(dir, 'tests', 'setup'), { recursive: true });
+  writeFileSync(join(dir, 'tests', 'setup', 'setup.ts'), `import '@testing-library/jest-dom/vitest';
+`);
+  logger.ok('tests/setup/setup.ts');
+
+  // tests/setup/test-utils.tsx — custom render wrapping all providers
+  writeFileSync(join(dir, 'tests', 'setup', 'test-utils.tsx'), `import { render, RenderOptions } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { MemoryRouter } from 'react-router-dom';
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false },
+    },
+  });
+}
+
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  initialRoute?: string;
+}
+
+function customRender(ui: React.ReactElement, options: CustomRenderOptions = {}) {
+  const { initialRoute = '/', ...renderOptions } = options;
+  const queryClient = createTestQueryClient();
+
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <FluentProvider theme={webLightTheme}>
+          <MemoryRouter initialEntries={[initialRoute]}>
+            {children}
+          </MemoryRouter>
+        </FluentProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return { ...render(ui, { wrapper: Wrapper, ...renderOptions }), queryClient };
+}
+
+export * from '@testing-library/react';
+export { customRender as render };
+`);
+  logger.ok('tests/setup/test-utils.tsx');
+
+  // src/App.test.tsx — smoke tests for the scaffolded App component
+  writeFileSync(join(dir, 'src', 'App.test.tsx'), `import { describe, it, expect } from 'vitest';
+import { render, screen } from '../tests/setup/test-utils';
+import { App } from './App';
+
+describe('App — smoke tests', () => {
+  it('renders without crashing', () => {
+    const { container } = render(<App />);
+    expect(container).toBeTruthy();
+  });
+
+  it('displays the app title', () => {
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  });
+
+  it('shows prototype or connected mode badge', () => {
+    render(<App />);
+    expect(screen.getByText(/Prototype Mode|Connected Mode/)).toBeInTheDocument();
+  });
+});
+`);
+  logger.ok('src/App.test.tsx (smoke tests)');
 }
 
 export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {

@@ -6,6 +6,26 @@ applyTo: "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts"
 
 This instruction file defines how Code Apps are tested — from unit tests through end-to-end tests. Every Code App ships with tests. Untested code does not merge.
 
+## Built-in Smoke Tests — Working Out of the Gate
+
+Every scaffolded Code App includes smoke tests that pass immediately after setup. The wizard runs these automatically during Step 7 (Scaffold) before declaring success.
+
+**What ships out of the box:**
+- `vitest.config.ts` — Vitest configured with jsdom, jest-dom matchers, path aliases, and coverage thresholds
+- `tests/setup/setup.ts` — Vitest setup file that loads `@testing-library/jest-dom/vitest` matchers
+- `tests/setup/test-utils.tsx` — Custom render wrapper with all providers (QueryClient, FluentProvider, MemoryRouter)
+- `src/App.test.tsx` — Three smoke tests: renders without crashing, displays title, shows mode badge
+
+**Run smoke tests anytime:**
+```bash
+npm run test:smoke    # Fast targeted smoke run (verbose output)
+npm run test          # Full Vitest run (includes smoke tests)
+```
+
+**Rule: Smoke tests must always pass.** If you change `App.tsx` or add providers, update the smoke tests and `test-utils.tsx` wrapper to match. A failing smoke test means the scaffold is broken — fix it before continuing.
+
+When adding new features or pages, follow the smoke test pattern: write a basic "renders without crashing" test for every new component before moving on. The smoke test acts as a canary — if it breaks, something fundamental changed.
+
 ## Phase Contract — Testing Gate Before Deploy
 
 Testing is a hard gate between implementation and deployment.

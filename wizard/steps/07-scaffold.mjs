@@ -33,6 +33,7 @@ export {
   mergePackageJsonScripts,
   writeConfig,
   writeStarterFiles,
+  writeSmokeTestFiles,
 } from '../lib/scaffold-foundations.mjs';
 
 export default async function stepScaffold() {
@@ -233,6 +234,20 @@ export default async function stepScaffold() {
   ui.line('Skipping connector setup during initial scaffold.');
   ui.line('When the prototype is stable, move to the dedicated connector step:');
   ui.line('  node wizard/index.mjs --from 8');
+
+  // ── Smoke tests — verify the scaffold is healthy before proceeding ──
+  ui.line('');
+  ui.divider();
+  ui.line('');
+  ui.line('Running smoke tests to verify scaffold health...');
+  const smokeOk = runLive('npm run test:smoke', { cwd: projectDir });
+  if (smokeOk) {
+    ui.ok('Smoke tests passed — scaffold is healthy and ready to develop');
+  } else {
+    ui.warn('Smoke tests did not pass. This is usually a dependency issue.');
+    ui.line('  You can diagnose later with: npm run test:smoke');
+    ui.line('  Continuing with scaffold — tests can be fixed before deployment.');
+  }
 
   // ── Git initialization ──
   ui.line('');
