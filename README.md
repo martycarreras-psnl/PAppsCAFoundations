@@ -66,7 +66,7 @@ That later flow creates connection references in the solution, attempts to disco
 
 ## Execution Roadmap
 
-Foundations is now evolving against an explicit 8-step robustness roadmap:
+Foundations is now evolving against an explicit 9-step robustness roadmap:
 
 1. Execution contracts across the lifecycle
 2. Schema-plan artifact workflow
@@ -74,9 +74,9 @@ Foundations is now evolving against an explicit 8-step robustness roadmap:
 4. Stricter three-layer architecture rules
 5. Testing as a deployment gate
 6. Built-in smoke tests that pass from the first scaffold
-6. Discovery helpers for human-in-the-loop tasks
-7. Separate npm CLI migration evaluation
-8. Foundations version traceability for downstream repos
+7. Discovery helpers for human-in-the-loop tasks
+8. Separate npm CLI migration evaluation
+9. Foundations version traceability for downstream repos
 
 The implementation is designed so each change is traceable to those steps and can be validated through scaffold, build, test, and sync workflows.
 
@@ -132,6 +132,8 @@ See `00-environment-setup.instructions.md` for details.
 
 Once you have the code on your machine, open [docs/guide.html](docs/guide.html) in your browser for an interactive visual walkthrough — tech stack overview, naming conventions, Power Apps Maker Portal links, and a detailed breakdown of each wizard step all in one page.
 
+There is also [docs/index.html](docs/index.html) — a marketing-style landing page that gives a high-level overview of the methodology, tech stack, and value proposition.
+
 The short version is: plan first, prototype second, connect later.
 
 If you started in the guide and want the concise repo overview, come back here to [README.md](README.md).
@@ -157,24 +159,31 @@ PAppsCAFoundations/
 │       ├── 07-dataverse-schema.instructions.md    # Tables, columns, option sets, relationships
 │       └── 08-copilot-studio.instructions.md      # Copilot Studio agent integration
 ├── docs/
-│   └── guide.html                          # Interactive visual setup guide (Fluent UI design)
+│   ├── index.html                          # Marketing landing page (Fluent UI design)
+│   ├── guide.html                          # Interactive visual setup guide (sidebar walkthrough)
+│   └── prototype-golden-path.md            # End-to-end delivery sequence from planning to real providers
 ├── scripts/
-│   ├── op-pac.mjs                          # Cross-platform 1Password wrapper for pac commands
-│   ├── op-pac.sh                           # Legacy Bash wrapper for pac commands
-│   ├── export-solution.mjs                 # Export unmanaged, refresh solution-source, optionally pack managed
-│   ├── setup-auth.mjs                      # Cross-platform auth setup (1Password or .env.local)
-│   ├── setup-auth.sh                       # Legacy Bash auth setup
+│   ├── decrypt-secret.mjs                  # Decrypt AES-256-GCM encrypted secrets from .env.local
 │   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
 │   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
+│   ├── export-solution.mjs                 # Export unmanaged, refresh solution-source, optionally pack managed
 │   ├── generate-dataverse-plan.mjs         # Expand planning payloads into execution plans
+│   ├── op-pac.mjs                          # Cross-platform 1Password wrapper for pac commands
+│   ├── op-pac.sh                           # Legacy Bash wrapper for pac commands
+│   ├── pac-safe.mjs                        # Safe pac CLI wrapper with version and profile guards
+│   ├── patch-datasources-info.mjs          # Patch datasources-info.json after data source changes
+│   ├── pre-commit-hook.sh                  # Git pre-commit hook to block accidental secret leaks
 │   ├── register-dataverse-data-sources.mjs # Cross-platform Dataverse table registration via PAC
 │   ├── register-dataverse-data-sources.sh  # Register planned tables with pac and regenerate SDK
 │   ├── schema-plan.example.json            # Starter Dataverse planning artifact
 │   ├── seed-prototype-assets.mjs           # Generate domain contracts, mock providers, and feedback artifacts
+│   ├── setup-auth.mjs                      # Cross-platform auth setup (1Password or .env.local)
+│   ├── setup-auth.sh                       # Legacy Bash auth setup
+│   ├── setup-wizard.sh                     # Bash wrapper that delegates to the Node wizard
 │   ├── sync-foundations.mjs                # Cross-platform template sync entry point
-│   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
-│   └── setup-wizard.sh                     # Bash wrapper that delegates to the Node wizard
+│   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
+│   └── tests/                              # Unit tests for scripts (connection discovery, scaffold, etc.)
 ├── wizard/                                 # Cross-platform Node.js setup wizard
 │   ├── index.mjs                           # Entry point + step orchestrator
 │   ├── lib/                                # Shared helpers (state, UI, shell, validation)
@@ -243,7 +252,7 @@ npm run sync:foundations -- --dry-run   # Preview only, no changes
 > node scripts/sync-foundations.mjs         # Any platform
 > ```
 
-**What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/guide.html`, `.env.template`
+**What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/`, `.env.template`, `.foundations-version.json`
 
 **What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
 

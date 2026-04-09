@@ -710,12 +710,31 @@
 │       ├── <span class="file">07-dataverse-schema.instructions.md</span>    <span class="comment"># Tables, columns, option sets</span>
 │       └── <span class="file">08-copilot-studio.instructions.md</span>      <span class="comment"># Copilot Studio agent integration</span>
 ├── <span class="folder">docs/</span>
-│   └── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide</span>
+│   ├── <span class="file">index.html</span>                          <span class="comment"># Marketing landing page (high-level overview)</span>
+│   ├── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide (this page)</span>
+│   └── <span class="file">prototype-golden-path.md</span>            <span class="comment"># End-to-end delivery from planning to real providers</span>
 ├── <span class="folder">scripts/</span>
-│   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># 1Password wrapper for pac</span>
-│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Bash wrapper to the Node auth helper</span>
+│   ├── <span class="file">decrypt-secret.mjs</span>                  <span class="comment"># Decrypt AES-256-GCM secrets from .env.local</span>
+│   ├── <span class="file">discover-copilot-connection.mjs</span>     <span class="comment"># Cross-platform Copilot Studio connection discovery</span>
+│   ├── <span class="file">discover-copilot-connection.sh</span>      <span class="comment"># Resolve Copilot Studio connection IDs</span>
+│   ├── <span class="file">export-solution.mjs</span>                 <span class="comment"># Export unmanaged, refresh solution-source, pack managed</span>
+│   ├── <span class="file">generate-dataverse-plan.mjs</span>         <span class="comment"># Expand planning payloads into execution plans</span>
+│   ├── <span class="file">op-pac.mjs</span>                          <span class="comment"># Cross-platform 1Password wrapper for pac</span>
+│   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># Legacy Bash wrapper for pac</span>
+│   ├── <span class="file">pac-safe.mjs</span>                        <span class="comment"># Safe pac wrapper with version and profile guards</span>
+│   ├── <span class="file">patch-datasources-info.mjs</span>          <span class="comment"># Patch datasources-info.json after changes</span>
+│   ├── <span class="file">pre-commit-hook.sh</span>                  <span class="comment"># Block accidental secret commits</span>
+│   ├── <span class="file">register-dataverse-data-sources.mjs</span> <span class="comment"># Register Dataverse tables via PAC</span>
+│   ├── <span class="file">register-dataverse-data-sources.sh</span>  <span class="comment"># Bash wrapper for table registration</span>
+│   ├── <span class="file">schema-plan.example.json</span>            <span class="comment"># Starter Dataverse planning artifact</span>
+│   ├── <span class="file">seed-prototype-assets.mjs</span>           <span class="comment"># Generate contracts, mock providers, feedback artifacts</span>
+│   ├── <span class="file">setup-auth.mjs</span>                      <span class="comment"># Cross-platform auth setup (1Password or .env.local)</span>
+│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Legacy Bash auth setup</span>
+│   ├── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Bash wrapper to the Node wizard</span>
+│   ├── <span class="file">sync-foundations.mjs</span>                <span class="comment"># Cross-platform template sync entry point</span>
 │   ├── <span class="file">sync-foundations.sh</span>                 <span class="comment"># Pull latest from template repo</span>
-│   └── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Bash wrapper to the Node wizard</span>
+│   ├── <span class="file">validate-schema-plan.mjs</span>            <span class="comment"># Validate planning payloads before provisioning</span>
+│   └── <span class="folder">tests/</span>                              <span class="comment"># Unit tests for scripts</span>
 ├── <span class="folder">wizard/</span>                                 <span class="comment"># ← THE MAIN EVENT</span>
 │   ├── <span class="file">index.mjs</span>                           <span class="comment"># Cross-platform Node.js setup wizard</span>
 │   ├── <span class="folder">lib/</span>                                <span class="comment"># Shared helpers (state, UI, shell)</span>
@@ -723,6 +742,7 @@
 ├── <span class="folder">solution/</span>                               <span class="comment"># Power Platform solution artifacts</span>
 ├── <span class="file">.env</span>                                    <span class="comment"># 1Password references (safe to commit)</span>
 ├── <span class="file">.env.template</span>                           <span class="comment"># Template for non-1Password teams</span>
+├── <span class="file">.foundations-version.json</span>               <span class="comment"># Bundle/version metadata for downstream syncs</span>
 ├── <span class="file">.gitignore</span>
 └── <span class="file">README.md</span></div>
 
