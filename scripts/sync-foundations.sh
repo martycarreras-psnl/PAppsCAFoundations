@@ -24,7 +24,7 @@
 set -euo pipefail
 
 # ── Configuration ──
-TEMPLATE_REPO="macarrer_microsoft/PAppsCAFoundations"
+TEMPLATE_REPO="martycarreras-psnl/PAppsCAFoundations"
 TEMPLATE_BRANCH="main"
 DRY_RUN=false
 AUTO_YES=false

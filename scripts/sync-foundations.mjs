@@ -7,7 +7,7 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { execFileSync, spawnSync } from 'node:child_process';
 
-const TEMPLATE_REPO = 'macarrer_microsoft/PAppsCAFoundations';
+const TEMPLATE_REPO = 'martycarreras-psnl/PAppsCAFoundations';
 const TEMPLATE_BRANCH = 'main';
 const TEMPLATE_GIT_URL = `https://github.com/${TEMPLATE_REPO}.git`;
 const SYNC_DIRS = ['.github/instructions', 'wizard', 'scripts', 'docs'];

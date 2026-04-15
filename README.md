@@ -24,7 +24,7 @@ cd my-expense-tracker
 **Option B — degit (no GitHub account required)**
 
 ```bash
-npx degit macarrer_microsoft/PAppsCAFoundations my-code-app
+npx degit martycarreras-psnl/PAppsCAFoundations my-code-app
 cd my-code-app
 ```
 
