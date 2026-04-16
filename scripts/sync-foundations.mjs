@@ -151,6 +151,17 @@ if (workingTreeStatus) {
 }
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'foundations-sync-'));
+// Restrict temp directory to owner-only (prevents other system users from reading downloaded files)
+try { fs.chmodSync(tempRoot, 0o700); } catch { /* best-effort: Windows ignores this */ }
+
+// Clean up temp directory on unexpected termination
+const cleanupAndExit = () => {
+  try { fs.rmSync(tempRoot, { recursive: true, force: true }); } catch { /* already gone */ }
+  process.exit(1);
+};
+process.on('SIGINT', cleanupAndExit);
+process.on('SIGTERM', cleanupAndExit);
+
 try {
   console.log(`Fetching latest foundations from ${TEMPLATE_REPO}...`);
   let fetched = false;
@@ -283,5 +294,7 @@ try {
   const stderr = error?.stderr?.toString?.().trim();
   fail(stderr || error.message || 'sync failed');
 } finally {
+  process.removeListener('SIGINT', cleanupAndExit);
+  process.removeListener('SIGTERM', cleanupAndExit);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

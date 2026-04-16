@@ -29,15 +29,22 @@ export function encrypt(plaintext) {
  * Decrypt an encrypted string. Accepts with or without "ENC:" prefix.
  */
 export function decrypt(encryptedStr) {
-  const raw = encryptedStr.startsWith('ENC:') ? encryptedStr.slice(4) : encryptedStr;
-  const [ivHex, authTagHex, dataHex] = raw.split(':');
-  const key = deriveKey();
-  const iv = Buffer.from(ivHex, 'hex');
-  const authTag = Buffer.from(authTagHex, 'hex');
-  const encrypted = Buffer.from(dataHex, 'hex');
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(authTag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf-8');
+  try {
+    const raw = encryptedStr.startsWith('ENC:') ? encryptedStr.slice(4) : encryptedStr;
+    const [ivHex, authTagHex, dataHex] = raw.split(':');
+    if (!ivHex || !authTagHex || !dataHex) {
+      throw new Error('malformed');
+    }
+    const key = deriveKey();
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const encrypted = Buffer.from(dataHex, 'hex');
+    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf-8');
+  } catch {
+    throw new Error('Decryption failed — value is corrupted or was encrypted on a different machine.');
+  }
 }
 
 /** Check if a value is encrypted (has ENC: prefix with hex payload). */

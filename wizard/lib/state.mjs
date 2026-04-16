@@ -1,5 +1,6 @@
 // wizard/lib/state.mjs — Cross-platform wizard state persistence (JSON)
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync } from 'node:fs';
+import { platform } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,6 +25,10 @@ export function loadState() {
 
 export function saveState() {
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  // Restrict to owner-only on Unix (prevents other system users from reading wizard state)
+  if (platform() !== 'win32') {
+    try { chmodSync(STATE_FILE, 0o600); } catch { /* best-effort */ }
+  }
 }
 
 export function stateGet(key, defaultValue = '') {

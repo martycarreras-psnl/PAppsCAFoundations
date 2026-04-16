@@ -107,19 +107,19 @@ export default async function stepScaffold() {
 
   ui.line('Installing required packages...');
   const prodPkgs = [
-    'react', 'react-dom', '@fluentui/react-components',
-    '@tanstack/react-query', 'react-router-dom',
-    '@microsoft/power-apps', 'concurrently',
+    'react@^19.0.0', 'react-dom@^19.0.0', '@fluentui/react-components@^9.56.0',
+    '@tanstack/react-query@^5.62.0', 'react-router-dom@^7.1.0',
+    '@microsoft/power-apps@^1.0.3', 'concurrently@^9.1.0',
   ].join(' ');
   runLive(`npm install ${prodPkgs}`, { cwd: projectDir })
     ? ui.ok('React + Fluent UI + TanStack Query + SDK installed')
     : ui.warn('Some packages failed to install');
 
   const devPkgs = [
-    'typescript', '@types/react', '@types/react-dom',
-    'vite', '@vitejs/plugin-react',
-    'vitest', '@testing-library/react', '@testing-library/jest-dom', 'jsdom',
-    'eslint', 'prettier',
+    'typescript@^5.7.0', '@types/react@^19.0.0', '@types/react-dom@^19.0.0',
+    'vite@^6.0.0', '@vitejs/plugin-react@^4.3.0',
+    'vitest@^2.1.0', '@testing-library/react@^16.1.0', '@testing-library/jest-dom@^6.6.0', 'jsdom@^25.0.0',
+    'eslint@^9.16.0', 'prettier@^3.4.0',
   ].join(' ');
   runLive(`npm install -D ${devPkgs}`, { cwd: projectDir })
     ? ui.ok('Dev dependencies installed')

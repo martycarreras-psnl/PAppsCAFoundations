@@ -11,10 +11,10 @@ export function pacPath() {
   const ext = IS_WIN ? '.exe' : '';
   const dotnetToolPath = join(homedir(), '.dotnet', 'tools', `pac${ext}`);
   if (existsSync(dotnetToolPath)) return dotnetToolPath;
-  // Fall back to PATH
+  // Fall back to PATH (shell-safe: execFileSync with array args)
   try {
-    const cmd = IS_WIN ? 'where pac' : 'which pac';
-    return execSync(cmd, { encoding: 'utf-8' }).trim().split('\n')[0];
+    const cmd = IS_WIN ? 'where' : 'which';
+    return execFileSync(cmd, ['pac'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
   } catch {
     return null;
   }
@@ -23,8 +23,8 @@ export function pacPath() {
 /** Check whether a command is available on PATH. */
 export function hasCommand(name) {
   try {
-    const cmd = IS_WIN ? `where ${name}` : `which ${name}`;
-    execSync(cmd, { stdio: 'ignore' });
+    const cmd = IS_WIN ? 'where' : 'which';
+    execFileSync(cmd, [name], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
