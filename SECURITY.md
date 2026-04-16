@@ -6,7 +6,7 @@ If you discover a security vulnerability in this project, please report it respo
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email **[martycarreras@outlook.com](mailto:martycarreras@outlook.com)** with:
+Instead, please email **[marty.carreras@microsoft.com](mailto:marty.carreras@microsoft.com)** with:
 
 1. A description of the vulnerability
 2. Steps to reproduce
