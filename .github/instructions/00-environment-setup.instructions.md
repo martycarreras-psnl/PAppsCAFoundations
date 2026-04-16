@@ -40,6 +40,13 @@ This is done once per team (or per project, depending on your org's security pos
    - Click "Add"
    - **Copy the secret Value immediately** — it is only shown once. If you lose it, you must create a new one.
 
+> **⚠️ Secret Rotation Required:** Azure App Registration secrets expire (default 12 months). When the secret expires, all CI/CD pipelines and developer auth will fail silently. **Prevention:**
+> 1. Set a calendar reminder 30 days before expiry
+> 2. Create the new secret in Azure Portal before the old one expires
+> 3. Update the value in: 1Password vault (or `.env.local`), GitHub Actions secret `PP_CLIENT_SECRET`, and any other credential stores
+> 4. Verify with `pac org who` after rotating
+> 5. Delete the old secret from Azure Portal once rotation is confirmed
+
 5. **Grant API permissions:**
    - Go to "API permissions" → "Add a permission"
    - Select "APIs my organization uses" → Search for "Dataverse" (or "Common Data Service")
@@ -191,6 +198,8 @@ op run --env-file=.env -- env | grep "^PP_"
 ```
 
 If any variable shows up empty or the command errors, fix the corresponding `op://` path in `.env` before committing. The vault name, item title, and field label must all match exactly — including case and spaces.
+
+> **⚠️ 1Password Concealment Gotcha:** `op run --env-file` replaces ALL resolved values in subprocess output with `<concealed by 1Password>` (exactly 24 characters) — even non-secret values like environment URLs. This silently breaks credential resolution in wrapped commands. **Symptom:** Every resolved value has length 24 and nothing starts with `https://`. **Fix:** Use `op read <op://ref>` per field instead of `op run --env-file` when piping or capturing output. See [TROUBLESHOOTING.md](../../../TROUBLESHOOTING.md) for full diagnosis.
 
 **Step 2c: How developers use it**
 

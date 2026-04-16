@@ -2,6 +2,20 @@
 
 A **GitHub template repository** with opinionated, comprehensive GitHub Copilot instruction files for building Power Apps Code Apps. Each new project starts from this template — you get the full instruction set, setup wizard, and scaffolding tools from your first commit.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+## Prerequisites
+
+| Requirement | Minimum | Notes |
+|-------------|---------|-------|
+| **Node.js** | 20+ | Required for wizard and all scripts |
+| **VS Code** | Latest | With GitHub Copilot extension for instruction-file support |
+| **Git** | 2.30+ | For template cloning and version control |
+| **.NET SDK** | 8.0+ | Required for PAC CLI installation |
+| **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
+| **Power Platform** | Access to at least one environment with Dataverse enabled |
+| **1Password CLI** | Optional | Recommended for secret management (`op`) |
+
 ## Quick Start
 
 Use this README when you want the shortest text path through the repo.
@@ -24,7 +38,7 @@ cd my-expense-tracker
 **Option B — degit (no GitHub account required)**
 
 ```bash
-npx degit martycarreras-psnl/PAppsCAFoundations my-code-app
+npx degit your-org/PAppsCAFoundations my-code-app
 cd my-code-app
 ```
 
@@ -259,3 +273,19 @@ npm run sync:foundations -- --dry-run   # Preview only, no changes
 Each scaffolded project also gets a `.foundations-version.json` file so downstream repos can see which bundle version they currently have before syncing.
 
 The script fetches the latest template via `degit`, shows a diff of what changed, and asks for confirmation before applying. Changes are committed as a single `chore: sync foundations` commit.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting issues, pull requests, and code standards.
+
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues with PAC CLI, authentication, 1Password, connections, and deployment.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and security practices.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

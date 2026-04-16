@@ -119,6 +119,7 @@ export default async function stepScaffold() {
     'typescript@^5.7.0', '@types/react@^19.0.0', '@types/react-dom@^19.0.0',
     'vite@^6.0.0', '@vitejs/plugin-react@^4.3.0',
     'vitest@^2.1.0', '@testing-library/react@^16.1.0', '@testing-library/jest-dom@^6.6.0', 'jsdom@^25.0.0',
+    '@playwright/test@^1.49.0',
     'eslint@^9.16.0', 'typescript-eslint@^8.18.0', '@eslint/js@^9.16.0', 'eslint-plugin-react-hooks@^5.1.0',
     'prettier@^3.4.0',
   ].join(' ');

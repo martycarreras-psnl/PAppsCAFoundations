@@ -170,6 +170,37 @@ export default tseslint.config(
 );
 `);
   logger.ok('eslint.config.mjs');
+
+  logger.line('Writing playwright.config.ts...');
+  writeFileSync(join(dir, 'playwright.config.ts'), `import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? 'github' : 'html',
+
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
+
+  webServer: {
+    command: 'npm run dev:local',
+    port: 3000,
+    reuseExistingServer: !process.env.CI,
+    env: { VITE_USE_MOCK: 'true' },
+  },
+});
+`);
+  logger.ok('playwright.config.ts');
 }
 
 export function mergePackageJsonScripts(dir, logger = noopLogger) {
@@ -458,6 +489,59 @@ describe('App — smoke tests', () => {
 });
 `);
   logger.ok('src/App.test.tsx (smoke tests)');
+
+  // tests/e2e/app.spec.ts — minimal Playwright E2E starter
+  mkdirSync(join(dir, 'tests', 'e2e'), { recursive: true });
+  writeFileSync(join(dir, 'tests', 'e2e', 'app.spec.ts'), `import { test, expect } from '@playwright/test';
+
+test.describe('App — E2E smoke', () => {
+  test('renders the home page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('h1')).toBeVisible();
+  });
+
+  test('shows prototype or connected mode badge', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText(/Prototype Mode|Connected Mode/)).toBeVisible();
+  });
+});
+`);
+  logger.ok('tests/e2e/app.spec.ts (E2E starter)');
+
+  // .github/workflows/ci.yml — CI pipeline for every PR
+  mkdirSync(join(dir, '.github', 'workflows'), { recursive: true });
+  writeFileSync(join(dir, '.github', 'workflows', 'ci.yml'), `name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type Check
+        run: npm run typecheck
+
+      - name: Unit Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+`);
+  logger.ok('.github/workflows/ci.yml');
 }
 
 export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
