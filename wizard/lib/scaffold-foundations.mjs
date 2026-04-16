@@ -45,7 +45,7 @@ export function createMinimalProject(dir, appName) {
       prebuild: 'node scripts/patch-datasources-info.mjs',
       build: 'npm run typecheck && vite build',
       preview: 'vite preview',
-      lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
+      lint: 'eslint src/ --max-warnings 0',
       format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
       test: 'vitest run',
       'test:watch': 'vitest',
@@ -74,7 +74,7 @@ export function writeConfig(dir, logger = noopLogger) {
       moduleResolution: 'bundler',
       jsx: 'react-jsx',
       strict: true,
-      verbatimModuleSyntax: false,
+      verbatimModuleSyntax: true,
       noUnusedLocals: true,
       noUnusedParameters: true,
       noFallthroughCasesInSwitch: true,
@@ -142,6 +142,34 @@ export default defineConfig({
 
   writeFileSync(join(dir, '.prettierrc'), '{ "singleQuote": true, "trailingComma": "all", "printWidth": 100 }\n');
   logger.ok('.prettierrc');
+
+  writeFileSync(join(dir, '.prettierignore'), `dist/
+node_modules/
+src/generated/
+.power/
+coverage/
+`);
+  logger.ok('.prettierignore');
+
+  logger.line('Writing eslint.config.mjs...');
+  writeFileSync(join(dir, 'eslint.config.mjs'), `import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  { ignores: ['dist/', 'src/generated/', '.power/', 'coverage/'] },
+);
+`);
+  logger.ok('eslint.config.mjs');
 }
 
 export function mergePackageJsonScripts(dir, logger = noopLogger) {
@@ -167,7 +195,7 @@ export function mergePackageJsonScripts(dir, logger = noopLogger) {
     prebuild: 'node scripts/patch-datasources-info.mjs',
     build: 'npm run typecheck && vite build',
     preview: 'vite preview',
-    lint: 'eslint src/ --ext .ts,.tsx --max-warnings 0',
+    lint: 'eslint src/ --max-warnings 0',
     format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
     test: 'vitest run',
     'test:watch': 'vitest',

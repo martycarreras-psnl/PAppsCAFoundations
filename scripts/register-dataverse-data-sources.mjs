@@ -63,6 +63,8 @@ if (dataverseTables.length === 0) {
 console.log(`Using PAC CLI: ${pacBin}`);
 console.log(`Registration plan: ${planPath}`);
 
+const failures = [];
+
 for (const table of dataverseTables) {
   selectAndVerifyPacProfile({
     pac: pacBin,
@@ -89,7 +91,17 @@ for (const table of dataverseTables) {
     },
   });
   console.log(`>>> Registering Dataverse table: ${table}`);
-  execFileSync(pacBin, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { stdio: 'inherit' });
+  try {
+    execFileSync(pacBin, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { stdio: 'inherit' });
+  } catch (err) {
+    console.error(`FAILED to register table: ${table} — ${err.message}`);
+    failures.push(table);
+  }
 }
 
-console.log('Dataverse data sources registered successfully. Generated connector output was refreshed during registration.');
+if (failures.length > 0) {
+  console.error(`\n${failures.length} table(s) failed to register: ${failures.join(', ')}`);
+  process.exit(1);
+} else {
+  console.log('Dataverse data sources registered successfully. Generated connector output was refreshed during registration.');
+}

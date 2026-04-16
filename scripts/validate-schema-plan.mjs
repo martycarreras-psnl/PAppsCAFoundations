@@ -27,6 +27,16 @@ const RESERVED_NAMES = new Set([
   'workflow'
 ]);
 
+const RESERVED_COLUMN_NAMES = new Set([
+  'createdon', 'modifiedon', 'createdby', 'modifiedby', 'ownerid',
+  'owningbusinessunit', 'owningteam', 'owninguser', 'statecode',
+  'statuscode', 'versionnumber', 'importsequencenumber', 'overriddencreatedon',
+  'timezoneruleversionnumber', 'utcconversiontimezonecode',
+]);
+
+const MAX_COLUMN_NAME_LENGTH = 50;
+const MAX_ENTITY_NAME_LENGTH = 50;
+
 function fail(message) {
   console.error(`Schema plan validation failed: ${message}`);
   process.exit(1);
@@ -122,29 +132,62 @@ function validateTables(plan) {
       fail(`${context} uses a reserved Dataverse name`);
     }
 
+    if (singular.length > MAX_ENTITY_NAME_LENGTH) {
+      fail(`${context}.logicalSingularName exceeds ${MAX_ENTITY_NAME_LENGTH} characters`);
+    }
+
     if (logicalNames.has(singular)) {
       fail(`${context}.logicalSingularName must be unique`);
     }
     logicalNames.add(singular);
 
+    const columnLogicalNames = new Set();
     columns.forEach((column, columnIndex) => {
       const columnContext = `${context}.columns[${columnIndex}]`;
       requireString(column, 'displayName', columnContext);
       requireString(column, 'schemaName', columnContext);
-      requireStringFromKeys(column, ['logicalName', 'schemaName'], `${columnContext}.logicalName`);
+      const logicalName = requireStringFromKeys(column, ['logicalName', 'schemaName'], `${columnContext}.logicalName`).toLowerCase();
       requireString(column, 'type', columnContext);
+
+      if (logicalName.length > MAX_COLUMN_NAME_LENGTH) {
+        fail(`${columnContext} logicalName "${logicalName}" exceeds ${MAX_COLUMN_NAME_LENGTH} characters`);
+      }
+
+      if (columnLogicalNames.has(logicalName)) {
+        fail(`${columnContext} duplicate column logicalName "${logicalName}" in ${context}`);
+      }
+      columnLogicalNames.add(logicalName);
+
+      if (RESERVED_COLUMN_NAMES.has(logicalName.replace(/^[a-z]+_/, ''))) {
+        fail(`${columnContext} logicalName "${logicalName}" collides with a reserved system column name`);
+      }
+
+      const colType = column.type?.toLowerCase();
+      if ((colType === 'picklist' || colType === 'choice' || colType === 'optionset') && !column.globalOptionSetName && !column.options) {
+        fail(`${columnContext} is a ${colType} column but has neither globalOptionSetName nor inline options`);
+      }
     });
   });
 }
 
 function validateRelationships(plan) {
+  const tables = plan.tables || [];
+  const tableNames = new Set(tables.map(t => (t.logicalSingularName || '').trim().toLowerCase()));
+
   const relationships = requireArray(plan, 'relationships', 'root');
   relationships.forEach((relationship, index) => {
     const context = `relationships[${index}]`;
     requireStringFromKeys(relationship, ['type'], `${context}.type`);
-    requireStringFromKeys(relationship, ['fromTable', 'referencingEntity'], `${context}.fromTable`);
-    requireStringFromKeys(relationship, ['toTable', 'referencedEntity'], `${context}.toTable`);
+    const fromTable = requireStringFromKeys(relationship, ['fromTable', 'referencingEntity'], `${context}.fromTable`).toLowerCase();
+    const toTable = requireStringFromKeys(relationship, ['toTable', 'referencedEntity'], `${context}.toTable`).toLowerCase();
     requireString(relationship, 'schemaName', context);
+
+    if (tableNames.size > 0 && !tableNames.has(fromTable)) {
+      fail(`${context}.fromTable "${fromTable}" does not match any table in the plan`);
+    }
+    if (tableNames.size > 0 && !tableNames.has(toTable)) {
+      fail(`${context}.toTable "${toTable}" does not match any table in the plan`);
+    }
   });
 }
 
