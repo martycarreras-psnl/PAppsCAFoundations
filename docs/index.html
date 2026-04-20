@@ -1542,8 +1542,8 @@ h4 { font-size: 1.1rem; }
       </div>
       <div class="pillar-card fade-in">
         <div class="pillar-icon gold">🤖</div>
-        <h3>Copilot-Guided Development</h3>
-        <p>14 scoped instruction files turn GitHub Copilot into a team member who knows your architecture, naming conventions, security rules, and deployment patterns. Every suggestion follows your standards.</p>
+        <h3>Agent-Guided Development</h3>
+        <p>14 scoped instruction files plus a top-level <code>AGENTS.md</code> mean GitHub Copilot, Cursor, Claude Code, Cline, Aider, and every other coding agent follows the same architecture, naming conventions, security rules, and deployment patterns. Your standards, enforced by whichever agent your team picks.</p>
       </div>
     </div>
   </div>
@@ -1602,13 +1602,13 @@ h4 { font-size: 1.1rem; }
           </tr>
           <tr>
             <td>Deployment</td>
-            <td>Manual pac code push, no CI/CD, no solution export</td>
-            <td class="highlight-col"><span class="check">✓</span> GitHub Actions CI + solution export pipeline out of the box</td>
+            <td>Manual pac code push, no CI/CD blueprint, no solution export</td>
+            <td class="highlight-col"><span class="check">✓</span> Documented CI/CD blueprint + solution export script + Power Platform Pipelines model</td>
           </tr>
           <tr>
             <td>Copilot Quality</td>
             <td>Generic suggestions that don't match your patterns</td>
-            <td class="highlight-col"><span class="check">✓</span> 14 scoped .instructions.md files — Copilot knows your standards</td>
+            <td class="highlight-col"><span class="check">✓</span> 14 scoped .instructions.md files + AGENTS.md — works with every coding agent</td>
           </tr>
         </tbody>
       </table>
@@ -1948,18 +1948,18 @@ h4 { font-size: 1.1rem; }
     <div class="accordion fade-in">
       <div class="accordion-item open">
         <button class="accordion-trigger" onclick="toggleAccordion(this)">
-          <span>14 Scoped GitHub Copilot Instruction Files</span>
+          <span>14 Scoped Instruction Files + AGENTS.md — Agent-Agnostic</span>
           <span class="accordion-icon">▼</span>
         </button>
-        <div class="accordion-panel" style="max-height: 300px;">
+        <div class="accordion-panel" style="max-height: 340px;">
           <div class="accordion-panel-content">
-            Each <code>.instructions.md</code> file uses <code>applyTo</code> scopes so Copilot only loads relevant guidance based on which files you're editing. No noise, no conflicting advice.
+            Each <code>.instructions.md</code> file uses <code>applyTo</code> scopes so agents only load relevant guidance based on which files you're editing. No noise, no conflicting advice. A top-level <code>AGENTS.md</code> provides non-negotiable architectural guardrails that every coding agent honors — Copilot, Cursor, Claude Code, Cline, Aider, and any tool that reads root-level context.
             <ul>
               <li><strong>00-series:</strong> Environment setup, business decomposition, scope refinement, Dataverse planning, prototype validation</li>
               <li><strong>01:</strong> Project scaffolding, solution-first rules, tech stack (React 18 + Fluent UI v9 + TanStack Query + Vite)</li>
               <li><strong>02:</strong> Connector patterns — Dataverse, SQL, SharePoint, O365, custom APIs</li>
               <li><strong>03:</strong> Component architecture — 4-layer separation, Fluent UI v9 patterns, hook contracts</li>
-              <li><strong>04:</strong> Deployment — CI/CD, GitHub Actions, solution export, Power Platform Pipelines</li>
+              <li><strong>04:</strong> Deployment — CI/CD blueprint, GitHub Actions, solution export, Power Platform Pipelines</li>
               <li><strong>05:</strong> Testing — Vitest, Playwright, MSW mocking, coverage thresholds</li>
               <li><strong>06:</strong> Security — secrets management, 1Password, pre-commit hooks, input validation</li>
               <li><strong>07:</strong> Dataverse schema — golden sequence, naming conventions, planning artifact workflow</li>
@@ -1976,7 +1976,7 @@ h4 { font-size: 1.1rem; }
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            A 9-step Node.js wizard that works on macOS, Linux, and Windows. Checks prerequisites, collects project identity, guides portal steps, sets up auth (1Password or encrypted .env.local), scaffolds React + Fluent UI, seeds prototype assets, and runs smoke tests. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over.
+            A 9-step Node.js wizard that runs natively on <strong>macOS, Linux, and Windows</strong> — no WSL required. Checks prerequisites, collects project identity, guides portal steps, sets up auth (1Password or encrypted .env.local), scaffolds React + Fluent UI, seeds prototype assets, and runs smoke tests. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over. Both browser and device-code sign-in flows are supported, with automatic fallback when OAuth callbacks misbehave.
           </div>
         </div>
       </div>
@@ -2029,7 +2029,19 @@ h4 { font-size: 1.1rem; }
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            The <code>sync-foundations.mjs</code> script pulls the latest instruction files, scripts, and wizard from the template repo into your downstream project. No fork management, no merge conflicts with your app code. Your project gets the accumulated lessons of every team that came before — automatically.
+            The <code>sync-foundations.mjs</code> script pulls the latest instruction files, scripts, and wizard from the template repo into your downstream project. No fork management, no merge conflicts with your app code. Your project gets the accumulated lessons of every team that came before — automatically. A <code>.foundations-version.json</code> bundle tag lets downstream repos see which version they are on.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleAccordion(this)">
+          <span>Public-Template-Ready Governance</span>
+          <span class="accordion-icon">▼</span>
+        </button>
+        <div class="accordion-panel">
+          <div class="accordion-panel-content">
+            MIT LICENSE, SECURITY.md, CODE_OF_CONDUCT.md, and CONTRIBUTING.md are included. The repository is hardened for public release: no secrets in history, pre-commit secret scanner, .env gitignored by default, and personal vault references stripped. Fork it, template it, or contribute back — it meets Microsoft open-source governance standards on day one.
           </div>
         </div>
       </div>
