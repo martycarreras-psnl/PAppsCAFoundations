@@ -198,14 +198,39 @@ export default async function stepAuthSetup() {
     const createUser = await confirm({ message: 'Create a user (interactive) auth profile now?', default: true });
     if (createUser) {
       ui.line('');
-      ui.line('Opening browser for sign-in...');
-      let userOk = runSafeLive(pac, [
-        'auth', 'create', '--name', userProfileName,
-        '--environment', devUrl,
-      ]);
+      ui.line('Sign-in method:');
+      ui.line('  1. Browser (opens automatically — fastest when it works)');
+      ui.line('  2. Device code (paste a code into any browser — most reliable)');
+      const signInMethod = await select({
+        message: 'How would you like to sign in?',
+        choices: [
+          { name: 'Device code — most reliable', value: 'deviceCode' },
+          { name: 'Browser — may hang on some macOS setups', value: 'browser' },
+        ],
+        default: 'deviceCode',
+      });
+
+      let userOk = false;
+      if (signInMethod === 'browser') {
+        ui.line('');
+        ui.line('Opening browser for sign-in...');
+        ui.line('If this terminal appears frozen for more than ~2 minutes after you finish signing in,');
+        ui.line('press Enter here or Ctrl+C and pick device code instead.');
+        ui.line('');
+        // 3-minute timeout so a stuck browser callback cannot hang the wizard forever.
+        userOk = runSafeLive(pac, [
+          'auth', 'create', '--name', userProfileName,
+          '--environment', devUrl,
+        ], { timeout: 180000 });
+        if (!userOk) {
+          ui.warn('Browser sign-in did not complete (timed out or failed). Falling back to device code.');
+          ui.line('');
+        }
+      }
+
       if (!userOk) {
-        ui.warn('Browser sign-in failed. Trying device code flow...');
-        ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
+        ui.line('Device code flow: you will see a URL and code below.');
+        ui.line('Open the URL in any browser, paste the code, and sign in.');
         ui.line('');
         userOk = runSafeLive(pac, [
           'auth', 'create', '--name', userProfileName,
