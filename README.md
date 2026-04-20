@@ -35,6 +35,8 @@ The wizard and all scripts run natively on all three platforms. Two notes for Wi
 - Use the **`.mjs`** entry points directly: `node scripts/setup-auth.mjs`, `node scripts/sync-foundations.mjs`, etc. The matching `.sh` files are thin Bash wrappers for macOS and Linux only — they do not run in `cmd.exe` or PowerShell without WSL or Git Bash.
 - Run the wizard the same way on every platform: `cd wizard && node index.mjs`.
 
+> **Windows + OneDrive tip:** Clone your project **outside** any OneDrive-synced folder (e.g. `C:\dev\my-app` rather than `C:\Users\<you>\OneDrive\...\my-app`). OneDrive path lengths plus `node_modules` depth regularly exceed Windows' 260-character path limit, which causes cryptic `npm install` and `tsc` failures. If you must use OneDrive, enable "Long paths" in Windows and Git (`git config --global core.longpaths true`).
+
 ## New here? Start with these
 
 - [AGENTS.md](AGENTS.md) — Top-level agent directive. Read this if you are (or are using) a coding agent.
@@ -160,7 +162,20 @@ Connector setup is intentionally deferred. The expected next move after scaffold
 If you've already completed the Power Platform portal and Admin Center steps and have credentials:
 
 ```bash
-cp .env.template .env.local   # Fill in credentials
+# macOS / Linux
+cp .env.template .env.local
+
+# Windows PowerShell
+Copy-Item .env.template .env.local
+
+# Windows cmd
+copy .env.template .env.local
+```
+
+Then on any platform:
+
+```bash
+# Edit .env.local and fill in credentials
 node scripts/setup-auth.mjs   # Create PAC auth profiles
 pac org who                   # Verify (no browser popup)
 ```
