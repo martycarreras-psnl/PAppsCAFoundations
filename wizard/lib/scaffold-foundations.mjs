@@ -339,7 +339,7 @@ export function App() {
         <Badge appearance="filled" color={isPrototypeMode ? 'success' : 'informative'}>
           {isPrototypeMode ? 'Prototype Mode' : 'Connected Mode'}
         </Badge>
-        <Title1>${appName}</Title1>
+        <Title1 as="h1">${appName}</Title1>
         <Text>
           Start with mock-backed UX, capture what the prototype changes in the data model,
           then add real providers and connectors once the planning payload is stable.
