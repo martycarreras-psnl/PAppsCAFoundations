@@ -141,7 +141,7 @@ export default async function stepAuthSetup() {
 
   if (pac) {
     try {
-      createProfiles(pac, persistedCredentialValues);
+      createProfiles(pac, persistedCredentialValues, { devUrl, testUrl, prodUrl });
     } catch (error) {
       ui.fail(error.message);
       process.exit(1);
@@ -233,23 +233,48 @@ export default async function stepAuthSetup() {
   setCompletedStep(4);
 }
 
-function createProfiles(pac, credentialValues) {
+function createProfiles(pac, credentialValues, stateUrls) {
   const tenantId = credentialValues.PP_TENANT_ID;
   const clientId = credentialValues.PP_APP_ID;
   const secret = credentialValues.PP_CLIENT_SECRET;
-  const devUrl = credentialValues.PP_ENV_DEV || '';
-  const testUrl = credentialValues.PP_ENV_TEST || '';
-  const prodUrl = credentialValues.PP_ENV_PROD || '';
+
+  // Environment URLs come from wizard state (the source of truth used by the
+  // verification step). Using credentialValues.PP_ENV_* here would cause the
+  // profile name hash to diverge from the verify-side hash whenever the
+  // credential source (e.g. a pre-existing 1Password item) contains a stale
+  // env-dev/env-test/env-prod value from a previous project.
+  const devUrl = (stateUrls?.devUrl || '').trim();
+  const testUrl = (stateUrls?.testUrl || '').trim();
+  const prodUrl = (stateUrls?.prodUrl || '').trim();
 
   if (!tenantId || !clientId || !secret || !devUrl) {
-    throw new Error('Resolved credentials are incomplete. Expected PP_TENANT_ID, PP_APP_ID, PP_CLIENT_SECRET, and PP_ENV_DEV to be present.');
+    throw new Error('Resolved credentials are incomplete. Expected PP_TENANT_ID, PP_APP_ID, PP_CLIENT_SECRET (from the credential source) and PP_ENV_DEV (from wizard state) to be present.');
   }
+
+  // Detect drift between the credential source and wizard state so the user
+  // knows to fix the 1Password item (or .env.local) before running anything
+  // that calls `resolveCredentialValues` downstream (scripts, step 09, etc.).
+  warnOnUrlDrift('PP_ENV_DEV', devUrl, credentialValues.PP_ENV_DEV);
+  if (testUrl) warnOnUrlDrift('PP_ENV_TEST', testUrl, credentialValues.PP_ENV_TEST);
+  if (prodUrl) warnOnUrlDrift('PP_ENV_PROD', prodUrl, credentialValues.PP_ENV_PROD);
 
   ui.line('');
   ui.line('Creating PAC auth profiles...');
   createPacProfile(pac, 'dev', devUrl, clientId, secret, tenantId);
   if (testUrl) createPacProfile(pac, 'test', testUrl, clientId, secret, tenantId);
   if (prodUrl) createPacProfile(pac, 'prod', prodUrl, clientId, secret, tenantId);
+}
+
+function warnOnUrlDrift(key, stateUrl, credentialUrl) {
+  if (!credentialUrl) return;
+  const a = String(stateUrl).trim().replace(/\/+$/, '').toLowerCase();
+  const b = String(credentialUrl).trim().replace(/\/+$/, '').toLowerCase();
+  if (a === b) return;
+  ui.warn(`${key} in your credential source (${credentialUrl}) differs from wizard state (${stateUrl}).`);
+  ui.line('  PAC profile names are derived from the wizard state URL (source of truth).');
+  ui.line('  Update the credential source so downstream scripts stay in sync:');
+  ui.line('    • 1Password: edit the item and set the env-* field to match wizard state');
+  ui.line('    • .env.local: edit the file and correct the PP_ENV_* line');
 }
 
 function createPacProfile(pac, targetKey, url, appId, secret, tenant) {

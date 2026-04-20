@@ -182,6 +182,12 @@ export default async function stepAppRegistration() {
       save1PasswordItem(vault, itemName, tenantId.trim(), clientId.trim(), clientSecret, devUrl, testUrl, prodUrl,
         { hadTenant: !!opTenantId, hadClient: !!opClientId, hadSecret: !!opSecret });
     }
+  } else if (use1Password && (devUrl || testUrl || prodUrl)) {
+    // Credentials already came from 1Password — but the env-* fields on the
+    // existing item may be stale (e.g. left over from a previous project).
+    // These are non-secret environment URLs; keep them aligned with wizard
+    // state so Step 04's resolveCredentialValues returns current URLs.
+    syncEnv1PasswordFields(vault, itemName, devUrl, testUrl, prodUrl);
   }
 
   // ── API permissions instructions ──
@@ -283,4 +289,31 @@ function printFieldList(tenantId, clientId, devUrl, testUrl, prodUrl) {
   if (devUrl) ui.line(`    env-dev        (Text):     ${devUrl}`);
   if (testUrl) ui.line(`    env-test       (Text):     ${testUrl}`);
   if (prodUrl) ui.line(`    env-prod       (Text):     ${prodUrl}`);
+}
+
+// Keep env-dev/env-test/env-prod on an existing 1Password item aligned with
+// wizard state. Only updates fields that differ; silent on mismatch failure
+// because the user may not have edit permissions on the vault.
+function syncEnv1PasswordFields(vault, itemName, devUrl, testUrl, prodUrl) {
+  const norm = (v) => String(v || '').trim().replace(/\/+$/, '').toLowerCase();
+  const readField = (field) => (runSafe('op', ['read', `op://${vault}/${itemName}/${field}`]) || '').trim();
+
+  const updates = [];
+  if (devUrl && norm(readField('env-dev')) !== norm(devUrl)) updates.push(`env-dev[text]=${devUrl}`);
+  if (testUrl && norm(readField('env-test')) !== norm(testUrl)) updates.push(`env-test[text]=${testUrl}`);
+  if (prodUrl && norm(readField('env-prod')) !== norm(prodUrl)) updates.push(`env-prod[text]=${prodUrl}`);
+
+  if (updates.length === 0) return;
+
+  ui.line('');
+  ui.line(`Updating 1Password item env-* fields to match wizard state...`);
+  const ok = runSafe('op', ['item', 'edit', itemName, '--vault', vault, ...updates]);
+  if (ok !== null) {
+    ui.ok(`Synced ${updates.length} environment URL field(s) in 1Password`);
+  } else {
+    ui.warn('Could not update 1Password env-* fields. Edit them manually so they match:');
+    if (devUrl) ui.line(`    env-dev:  ${devUrl}`);
+    if (testUrl) ui.line(`    env-test: ${testUrl}`);
+    if (prodUrl) ui.line(`    env-prod: ${prodUrl}`);
+  }
 }
