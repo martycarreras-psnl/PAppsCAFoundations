@@ -85,8 +85,9 @@ export function writeConfig(dir, logger = noopLogger) {
       rootDir: '.',
       outDir: './dist',
       paths: { '@/*': ['./src/*'] },
+      types: ['vitest/globals', '@testing-library/jest-dom'],
     },
-    include: ['src/**/*', '.power/**/*'],
+    include: ['src/**/*', 'tests/**/*', '.power/**/*'],
     exclude: ['node_modules', 'dist'],
   }, null, 2) + '\n');
   logger.ok('tsconfig.json');
@@ -424,7 +425,8 @@ export function writeSmokeTestFiles(dir, appName, logger = noopLogger) {
   logger.ok('tests/setup/setup.ts');
 
   // tests/setup/test-utils.tsx — custom render wrapping all providers
-  writeFileSync(join(dir, 'tests', 'setup', 'test-utils.tsx'), `import { render, RenderOptions } from '@testing-library/react';
+  writeFileSync(join(dir, 'tests', 'setup', 'test-utils.tsx'), `import { render } from '@testing-library/react';
+import type { RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import { MemoryRouter } from 'react-router-dom';
