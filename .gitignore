@@ -34,3 +34,6 @@ solution/*.zip
 # Temporary files
 *.tmp
 *.log
+
+# Personal .env (1Password op:// refs or secrets) — wizard regenerates per project
+.env
