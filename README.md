@@ -13,8 +13,33 @@ A **GitHub template repository** with opinionated, comprehensive GitHub Copilot 
 | **Git** | 2.30+ | For template cloning and version control |
 | **.NET SDK** | 8.0+ | Required for PAC CLI installation |
 | **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
-| **Power Platform** | Access to at least one environment with Dataverse enabled |
+| **Power Platform** | Access to at least one environment with Dataverse enabled | See licensing note below |
 | **1Password CLI** | Optional | Recommended for secret management (`op`) |
+
+### Power Apps Code Apps licensing
+
+Code Apps are a **premium Power Apps feature**. Publishing (`pac code push`) requires one of:
+
+- **Power Apps Premium** per-user license for each user running the app, OR
+- **Power Apps Developer Plan** (free, individual use only) for personal learning, OR
+- **Microsoft 365 Developer Program** sandbox tenant (free, renewable) for learning and demos
+
+If you are trying this template **for the first time or for personal learning**, sign up for the free [Microsoft 365 Developer Program](https://developer.microsoft.com/microsoft-365/dev-program) and create a developer tenant. It gives you a Power Platform environment with Dataverse and permissions to create App Registrations — which your corporate tenant likely will not let you do.
+
+Code Apps also require the **Power Platform environment to have Dataverse provisioned** (most environments do by default, but "Teams environments" do not). If `pac org who` works but `pac code init` fails with a Dataverse-related error, provision Dataverse on the environment from the Power Platform Admin Center.
+
+### Windows, macOS, Linux
+
+The wizard and all scripts run natively on all three platforms. Two notes for Windows:
+
+- Use the **`.mjs`** entry points directly: `node scripts/setup-auth.mjs`, `node scripts/sync-foundations.mjs`, etc. The matching `.sh` files are thin Bash wrappers for macOS and Linux only — they do not run in `cmd.exe` or PowerShell without WSL or Git Bash.
+- Run the wizard the same way on every platform: `cd wizard && node index.mjs`.
+
+## New here? Start with these
+
+- [AGENTS.md](AGENTS.md) — Top-level agent directive. Read this if you are (or are using) a coding agent.
+- [docs/glossary.md](docs/glossary.md) — One-page reference for Power Platform terminology. Skim before diving in.
+- [.github/instructions/README.md](.github/instructions/README.md) — Map of the Copilot instruction set. **You probably do not need to read the individual files** — Copilot reads them for you.
 
 ## Quick Start
 
