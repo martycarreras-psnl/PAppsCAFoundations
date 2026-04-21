@@ -129,6 +129,8 @@ Skipping step 7 is the most common cause of "column not found" or "table not fou
 
 Skipping step 6 means users with only Basic User cannot access your custom tables — Dataverse denies access by default on new custom entities.
 
+**Step 4 (Picklist columns) has a specific gotcha that trips almost every first-time project:** Dataverse rejects any attempt to embed an option set inline inside a `PicklistAttributeMetadata` payload. You must create the global option set in step 1, then bind to its `MetadataId` via `GlobalOptionSet@odata.bind`. See [Binding a column to a global option set](#binding-a-column-to-a-global-option-set) below for the exact payload shape.
+
 ---
 
 ## Solution Context — CRITICAL for Every API Call
@@ -357,7 +359,35 @@ create_global_optionset_if_missing "agtpo_complexitylevel" "Complexity Level" \
 
 ### Binding a column to a global option set
 
-When creating a Picklist column via the Web API, bind it to the global option set using `GlobalOptionSet@odata.bind` — do not redefine the values inline:
+When creating a Picklist column via the Web API, bind it to the global option set using `GlobalOptionSet@odata.bind` — do not redefine the values inline.
+
+> **⚠️ CRITICAL — Dataverse will reject inline option sets on a Picklist attribute.**
+>
+> This is the single most common way the first Picklist column in a new project fails. The Web API does not accept an `OptionSet` object embedded inside a `PicklistAttributeMetadata` payload (it only accepts this embedded form for Boolean's `TrueOption`/`FalseOption`). You **must** create the global option set first, retrieve its `MetadataId`, and reference it via `GlobalOptionSet@odata.bind`.
+>
+> **❌ WRONG — fails with `400 Bad Request: An undeclared property 'OptionSet'...`**
+> ```json
+> {
+>   "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+>   "SchemaName": "rpvms_status",
+>   "OptionSet": {
+>     "OptionSetType": "Picklist",
+>     "IsGlobal": false,
+>     "Options": [ { "Value": 100000000, "Label": { ... } } ]
+>   }
+> }
+> ```
+>
+> **✅ RIGHT — create the global option set first, then bind by MetadataId:**
+> ```json
+> {
+>   "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+>   "SchemaName": "rpvms_status",
+>   "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(<metadata-id-guid>)"
+> }
+> ```
+>
+> If you are tempted to use an inline/local option set "just for this one column," don't — see the Global vs Inline table above. Local option sets also do not travel cleanly with solution export and are not scriptable.
 
 ```bash
 create_picklist_column_if_missing() {
@@ -1280,6 +1310,7 @@ Before writing any setup script or creating any schema manually, answer these qu
 
 **Columns:**
 - [ ] Does your setup script create option sets before the picklist columns that reference them?
+- [ ] Do Picklist column payloads use `GlobalOptionSet@odata.bind: "/GlobalOptionSetDefinitions(<MetadataId>)"` — **never** an inline `OptionSet` object? (Dataverse rejects inline option sets on `PicklistAttributeMetadata`.)
 - [ ] Are simple columns (string, integer, boolean) created before lookup columns (relationships)?
 
 **Relationships:**
