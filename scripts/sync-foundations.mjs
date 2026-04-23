@@ -11,7 +11,7 @@ const TEMPLATE_REPO = 'martycarreras-psnl/PAppsCAFoundations';
 const TEMPLATE_BRANCH = 'main';
 const TEMPLATE_GIT_URL = `https://github.com/${TEMPLATE_REPO}.git`;
 const SYNC_DIRS = ['.github/instructions', 'wizard', 'scripts', 'docs'];
-const SYNC_FILES = ['.env.template', '.foundations-version.json'];
+const SYNC_FILES = ['.env.template', '.foundations-version.json', 'AGENTS.md'];
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has('--dry-run');

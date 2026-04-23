@@ -75,3 +75,23 @@ These are enforced by the detailed instruction files but must be respected even 
 If the user's request is ambiguous about whether they want a Code App or a generic web app, **ask**. Do not silently produce a generic app. The entire value of this template is its Code-App specificity.
 
 If a requested pattern conflicts with a rule in this file or in `.github/instructions/`, surface the conflict to the user and propose the Code-App-compliant alternative rather than silently ignoring the rule.
+
+## Form Field Pattern (REQUIRED — Dataverse Metadata-Backed Labels)
+
+Every editable field whose value is written to Dataverse **must** use a shared `DataverseFieldLabel` primitive backed by live Dataverse metadata. This is how a Code App stays consistent with each column's `RequiredLevel` setting without per-field hardcoding, and without drifting when a schema owner flips a column from Optional to Business Required.
+
+Rules (non-negotiable, apply from the very first Dataverse-bound input in every new project):
+
+1. **Never** render a plain `<Label>`, raw `<label>`, or hardcoded `*` asterisk for a Dataverse-bound field. Use `<DataverseFieldLabel tableLogicalName="..." fieldLogicalName="..." fallback="..." />`.
+2. Domain-model keys map to Dataverse logical names via a single `toDataverseFieldName(key)` helper in `src/lib/dataverse-field-name.ts` (convention: `<publisherPrefix>_` + key.toLowerCase()). Pass an explicit `fieldLogicalName` only for out-of-convention columns (e.g. OOTB Dataverse attributes).
+3. Set `aria-required={required || undefined}` on the input/select/textarea using `useDataverseFieldRequired(table, field)` from the label module.
+4. For client-only fields that are not Dataverse-backed (e.g. a dialog comment that is computed into another record), use `<DataverseFieldLabel required>...</DataverseFieldLabel>` — still go through the primitive so the visual indicator stays consistent.
+5. When writing a form mutation for a Business-Required (`ApplicationRequired`) column, guard client-side using the metadata and throw a clear `"<Display Name> is required."` error when the value is empty. The Web API does **not** enforce `ApplicationRequired` — the app must.
+6. Also guard the submit button: `disabled={(required && !(value ?? '').trim()) || mutation.isPending}`.
+7. When adding a new Dataverse table to the app, register its `getMetadata` call in `fieldMetadataServiceRegistry` in the same PR. Without that entry, metadata lookups for that table return `null` and the asterisk will not appear.
+
+Critical gotcha: The Power Apps SDK `getMetadata` result returns `RequiredLevel.Value` as a **string name** (`"None" | "SystemRequired" | "ApplicationRequired" | "Recommended"`), not a numeric value. Your `mapRequiredLevel` function must accept both shapes.
+
+Full pattern — including provider contract, provider implementation, shared primitive, hook, and canonical form helper shape — is in [.github/instructions/09-form-field-pattern.instructions.md](.github/instructions/09-form-field-pattern.instructions.md). Read that file before introducing the first Dataverse-bound editable field in a new project, and scaffold all three building blocks (`FieldMetadataRepository`, `DataverseFieldLabel`, `toDataverseFieldName`) at once.
+
+Do not ask the user whether to apply this pattern. It is the default for every editable Dataverse-bound field in every Code App built from this template, forever.

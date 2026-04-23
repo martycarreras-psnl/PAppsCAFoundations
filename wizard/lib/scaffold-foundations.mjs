@@ -596,6 +596,12 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
     logger.ok('.foundations-version.json copied');
   }
 
+  const agentsFile = join(rootDir, 'AGENTS.md');
+  if (existsSync(agentsFile)) {
+    copyFileSync(agentsFile, join(projectDir, 'AGENTS.md'));
+    logger.ok('AGENTS.md copied');
+  }
+
   for (const f of ['.env.local', '.env', '.env.template']) {
     const src = join(rootDir, f);
     if (existsSync(src)) {
