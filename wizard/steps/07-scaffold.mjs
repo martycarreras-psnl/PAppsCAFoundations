@@ -56,7 +56,7 @@ export default async function stepScaffold() {
   if (existsSync(projectDir) && readdirSync(projectDir).length > 0) {
     ui.line('');
     ui.warn(`Directory ${projectDir} already exists and is not empty.`);
-    const cont = await confirm({ message: 'Continue anyway? (existing files may be overwritten)', default: false });
+    const cont = await confirm({ message: 'Continue anyway? (existing files may be overwritten)', default: true });
     if (!cont) {
       ui.line('Choose a different path and re-run the wizard.');
       process.exit(0);
@@ -617,28 +617,9 @@ export async function setupConnectors(pac, projectDir) {
 
     ui.line('Adding data sources to your Code App...');
 
-    // Check if Dataverse was selected — ask for table names
-    if (selected.includes('shared_commondataserviceforapps')) {
-      ui.line('');
-      ui.line('Dataverse selected — which tables do you need?');
-      ui.line(`(logical names, e.g. ${prefix}_project, ${prefix}_task)`);
-      ui.line('Enter them one at a time. Press Enter on a blank line when done.');
-      ui.line('');
-      let tableNum = 1;
-      while (true) {
-        const table = await input({ message: `Table ${tableNum} (blank to stop)`, default: '' });
-        if (!table.trim()) break;
-        const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table.trim()];
-        ui.line(`  Running: pac ${args.join(' ')}`);
-        const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
-        if (ok) {
-          ui.ok(`${table.trim()} — data source added`);
-        } else {
-          ui.warn(`${table.trim()} — failed. Add manually later: pac ${args.join(' ')}`);
-        }
-        tableNum++;
-      }
-    }
+    // Dataverse table registration is handled by the coding agent
+    // at development time (pac code add-data-source -a dataverse -t <table>).
+    // The wizard only handles non-Dataverse connectors that need a Connection ID.
 
     // Add non-Dataverse connectors as data sources.
     // Non-Dataverse connectors REQUIRE a Connection ID (-c flag).
@@ -648,10 +629,23 @@ export async function setupConnectors(pac, projectDir) {
     if (nonDvSelected.length > 0) {
       ui.line('');
       ui.line('Non-Dataverse connectors require a Connection ID to register');
-      ui.line('as data sources. A Connection ID comes from an actual connection');
-      ui.line('you create in the Power Apps Maker Portal:');
-      ui.line('  make.powerapps.com → your environment → Connections');
-      ui.line('  Click a connection → the ID is the GUID at the end of the browser URL.');
+      ui.line('as data sources.');
+      ui.line('');
+      ui.line('HOW TO FIND A CONNECTION ID:');
+      ui.line('  1. Go to make.powerapps.com and select your environment');
+      ui.line('  2. In the left nav, go to Connections (under Data, or use');
+      ui.line('     the direct URL: make.powerapps.com/environments/<env-id>/connections)');
+      ui.line('  3. Find the connector you need (e.g. Office 365 Users)');
+      ui.line('  4. Click on the connection row to open its details');
+      ui.line('  5. Look at the browser URL — it will look like:');
+      ui.line('     .../connections/shared_office365users/<CONNECTION_ID>/details');
+      ui.line('  6. The Connection ID is the GUID between the connector name and /details');
+      ui.line('');
+      ui.line('If the connection does not exist yet, create it first:');
+      ui.line('  Connections → + New connection → search for the connector → authenticate');
+      ui.line('');
+      ui.line('TIP: The wizard will also try to auto-discover connections via');
+      ui.line('pac connection list. If a match is found, you can pick it from a list.');
       ui.line('');
 
       for (const apiId of nonDvSelected) {
