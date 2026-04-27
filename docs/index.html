@@ -1525,10 +1525,11 @@ h4 { font-size: 1.1rem; }
           <span class="terminal-title">Terminal — Getting Started</span>
         </div>
         <div class="terminal-body" id="terminal-body">
-          <div class="terminal-line"><span class="comment"># Clone the template and start the wizard</span></div>
+          <div class="terminal-line"><span class="comment"># Clone the template and start the wizard (terminal or browser)</span></div>
           <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">npx</span> <span class="flag">degit</span> <span class="string">martycarreras-psnl/PAppsCAFoundations</span> my-app</div>
-          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">cd</span> my-app/wizard <span class="flag">&&</span> <span class="cmd">npm</span> install</div>
-          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">node</span> index.mjs</div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">cd</span> my-app <span class="flag">&&</span> <span class="cmd">npm</span> run wizard:ux  <span class="comment"># ✨ browser experience</span></div>
+          <div class="terminal-line"><span class="comment"># …or stick with the classic terminal flow:</span></div>
+          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">cd</span> wizard <span class="flag">&&</span> <span class="cmd">npm</span> install <span class="flag">&&</span> <span class="cmd">node</span> index.mjs</div>
           <div class="terminal-line"></div>
           <div class="terminal-line"><span class="success">✓</span> <span class="output">Prerequisites verified</span></div>
           <div class="terminal-line"><span class="success">✓</span> <span class="output">Project identity captured</span></div>
@@ -1642,7 +1643,7 @@ h4 { font-size: 1.1rem; }
           <tr>
             <td>Project Setup</td>
             <td>Scattered docs, tribal knowledge, days of config</td>
-            <td class="highlight-col"><span class="check">✓</span> Interactive wizard — working app from zero</td>
+            <td class="highlight-col"><span class="check">✓</span> Interactive wizard — terminal <em>or</em> beautiful browser experience — working app from zero</td>
           </tr>
           <tr>
             <td>Architecture Decisions</td>
@@ -2040,12 +2041,17 @@ h4 { font-size: 1.1rem; }
 
       <div class="accordion-item">
         <button class="accordion-trigger" onclick="toggleAccordion(this)">
-          <span>Cross-Platform Interactive Wizard</span>
+          <span>Cross-Platform Interactive Wizard — Terminal <em>or</em> Browser</span>
           <span class="accordion-icon">▼</span>
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            A 9-step Node.js wizard that runs natively on <strong>macOS, Linux, and Windows</strong> — no WSL required. Checks prerequisites, collects project identity, guides portal steps, sets up auth (1Password or encrypted .env.local), scaffolds React + Fluent UI, seeds prototype assets, and runs smoke tests. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over. Both browser and device-code sign-in flows are supported, with automatic fallback when OAuth callbacks misbehave.
+            A 9-step setup flow you can run two ways — pick whichever feels right:
+            <ul>
+              <li><strong>Terminal wizard</strong> (<code>node wizard/index.mjs</code>) — Node.js CLI that runs natively on macOS, Linux, and Windows. No WSL required.</li>
+              <li><strong>✨ Browser wizard</strong> (<code>npm run wizard:ux</code>) — a beautiful localhost web app at <code>http://127.0.0.1:5174</code> built with the same Fluent UI v9 design language you'll use in your Code Apps. Step navigator with status pills, jump-to-step, resume detection, light/dark/system themes, live log panel with SSE streaming, and one-click terminal-handoff cards for steps that need interactive auth. CSRF-protected, localhost-only, auto-shutdown on idle.</li>
+            </ul>
+            Both flows share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Both check prerequisites, collect project identity, guide portal steps, set up auth (1Password or encrypted .env.local), scaffold React + Fluent UI, seed prototype assets, and run smoke tests. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over.
           </div>
         </div>
       </div>
@@ -2145,7 +2151,8 @@ h4 { font-size: 1.1rem; }
         <div class="cta-step">
           <div class="cta-step-number">2</div>
           <div class="cta-step-text">Run the wizard</div>
-          <code>node wizard/index.mjs</code>
+          <code>npm run wizard:ux</code>
+          <div style="margin-top:6px; font-size:12px; color:var(--neutral-secondary);">or <code>node wizard/index.mjs</code></div>
         </div>
         <div class="cta-step">
           <div class="cta-step-number">3</div>

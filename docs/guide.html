@@ -917,9 +917,13 @@
             <li><strong>Recommended:</strong> Click <strong>"Use this template"</strong> on GitHub → create your repo → <code>git clone https://github.com/your-org/my-app.git</code></li>
             <li><strong>Quick explore:</strong> <code>npx degit martycarreras-psnl/PAppsCAFoundations my-app</code></li>
           </ul>
-          <strong>Step 2 — Run the wizard:</strong>
-          <pre style="margin-top:8px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
-          <p style="margin-top:8px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+          <strong>Step 2 — Run the wizard</strong> — pick the experience you prefer:
+          <p style="margin-top:8px;"><strong>Terminal wizard</strong> (the original):</p>
+          <pre style="margin-top:4px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
+          <p style="margin-top:12px;">✨ <strong>Browser wizard</strong> (new) — same flow, beautiful Fluent UI experience at <code>http://127.0.0.1:5174</code>:</p>
+          <pre style="margin-top:4px; display:inline-block;">cd my-app &amp;&amp; npm run wizard:ux</pre>
+          <p style="margin-top:8px; font-size:13px; color:var(--neutral-secondary, #605e5c);">Both wizards share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff in the browser version.</p>
+          <p style="margin-top:12px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
           <p style="margin-top:8px;"><strong>Want a stronger business fit?</strong> After the wizard gives you a working foundation, use the narrative-first planning instructions and prototype checkpoint before finalizing Dataverse schema, connectors, approvals, or agent behavior.</p>
           <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
         </div>

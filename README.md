@@ -73,13 +73,29 @@ cd my-code-app
 
 ### Step 2: Run the wizard
 
+You now have **two ways to run the setup wizard** — pick whichever feels right. They share the same `.wizard-state.json`, so you can switch between them at any time without losing progress.
+
+**Option A — Terminal wizard** (the original)
+
 ```bash
 cd wizard
 npm install
 node index.mjs
 ```
 
-That's it. The wizard walks you through everything — tool checks, naming, Power Platform portal steps, authentication, scaffolding, and your first deploy. It works on **Windows, macOS, and Linux**.
+**Option B — Browser wizard** (✨ new)
+
+```bash
+npm run wizard:ux
+```
+
+Opens a beautiful local web app at `http://127.0.0.1:5174` — same Fluent UI v9 design language you'll use to build your Code Apps. Step navigator with status pills, jump-to-step, resume detection, light/dark/system themes, and a live log panel that streams output. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff to your terminal. The server binds to localhost only and shuts down after 10 minutes of inactivity.
+
+> See [wizard-ux/README.md](wizard-ux/README.md) for the full architecture and security notes.
+
+---
+
+That's it. Either path walks you through everything — tool checks, naming, Power Platform portal steps, authentication, scaffolding, and your first deploy. Both work on **Windows, macOS, and Linux**.
 
 You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
 
@@ -238,10 +254,14 @@ PAppsCAFoundations/
 │   ├── sync-foundations.sh                 # Pull latest updates from the template repo
 │   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
 │   └── tests/                              # Unit tests for scripts (connection discovery, scaffold, etc.)
-├── wizard/                                 # Cross-platform Node.js setup wizard
+├── wizard/                                 # Cross-platform Node.js setup wizard (terminal)
 │   ├── index.mjs                           # Entry point + step orchestrator
 │   ├── lib/                                # Shared helpers (state, UI, shell, validation)
 │   └── steps/                              # 9 step modules (01-prerequisites … 08-connectors + deploy)
+├── wizard-ux/                              # ✨ Parallel browser-based setup experience
+│   ├── server/                             # Fastify API on 127.0.0.1:5174 (state, system, steps, SSE stream)
+│   ├── src/                                # Vite + React 19 + Fluent UI v9 + TanStack Query
+│   └── README.md                           # Architecture, security, and roadmap notes
 ├── solution/                               # Power Platform solution artifacts
 ├── .env                                    # 1Password secret references (safe to commit)
 ├── .env.template                           # Template for teams not using 1Password
