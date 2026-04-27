@@ -1,0 +1,12 @@
+{
+  "name": "papps-ca-foundations",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:pdf": "node scripts/generate-pdf.mjs"
+  },
+  "devDependencies": {
+    "puppeteer": "^23.10.4"
+  }
+}
