@@ -7,6 +7,7 @@ import {
   HomeRegular, BoxMultipleRegular, InfoRegular,
 } from '@fluentui/react-icons';
 import { useTheme } from '../theme/ThemeProvider';
+import { gradients } from '../theme/tokens';
 
 const useStyles = makeStyles({
   root: {
@@ -15,8 +16,8 @@ const useStyles = makeStyles({
     gap: '16px',
     padding: '0 24px',
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    backgroundColor: tokens.colorNeutralBackground2,
-    backdropFilter: 'blur(12px)',
+    backgroundColor: tokens.colorNeutralBackground1Hover,
+    backdropFilter: 'blur(20px) saturate(180%)',
   },
   brand: {
     display: 'flex', alignItems: 'center', gap: '12px',
@@ -26,11 +27,11 @@ const useStyles = makeStyles({
   badge: {
     width: '32px', height: '32px',
     borderRadius: '8px',
-    background: `linear-gradient(135deg, ${tokens.colorBrandBackground} 0%, ${tokens.colorBrandBackground2} 100%)`,
+    background: gradients.accent,
     display: 'grid', placeItems: 'center',
-    color: tokens.colorNeutralForegroundOnBrand,
+    color: '#ffffff',
     fontWeight: 700,
-    boxShadow: tokens.shadow4Brand,
+    boxShadow: tokens.shadow8,
   },
   spacer: { flex: 1 },
   navLinks: { display: 'flex', gap: '4px' },
@@ -60,8 +61,8 @@ export function AppHeader() {
   return (
     <header className={s.root}>
       <Link to="/" className={s.brand}>
-        <div className={s.badge}>P</div>
-        <Body1Strong>WizardUX</Body1Strong>
+        <div className={s.badge}>F</div>
+        <Body1Strong>Foundations</Body1Strong>
       </Link>
 
       <div className={s.spacer} />

@@ -11,6 +11,7 @@ import {
 import { HeroBackground } from '../components/HeroBackground';
 import { useSteps, useSystem, useWizardState } from '../hooks/useWizardData';
 import { api } from '../services/api';
+import { gradients } from '../theme/tokens';
 
 const useStyles = makeStyles({
   root: {
@@ -35,25 +36,31 @@ const useStyles = makeStyles({
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '4px 12px',
+    padding: '6px 14px',
     borderRadius: '999px',
-    background: 'rgba(255,255,255,0.08)',
-    backdropFilter: 'blur(8px)',
-    border: `1px solid rgba(255,255,255,0.12)`,
+    background: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    boxShadow: tokens.shadow4,
     fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground1,
-    marginBottom: '16px',
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: tokens.colorBrandForeground1,
+    marginBottom: '20px',
   },
   title: {
     margin: 0,
-    background: `linear-gradient(135deg, #ffffff 0%, ${tokens.colorBrandForeground2} 100%)`,
+    background: gradients.accent,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
+    letterSpacing: '-0.02em',
   },
   subtitle: {
-    marginTop: '12px',
+    marginTop: '14px',
     color: tokens.colorNeutralForeground2,
+    fontSize: tokens.fontSizeBase400,
+    lineHeight: 1.6,
   },
   body: {
     position: 'relative',
@@ -71,8 +78,8 @@ const useStyles = makeStyles({
   },
   card: {
     cursor: 'pointer',
-    transition: 'transform 200ms ease-out, box-shadow 200ms ease-out',
-    ':hover': { transform: 'translateY(-2px)', boxShadow: tokens.shadow16 },
+    transition: 'transform 220ms cubic-bezier(0.1, 0.9, 0.2, 1), box-shadow 220ms cubic-bezier(0.1, 0.9, 0.2, 1)',
+    ':hover': { transform: 'translateY(-3px)', boxShadow: tokens.shadow16 },
   },
   cardDisabled: {
     opacity: 0.5,
@@ -83,9 +90,10 @@ const useStyles = makeStyles({
     width: '40px', height: '40px',
     display: 'grid', placeItems: 'center',
     borderRadius: '10px',
-    background: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground2,
+    background: gradients.accent,
+    color: '#ffffff',
     fontSize: '20px',
+    boxShadow: tokens.shadow4,
   },
   systemBar: {
     display: 'flex', flexWrap: 'wrap', gap: '8px',
@@ -122,14 +130,15 @@ export function Welcome() {
         <HeroBackground />
         <div className={s.heroInner}>
           <div className={s.pill}>
-            <RocketRegular /> Power Apps Code App Setup
+            <RocketRegular /> Power Apps Code Apps · Foundations
           </div>
           <Title1 as="h1" className={s.title}>
-            Build a Code App, beautifully
+            Build beautiful apps. Share them with the world.
           </Title1>
           <Body1 className={s.subtitle}>
-            A guided experience for everything Power Apps Code Apps need —
-            tenant, environment, publisher, solution, and your first deploy.
+            A guided setup for everything Power Apps Code Apps need —
+            tenant, environment, publisher, solution, and your first deploy. Same flow as the
+            terminal wizard, in a beautiful localhost experience.
           </Body1>
         </div>
       </div>
