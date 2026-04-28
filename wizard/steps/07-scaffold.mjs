@@ -10,6 +10,7 @@ import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN, ha
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
+import { extractConnectionId } from '../lib/validate.mjs';
 import {
   copyFoundationFiles,
   createMinimalProject,
@@ -637,9 +638,11 @@ export async function setupConnectors(pac, projectDir) {
       ui.line('     the direct URL: make.powerapps.com/environments/<env-id>/connections)');
       ui.line('  3. Find the connector you need (e.g. Office 365 Users)');
       ui.line('  4. Click on the connection row to open its details');
-      ui.line('  5. Look at the browser URL — it will look like:');
+      ui.line('  5. Copy the URL from your browser — it will look like:');
       ui.line('     .../connections/shared_office365users/<CONNECTION_ID>/details');
-      ui.line('  6. The Connection ID is the GUID between the connector name and /details');
+      ui.line('');
+      ui.line('TIP: Paste the FULL URL when prompted — the wizard will pull out the');
+      ui.line('Connection ID for you. You can also paste just the GUID if you prefer.');
       ui.line('');
       ui.line('If the connection does not exist yet, create it first:');
       ui.line('  Connections → + New connection → search for the connector → authenticate');
@@ -693,7 +696,7 @@ async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
             value: entry.connectionId,
           })),
           { name: 'Re-scan connections', value: '__rescan__' },
-          { name: 'Paste a connection ID manually', value: '__manual__' },
+          { name: 'Paste a connection URL or GUID manually', value: '__manual__' },
           { name: 'Skip this connector for now', value: '__skip__' },
         ],
       });
@@ -702,10 +705,15 @@ async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
       if (selected === '__skip__') return '';
       if (selected === '__manual__') {
         const manual = await input({
-          message: `Connection ID for ${connectorName} (blank to skip)`,
+          message: `Paste the connection URL or GUID for ${connectorName} (blank to skip)`,
           default: '',
+          validate: (v) => {
+            const t = (v || '').trim();
+            if (!t) return true; // blank = skip
+            return extractConnectionId(t) ? true : 'Could not find a GUID in that input. Paste the full connection URL or just the GUID.';
+          },
         });
-        return manual.trim();
+        return extractConnectionId(manual);
       }
 
       return selected;
@@ -718,7 +726,7 @@ async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
       message: `How do you want to continue for ${connectorName}?`,
       choices: [
         { name: 'Re-scan connections after creating one', value: '__rescan__' },
-        { name: 'Paste a connection ID manually', value: '__manual__' },
+        { name: 'Paste a connection URL or GUID manually', value: '__manual__' },
         { name: 'Skip this connector for now', value: '__skip__' },
       ],
     });
@@ -727,10 +735,15 @@ async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
     if (nextAction === '__skip__') return '';
 
     const manual = await input({
-      message: `Connection ID for ${connectorName} (blank to skip)`,
+      message: `Paste the connection URL or GUID for ${connectorName} (blank to skip)`,
       default: '',
+      validate: (v) => {
+        const t = (v || '').trim();
+        if (!t) return true;
+        return extractConnectionId(t) ? true : 'Could not find a GUID in that input. Paste the full connection URL or just the GUID.';
+      },
     });
-    return manual.trim();
+    return extractConnectionId(manual);
   }
 }
 

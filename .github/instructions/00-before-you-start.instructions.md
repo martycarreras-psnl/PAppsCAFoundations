@@ -60,7 +60,9 @@ For each environment:
    - **Region**: Match your organization's data residency requirements
    - **Add Dataverse**: Yes (required for Code Apps)
    - **Language / Currency**: Set appropriately for your org
-3. Record the environment URL for each (format: `https://yourorg-dev.crm.dynamics.com`)
+3. Record the environment URL for each (format: `https://yourorg-dev.crm.dynamics.com`).
+
+   > When you copy the URL straight from the Power Platform Admin Center it will be shown without a scheme (e.g. `yourorg-dev.crm.dynamics.com`). The wizard accepts either form — it will normalize the value and prepend `https://` automatically.
 
 ---
 
@@ -93,11 +95,13 @@ For each connector your app uses, in each environment (dev, test, prod):
 3. Click **New connection**
 4. Search for and select your connector (e.g. **Office 365 Users**, **SQL Server**, **SharePoint**)
 5. Authenticate / fill in connection details
-6. Once created, click the connection → note the **Connection ID** from the browser URL:
+6. Once created, click the connection to open its details page. The browser URL will look like:
    ```
    https://make.powerapps.com/environments/xxx/connections/shared_office365users/<CONNECTION_ID>/details
    ```
-   The Connection ID is the last UUID segment before `/details`
+   The Connection ID is the last UUID segment before `/details`.
+
+   **You don't need to pick the GUID out by hand.** When the wizard prompts for a Connection ID, you can paste **the entire URL** above — the wizard will extract the Connection ID for you. Pasting just the GUID also works.
 
 7. Record the Connection ID for each connector in each environment in the **Project Values** table below
 

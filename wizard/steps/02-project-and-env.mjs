@@ -2,7 +2,7 @@
 import { input, confirm } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
-import { isValidDataverseUrl } from '../lib/validate.mjs';
+import { isValidDataverseUrl, normalizeDataverseUrl } from '../lib/validate.mjs';
 
 export default async function stepProjectAndEnv() {
   ui.stepHeader(2, TOTAL_STEPS, 'Project & Environment');
@@ -30,7 +30,7 @@ export default async function stepProjectAndEnv() {
 
   // ── Dev environment URL (required) ──
   ui.line('Enter the URL of your Power Platform development environment.');
-  ui.line('(e.g. https://org-name.crm.dynamics.com)');
+  ui.line('(e.g. https://org-name.crm.dynamics.com — https:// is added for you if missing)');
   ui.line('');
   ui.line('If you haven\'t created one yet:');
   ui.line('  1. Open the Power Platform Admin Center:');
@@ -52,7 +52,7 @@ export default async function stepProjectAndEnv() {
     devUrl = await input({
       message: 'Dev environment URL (required)',
       validate: (v) => {
-        const url = v.trim().replace(/\/$/, '');
+        const url = normalizeDataverseUrl(v);
         if (!url) return 'Required';
         if (!isValidDataverseUrl(url) && !isValidDataverseUrl(url + '/')) {
           return 'Expected format: https://org-name.crm.dynamics.com';
@@ -61,14 +61,14 @@ export default async function stepProjectAndEnv() {
       },
     });
   }
-  devUrl = devUrl.trim().replace(/\/$/, '');
+  devUrl = normalizeDataverseUrl(devUrl);
   stateSet('PP_ENV_DEV', devUrl);
   stateSet('WIZARD_TARGET_ENV', 'dev');
 
   // ── Test URL (optional) ──
   ui.line('');
   let testUrl = await input({ message: 'Test environment URL (Enter to skip)', default: '' });
-  testUrl = testUrl.trim().replace(/\/$/, '');
+  testUrl = normalizeDataverseUrl(testUrl);
   if (testUrl) {
     if (!isValidDataverseUrl(testUrl) && !isValidDataverseUrl(testUrl + '/')) {
       ui.warn('Doesn\'t look standard, but saving anyway.');
@@ -79,7 +79,7 @@ export default async function stepProjectAndEnv() {
   // ── Prod URL (optional) ──
   ui.line('');
   let prodUrl = await input({ message: 'Prod environment URL (Enter to skip)', default: '' });
-  prodUrl = prodUrl.trim().replace(/\/$/, '');
+  prodUrl = normalizeDataverseUrl(prodUrl);
   if (prodUrl) {
     if (!isValidDataverseUrl(prodUrl) && !isValidDataverseUrl(prodUrl + '/')) {
       ui.warn('Doesn\'t look standard, but saving anyway.');

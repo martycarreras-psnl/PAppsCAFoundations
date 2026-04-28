@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE_PATH = resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs');
-const { isValidDataverseUrl } = await import(VALIDATE_PATH);
+const { isValidDataverseUrl, normalizeDataverseUrl } = await import(VALIDATE_PATH);
 
-const URL_HINT = 'Format: https://org-name.crm.dynamics.com';
+const URL_HINT = 'Format: https://org-name.crm.dynamics.com (the wizard adds https:// for you if you paste it without).';
 
 export default {
   meta: {
@@ -30,7 +30,7 @@ export default {
         id: 'PP_ENV_DEV',
         type: 'url',
         label: 'Dev environment URL',
-        help: 'The URL of your Power Platform development environment. ' + URL_HINT,
+        help: 'The URL of your Power Platform development environment. Paste it straight from PPAC — with or without https://. ' + URL_HINT,
         why: [
           "If you haven't created one yet:",
           '1. Open https://admin.powerplatform.microsoft.com',
@@ -65,7 +65,7 @@ export default {
 
   async apply(answers, _state, log) {
     const errors = {};
-    const norm = (s) => (s || '').trim().replace(/\/$/, '');
+    const norm = (s) => normalizeDataverseUrl(s);
 
     const appName = (answers.APP_NAME || '').trim();
     if (!appName) errors.APP_NAME = 'Required';
