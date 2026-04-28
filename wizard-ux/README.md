@@ -1,8 +1,8 @@
-# WizardUX — Browser-Based Setup (Experimental)
+# WizardUX — Browser-Based Setup
 
-A parallel, browser-based UX for the PAppsCAFoundations setup wizard. Runs alongside the CLI wizard, sharing the same `.wizard-state.json` so you can switch between them at any time.
+A browser-based UX for the PAppsCAFoundations setup wizard. Runs alongside the CLI wizard, sharing the same `.wizard-state.json` so you can switch between them at any time.
 
-> **Status: experimental.** The CLI wizard at [`../wizard/`](../wizard) remains the supported, authoritative entry point. WizardUX is a richer alternative for steps that are pure data-collection, with terminal handoffs for steps that need interactive auth or long-running processes.
+> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX provides a richer experience for steps that are pure data-collection, with terminal handoffs for steps that need interactive auth or long-running processes.
 
 ## Quick start
 
