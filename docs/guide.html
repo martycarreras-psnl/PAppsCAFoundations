@@ -929,6 +929,18 @@
         </div>
       </div>
 
+      <figure style="margin: 32px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,32,80,0.14); border: 1px solid #e1e1e1;">
+        <img
+          src="assets/wizard-steps.png"
+          alt="Browser wizard home page showing the nine-step grid: Prerequisites, Project &amp; Environment, App Registration, PAC Auth Profiles, Publisher, Solution, Scaffold the Code App, Bind Connectors, and Verify &amp; Deploy."
+          loading="lazy"
+          style="display:block; width:100%; height:auto;"
+        />
+        <figcaption style="padding: 12px 16px; font-size: 13px; color: var(--neutral-secondary, #605e5c); background: #fafafa; border-top: 1px solid #eee;">
+          The browser wizard at <code>http://127.0.0.1:5174</code> — nine self-contained, re-runnable steps. Smart paste means you can drop a Maker Portal connection URL straight in and the wizard pulls the connector apiId and the connection GUID out for you.
+        </figcaption>
+      </figure>
+
       <div class="card-grid" style="grid-template-columns: repeat(4, 1fr);">
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🔍</div>
@@ -1225,12 +1237,25 @@
           <div class="accordion-body"><div class="accordion-content">
             <p>This is the first connected-mode step. Run it only after the planning payload and prototype are stable enough that connector choices are no longer guesses.</p>
             <ol>
+              <li>Presents a checklist of the seven most common connectors (Office 365 Users, SharePoint, Dataverse, SQL, Teams, Blob, Outlook)</li>
+              <li>Then loops on <em>"Add another connector by URL or apiId (blank to finish)"</em> — paste any Maker Portal connection URL or a bare <code>shared_xxx</code> apiId, including custom connectors and connectors not on the shortlist</li>
               <li>Creates solution-level connection references for the connectors you actually chose</li>
               <li>Runs <code>pac connection list</code> and filters matches to the selected connector API ID</li>
               <li>Lets you select an existing connection when matches are found</li>
               <li>Falls back to manual Connection ID entry only when discovery does not find a usable match</li>
               <li>Adds the selected data sources to the Code App so generated services can be produced later</li>
             </ol>
+            <div class="callout callout-success">
+              <span class="callout-icon">✨</span>
+              <div>
+                <strong>Smart paste — never hand-edit a URL again.</strong> Paste a Maker Portal connection-details URL like
+                <code>.../connections/shared_office365users/&lt;GUID&gt;/details</code> and the wizard extracts <strong>both</strong>
+                the connector apiId <em>and</em> the connection GUID in one shot — no separate Connection-ID prompt for that connector.
+                Pasting just a bare GUID still works, and bare apiIds (e.g. <code>shared_approvals</code>) skip the URL entirely
+                and go straight to connection-ID resolution. Environment URLs are similarly tolerant — paste straight from PPAC,
+                with or without <code>https://</code>.
+              </div>
+            </div>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
               <div>This step uses a user auth profile for <code>pac code add-data-source</code>. The wizard switches from SPN automatically when needed. If the profile already exists, no sign-in is required.</div>

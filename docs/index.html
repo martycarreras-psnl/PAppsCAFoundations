@@ -1474,6 +1474,7 @@ h4 { font-size: 1.1rem; }
     <ul class="nav-links">
       <li><a href="#why">Why Code Apps</a></li>
       <li><a href="#methodology">Methodology</a></li>
+      <li><a href="#wizard">Wizard</a></li>
       <li><a href="#dataverse">Dataverse</a></li>
       <li><a href="#connectors">Connectors</a></li>
       <li><a href="#copilot">Copilot Studio</a></li>
@@ -1747,6 +1748,48 @@ h4 { font-size: 1.1rem; }
           <p>Swap mock providers for real adapters. Run the full test suite. Build with Vite. Deploy via pac code push to dev, then promote through Power Platform Pipelines to test and production. CI/CD enforces the gate: no test evidence, no deploy.</p>
           <span class="timeline-tag">Instructions: 01–06</span>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Browser Wizard Showcase
+     ============================================================ -->
+<section class="section" id="wizard" style="background: var(--neutral-lightest);">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">The Setup Wizard</span>
+      <h2>Nine Steps. <span class="gradient-text">Terminal or Browser.</span></h2>
+      <p class="subtitle">
+        Same `.wizard-state.json`, same opinionated sequence — pick the surface that fits the moment. Every step is self-contained, idempotent, and re-runnable. Every decision lands in audit-friendly state on disk. Smart paste handling means you never hand-edit a URL again.
+      </p>
+    </div>
+
+    <div class="fade-in" style="max-width: 1100px; margin: 0 auto 3rem; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,32,80,0.18); border: 1px solid var(--neutral-light);">
+      <img
+        src="assets/wizard-steps.png"
+        alt="Browser wizard home page showing the nine-step grid: Prerequisites, Project &amp; Environment, App Registration, PAC Auth Profiles, Publisher, Solution, Scaffold the Code App, Bind Connectors, and Verify &amp; Deploy."
+        loading="lazy"
+        style="display: block; width: 100%; height: auto;"
+      />
+    </div>
+
+    <div class="features-grid fade-in" style="max-width: 1100px; margin: 0 auto;">
+      <div class="feature-card">
+        <div class="feature-icon" style="background: rgba(0,120,212,0.1); color: var(--brand-primary);">🌐</div>
+        <h3>Browser experience</h3>
+        <p><code style="background: var(--neutral-lighter); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em;">npm run wizard:ux</code> opens a Fluent UI v9 web app on <code style="background: var(--neutral-lighter); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em;">127.0.0.1:5174</code> — step navigator with status pills, jump-to-step, light/dark/system themes, and an embedded terminal for the steps that need device-code or biometric prompts.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: rgba(92,45,145,0.1); color: var(--accent-purple);">📋</div>
+        <h3>Smart paste handling</h3>
+        <p>Paste an environment URL <strong>with or without</strong> <code style="background: var(--neutral-lighter); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em;">https://</code> — the wizard normalizes it. Paste a Maker Portal connection-details URL and the wizard extracts <strong>both</strong> the connector apiId <em>and</em> the connection GUID in one shot.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background: rgba(0,130,114,0.1); color: var(--accent-teal);">🔌</div>
+        <h3>Any connector, by URL</h3>
+        <p>The connector step starts with the seven most common connectors, then asks <em>"Add another connector by URL or apiId"</em> in a loop. Drop in Approvals, Outlook Tasks, or any custom connector you've published — friendly display name auto-suggested.</p>
       </div>
     </div>
   </div>

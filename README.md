@@ -93,6 +93,16 @@ Opens a beautiful local web app at `http://127.0.0.1:5174` — same Fluent UI v9
 
 > See [wizard-ux/README.md](wizard-ux/README.md) for the full architecture and security notes.
 
+![Browser wizard — nine self-contained, re-runnable steps from zero to deployed Code App](docs/assets/wizard-steps.png)
+
+#### Smart paste handling — it just works
+
+Both wizards (terminal and browser) tolerate real-world copy-paste behavior so you never need to hand-edit a value:
+
+- **Environment URLs** — paste straight from the Power Platform Admin Center. The wizard accepts `org-name.crm.dynamics.com` and prepends `https://` for you. It also strips trailing slashes and any leftover path segments.
+- **Connection IDs** — paste the entire Maker Portal connection-details URL (e.g. `https://make.powerapps.com/environments/<env>/connections/shared_office365users/<GUID>/details`) and the wizard pulls the GUID out for you. A bare GUID still works.
+- **Any connector by URL** — after the curated checklist of common connectors (Office 365, SharePoint, Dataverse, SQL, Teams, Blob, Outlook), the wizard asks *"Add another connector by URL or apiId"* in a loop. Paste a Maker Portal connection URL and the wizard extracts **both** the connector apiId (`shared_xxx`) **and** the connection GUID in one shot — no separate Connection-ID prompt for that connector. Custom connectors and not-yet-on-the-shortlist connectors (Approvals, Outlook Tasks, your own custom APIs) all flow through the same path.
+
 ---
 
 That's it. Either path walks you through everything — tool checks, naming, Power Platform portal steps, authentication, scaffolding, and your first deploy. Both work on **Windows, macOS, and Linux**.
@@ -168,7 +178,7 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
 6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
 7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload. Includes a `vitest.config.ts`, test setup, and smoke tests that the wizard runs automatically to verify the scaffold is healthy before proceeding.
-8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable
+8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable. Starts with the seven most common connectors as a checklist, then loops on *"Add another connector by URL or apiId"* so you can drop in Approvals, Outlook Tasks, custom connectors, or anything else by pasting its Maker Portal URL.
 9. **Builds, verifies, and optionally deploys** — after prototype validation and connector binding are complete
 
 Connector setup is intentionally deferred. The expected next move after scaffold is `npm run dev:local`, not collecting connection IDs.
