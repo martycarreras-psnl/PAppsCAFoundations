@@ -154,19 +154,29 @@ export function EmbeddedTerminal({ initialCommand, onStatusChange, onClose, heig
 
         ws.addEventListener('message', (ev) => {
           if (typeof ev.data === 'string') {
-            // Control frame (JSON) from the server
-            try {
-              const msg = JSON.parse(ev.data);
-              if (msg && msg.type === 'exit') {
-                setExitCode(msg.code ?? null);
-                setStatusAnd('closed', { exitCode: msg.code, signal: msg.signal });
-                term.writeln('');
-                term.writeln(`\u001b[90m[process exited with code ${msg.code ?? '?'}]\u001b[0m`);
-              } else if (msg && msg.type === 'error') {
-                setStatusAnd('error', { message: msg.message });
-                term.writeln(`\u001b[31m${msg.message}\u001b[0m`);
+            // Text frame: could be a JSON control message OR raw shell output
+            // (node-pty emits UTF-8 strings by default, which ws sends as text).
+            const text = ev.data;
+            if (text.length > 0 && text[0] === '{') {
+              try {
+                const msg = JSON.parse(text);
+                if (msg && msg.type === 'exit') {
+                  setExitCode(msg.code ?? null);
+                  setStatusAnd('closed', { exitCode: msg.code, signal: msg.signal });
+                  term.writeln('');
+                  term.writeln(`\u001b[90m[process exited with code ${msg.code ?? '?'}]\u001b[0m`);
+                  return;
+                }
+                if (msg && msg.type === 'error') {
+                  setStatusAnd('error', { message: msg.message });
+                  term.writeln(`\u001b[31m${msg.message}\u001b[0m`);
+                  return;
+                }
+              } catch {
+                // Fall through and treat as shell output
               }
-            } catch { /* ignore */ }
+            }
+            term.write(text);
             return;
           }
           // Binary stdout/stderr
