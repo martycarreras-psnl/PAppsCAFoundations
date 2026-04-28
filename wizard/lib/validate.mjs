@@ -56,3 +56,66 @@ export function extractConnectionId(v) {
   return matches[matches.length - 1].toLowerCase();
 }
 
+/**
+ * Extract a connector apiId (e.g. "shared_office365users") from either a raw
+ * apiId or a Maker Portal URL containing it. Returns '' if no apiId-shaped
+ * token is present.
+ *
+ * Recognizes both "/connections/shared_xxx/" and "/apis/shared_xxx" path
+ * segments, and accepts a bare "shared_xxx" string as input.
+ */
+export function extractConnectorApiId(v) {
+  if (!v) return '';
+  const s = String(v).trim();
+  if (!s) return '';
+  // Path-based: /connections/<apiId>/  OR  /apis/<apiId>(/|$)
+  const pathMatch = s.match(/\/(?:connections|apis)\/(shared_[a-z0-9_-]+)/i);
+  if (pathMatch) return pathMatch[1].toLowerCase();
+  // Bare apiId
+  const bareMatch = s.match(/^(shared_[a-z0-9_-]+)$/i);
+  if (bareMatch) return bareMatch[1].toLowerCase();
+  return '';
+}
+
+/**
+ * Parse a Power Apps Maker Portal connection URL (or a bare apiId / GUID) and
+ * return whatever pieces we can recognize:
+ *   { apiId: 'shared_xxx' | '', connectionId: '<guid>' | '' }
+ *
+ * Useful when the user pastes the entire connection-details URL — we can
+ * derive both the connector and the connection ID in one shot.
+ */
+export function parseConnectionUrl(v) {
+  return {
+    apiId: extractConnectorApiId(v),
+    connectionId: extractConnectionId(v),
+  };
+}
+
+/**
+ * Human-friendly display name from a connector apiId.
+ *   "shared_office365users" -> "Office 365 Users"
+ *   "shared_sharepointonline" -> "Sharepointonline"
+ *   "shared_sql" -> "Sql"
+ * Best-effort only; the user can override at prompt time.
+ */
+export function humanizeConnectorApiId(apiId) {
+  if (!apiId) return '';
+  const slug = String(apiId).replace(/^shared_/i, '');
+  if (!slug) return apiId;
+  const KNOWN = {
+    office365users: 'Office 365 Users',
+    office365: 'Office 365 Outlook',
+    sharepointonline: 'SharePoint',
+    commondataserviceforapps: 'Dataverse',
+    sql: 'SQL Server',
+    teams: 'Microsoft Teams',
+    azureblob: 'Azure Blob Storage',
+    webcontents: 'HTTP with Entra ID',
+  };
+  if (KNOWN[slug.toLowerCase()]) return KNOWN[slug.toLowerCase()];
+  // Fallback: capitalize first letter
+  return slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
+

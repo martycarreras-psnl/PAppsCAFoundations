@@ -120,6 +120,8 @@ For each connector your app uses, in each environment (dev, test, prod):
 | Azure Blob Storage | `shared_azureblob` |
 | HTTP with Entra ID | `shared_webcontents` |
 
+> The wizard's connector step shows the list above as a checklist, then asks **"Add another connector by URL or apiId"** in a loop. Paste the full Maker Portal connection URL of any other connector (e.g. Approvals, Outlook Tasks, a custom connector you've published to the environment) and the wizard will register it as a data source — extracting the apiId and the connection ID from the URL in one shot. You can also paste a bare `shared_xxx` apiId if you only want to create the connection reference now and bind the connection later.
+
 ---
 
 ## Step 6: Register the App Registration as an Application User

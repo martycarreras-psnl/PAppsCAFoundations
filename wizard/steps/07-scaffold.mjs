@@ -10,7 +10,12 @@ import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN, ha
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
-import { extractConnectionId } from '../lib/validate.mjs';
+import {
+  extractConnectionId,
+  extractConnectorApiId,
+  parseConnectionUrl,
+  humanizeConnectorApiId,
+} from '../lib/validate.mjs';
 import {
   copyFoundationFiles,
   createMinimalProject,
@@ -550,10 +555,71 @@ export async function setupConnectors(pac, projectDir) {
     checked: existingApiIds.has(c.apiId),
   }));
 
-  const selected = await checkbox({
+  const selectedFromList = await checkbox({
     message: 'Which connectors does your app need? (Space to toggle, Enter to confirm)',
     choices,
   });
+
+  // Build a connector-meta map keyed by apiId. Common connectors come from
+  // COMMON_CONNECTORS; custom connectors are added below from URL/apiId input.
+  // Custom entries may also carry a pre-extracted connectionId (when the user
+  // pastes a full Maker Portal connection-details URL) so we can skip the
+  // separate connection-ID prompt for that connector.
+  const connectorMeta = new Map();
+  for (const c of COMMON_CONNECTORS) connectorMeta.set(c.apiId, { ...c });
+  const selected = [...selectedFromList];
+  // Pre-extracted connection IDs harvested from custom-URL paste, keyed by apiId.
+  const prefilledConnectionIds = new Map();
+
+  // ── 2b. Custom connectors via URL or apiId ──
+  ui.line('');
+  ui.line('You can add any other connector by pasting its Maker Portal');
+  ui.line('connection URL (or its apiId, e.g. shared_approvals).');
+  ui.line('');
+  while (true) {
+    const raw = await input({
+      message: 'Add another connector by URL or apiId (blank to finish)',
+      default: '',
+      validate: (v) => {
+        const t = (v || '').trim();
+        if (!t) return true;
+        return extractConnectorApiId(t)
+          ? true
+          : 'Could not detect a connector apiId. Paste the full connection URL or a "shared_xxx" id.';
+      },
+    });
+    const trimmed = (raw || '').trim();
+    if (!trimmed) break;
+    const { apiId, connectionId } = parseConnectionUrl(trimmed);
+    if (!apiId) {
+      ui.warn('No connector apiId detected — skipped.');
+      continue;
+    }
+    if (selected.includes(apiId) || existingApiIds.has(apiId)) {
+      ui.info(`${apiId} — already in the list, skipping`);
+      if (connectionId && !prefilledConnectionIds.has(apiId)) {
+        prefilledConnectionIds.set(apiId, connectionId);
+        ui.line(`    Captured connection ID from URL: ${connectionId}`);
+      }
+      continue;
+    }
+    const defaultName = humanizeConnectorApiId(apiId);
+    const displayName = await input({
+      message: `Friendly display name for ${apiId}`,
+      default: defaultName,
+      validate: (v) => ((v || '').trim() ? true : 'Display name is required.'),
+    });
+    const meta = { apiId, name: displayName.trim(), hasTable: false, custom: true };
+    connectorMeta.set(apiId, meta);
+    selected.push(apiId);
+    if (connectionId) {
+      prefilledConnectionIds.set(apiId, connectionId);
+      ui.ok(`${displayName.trim()} — added (connection ID extracted from URL)`);
+    } else {
+      ui.ok(`${displayName.trim()} — added`);
+    }
+  }
+  ui.line('');
 
   if (selected.length === 0) {
     ui.line('No connectors selected. You can add them later.');
@@ -569,7 +635,7 @@ export async function setupConnectors(pac, projectDir) {
     ui.line('');
     ui.line('Creating connection references in your solution...');
     for (const apiId of newSelections) {
-      const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
+      const connector = connectorMeta.get(apiId) || { apiId, name: humanizeConnectorApiId(apiId) };
       const logicalName = `${prefix}_${apiId}`;
       try {
         const result = await dvPost('connectionreferences', {
@@ -596,7 +662,7 @@ export async function setupConnectors(pac, projectDir) {
     ui.line('Create them manually in the Power Apps Maker Portal:');
     ui.line('  Solutions → your solution → + Add existing → Connection Reference');
     for (const apiId of newSelections) {
-      const c = COMMON_CONNECTORS.find((conn) => conn.apiId === apiId);
+      const c = connectorMeta.get(apiId) || { apiId, name: humanizeConnectorApiId(apiId) };
       ui.line(`  • ${c.name} (${apiId})`);
     }
   }
@@ -652,8 +718,15 @@ export async function setupConnectors(pac, projectDir) {
       ui.line('');
 
       for (const apiId of nonDvSelected) {
-        const connector = COMMON_CONNECTORS.find((c) => c.apiId === apiId);
-        const connectionId = await resolveConnectionIdForConnector(pac, apiId, connector.name);
+        const connector = connectorMeta.get(apiId) || { apiId, name: humanizeConnectorApiId(apiId) };
+        const prefilled = prefilledConnectionIds.get(apiId);
+        let connectionId;
+        if (prefilled) {
+          ui.line(`${connector.name} — using connection ID extracted from the URL you pasted.`);
+          connectionId = prefilled;
+        } else {
+          connectionId = await resolveConnectionIdForConnector(pac, apiId, connector.name);
+        }
         if (!connectionId) {
           ui.info(`${connector.name} — skipped`);
           ui.line(`    Add later: pac code add-data-source -a ${apiId} -c <CONNECTION_ID>`);
