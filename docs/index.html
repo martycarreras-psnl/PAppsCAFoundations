@@ -1933,7 +1933,7 @@ h4 { font-size: 1.1rem; }
     </div>
     <h1>Build Beautiful Apps.<br><span class="gradient-text">Share Them With the World.</span></h1>
     <p class="subtitle">
-      A welcoming starting point for anyone who wants to turn an idea into a polished Power Apps Code App — whether it's just for you or for thousands across your organization. Powered by Dataverse. Guided by GitHub Copilot. Crafted so your first app feels like your hundredth.
+      A welcoming starting point for anyone who wants to turn an idea into a polished Power Apps Code App — whether it's just for you or for thousands across your organization. Powered by Dataverse. Guided by your favorite coding agent. Crafted so your first app feels like your hundredth.
     </p>
     <div class="hero-actions">
       <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations" class="btn btn-primary" target="_blank" rel="noopener">
@@ -2062,8 +2062,8 @@ h4 { font-size: 1.1rem; }
       </div>
       <div class="pillar-card fade-in">
         <div class="pillar-icon gold">🤖</div>
-        <h3>Agent-Guided Development</h3>
-        <p>14 scoped instruction files plus a top-level <code>AGENTS.md</code> mean GitHub Copilot, Cursor, Claude Code, Cline, Aider, and every other coding agent follows the same architecture, naming conventions, security rules, and deployment patterns. Your standards, enforced by whichever agent your team picks.</p>
+        <h3>First-Class Multi-Agent Support</h3>
+        <p>Native guidance for <strong>GitHub Copilot</strong>, <strong>Claude Code</strong>, <strong>Cursor</strong>, and <strong>Codex</strong>. Each agent reads the same 14 scoped instruction files in its own format — <code>.github/instructions/</code> for Copilot, <code>.claude/rules/</code> for Claude, <code>.cursor/rules/</code> for Cursor, and nested <code>AGENTS.md</code> for Codex. Your standards, enforced by whichever agent your team picks.</p>
       </div>
     </div>
 
@@ -2113,7 +2113,7 @@ h4 { font-size: 1.1rem; }
           <tr>
             <td>Architecture Decisions</td>
             <td>Ad hoc, inconsistent across projects</td>
-            <td class="highlight-col"><span class="check">✓</span> Opinionated 4-layer architecture, enforced by Copilot</td>
+            <td class="highlight-col"><span class="check">✓</span> Opinionated 4-layer architecture, enforced by your coding agent</td>
           </tr>
           <tr>
             <td>Dataverse Schema</td>
@@ -2141,9 +2141,9 @@ h4 { font-size: 1.1rem; }
             <td class="highlight-col"><span class="check">✓</span> Documented CI/CD blueprint + solution export script + Power Platform Pipelines model</td>
           </tr>
           <tr>
-            <td>Copilot Quality</td>
+            <td>Agent Quality</td>
             <td>Generic suggestions that don't match your patterns</td>
-            <td class="highlight-col"><span class="check">✓</span> 14 scoped .instructions.md files + AGENTS.md — works with every coding agent</td>
+            <td class="highlight-col"><span class="check">✓</span> Native guidance for 4 agents: Copilot, Claude Code, Cursor, Codex + AGENTS.md fallback for others</td>
           </tr>
         </tbody>
       </table>
@@ -2169,7 +2169,7 @@ h4 { font-size: 1.1rem; }
         <div class="timeline-marker">1</div>
         <div class="timeline-content">
           <h4>Business Problem Decomposition</h4>
-          <p>Start with a freeform narrative. Copilot decomposes it across 12 business dimensions — actors, workflows, approvals, exceptions, reporting needs, collaboration surfaces. No rigid questionnaires. Just structured thinking about what you're actually building.</p>
+          <p>Start with a freeform narrative. Your coding agent decomposes it across 12 business dimensions — actors, workflows, approvals, exceptions, reporting needs, collaboration surfaces. No rigid questionnaires. Just structured thinking about what you're actually building.</p>
           <span class="timeline-tag">Instruction: 00a</span>
         </div>
       </div>
@@ -2524,12 +2524,12 @@ h4 { font-size: 1.1rem; }
     <div class="accordion fade-in">
       <div class="accordion-item open">
         <button class="accordion-trigger" onclick="toggleAccordion(this)">
-          <span>14 Scoped Instruction Files + AGENTS.md — Agent-Agnostic</span>
+          <span>First-Class Multi-Agent Support — Copilot, Claude Code, Cursor, Codex</span>
           <span class="accordion-icon">▼</span>
         </button>
         <div class="accordion-panel" style="max-height: 340px;">
           <div class="accordion-panel-content">
-            Each <code>.instructions.md</code> file uses <code>applyTo</code> scopes so agents only load relevant guidance based on which files you're editing. No noise, no conflicting advice. A top-level <code>AGENTS.md</code> provides non-negotiable architectural guardrails that every coding agent honors — Copilot, Cursor, Claude Code, Cline, Aider, and any tool that reads root-level context.
+            The canonical instruction files live in <code>.github/instructions/</code> with <code>applyTo</code> scopes. Native projections are generated for each agent: <code>.claude/rules/</code> for Claude Code, <code>.cursor/rules/</code> for Cursor, and nested <code>AGENTS.md</code> files for Codex. A top-level <code>AGENTS.md</code> provides non-negotiable architectural guardrails that every coding agent honors — including Cline, Aider, and any tool that reads root-level context.
             <ul>
               <li><strong>00-series:</strong> Environment setup, business decomposition, scope refinement, Dataverse planning, prototype validation</li>
               <li><strong>01:</strong> Project scaffolding, solution-first rules, tech stack (React 18 + Fluent UI v9 + TanStack Query + Vite)</li>
@@ -2610,7 +2610,7 @@ h4 { font-size: 1.1rem; }
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            The <code>sync-foundations.mjs</code> script pulls the latest instruction files, scripts, and wizard from the template repo into your downstream project. No fork management, no merge conflicts with your app code. Your project gets the accumulated lessons of every team that came before — automatically. A <code>.foundations-version.json</code> bundle tag lets downstream repos see which version they are on.
+            The <code>sync-foundations.mjs</code> script pulls the latest instruction files, agent-native guidance, scripts, and wizard from the template repo into your downstream project. No fork management, no merge conflicts with your app code. Your project gets the accumulated lessons of every team that came before — automatically. A <code>.foundations-version.json</code> bundle tag lets downstream repos see which version they are on.
           </div>
         </div>
       </div>

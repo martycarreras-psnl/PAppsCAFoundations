@@ -1,0 +1,17 @@
+---
+globs: "src/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/06-security.instructions.md — do not edit directly -->
+# Security & Authentication
+
+- Auth handled by Power Platform host — no external auth libraries
+- No tokens, client secrets, or connection strings in committed files
+- `.env.local` (gitignored) or 1Password `op://` for local secrets
+- Validate/sanitize all user input at component boundaries
+- `DOMPurify` for any external HTML rendering
+- Never construct dynamic URLs from user input without validation
+- Pre-commit hook blocks accidental secret commits
+- Connectors are the only data path (DLP)
+
+Full details: `.github/instructions/06-security.instructions.md`

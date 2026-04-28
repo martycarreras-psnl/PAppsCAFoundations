@@ -2,7 +2,11 @@
 
 **You probably do not need to read the files in this folder.**
 
-These are **instruction files for GitHub Copilot** (and other coding agents that honor `applyTo` scopes or `description` fields). Copilot loads them automatically as you edit matching files. They are a reference set, not a tutorial.
+These are **instruction files for coding agents** (GitHub Copilot, Claude Code, Cursor, Codex, and others). This directory is the **canonical source** — Claude, Cursor, and Codex projections are generated from these files. See [../../docs/agent-support.md](../../docs/agent-support.md) for which files each agent reads.
+
+Copilot loads them automatically as you edit matching files. Other agents read their native projections (`.claude/rules/`, `.cursor/rules/`, nested `AGENTS.md`).
+
+They are a reference set, not a tutorial.
 
 If you are a human opening this folder for the first time, do this instead:
 
@@ -26,7 +30,7 @@ Open a specific instruction file when:
 
 ## Map Of The Instruction Set
 
-Loaded by Copilot based on the file you are editing. The `applyTo` glob on each file controls when it loads.
+Loaded by coding agents based on the file you are editing. The `applyTo` glob on each file controls when Copilot loads it; other agents use their native equivalents.
 
 ### Planning phase (narrative → conceptual model)
 
@@ -70,6 +74,7 @@ Loaded via rich `description` fields during planning conversations, before any c
 If you are contributing a change:
 
 - Every file must have YAML frontmatter with either `applyTo` (for file-scoped rules) or `description` (for planning-phase files discovered by agents).
+- After editing, run `npm run guidance:generate` to update Claude, Cursor, and Codex projections, then `npm run guidance:check` to verify.
 - Keep content prescriptive, not conversational. Agents follow imperative rules better than suggestions.
 - Reference concrete file paths and commands. Avoid vague guidance like "consider using a good pattern".
 - Do not duplicate content across files. Cross-link instead. Duplication drifts.

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Manifest that maps canonical .github/instructions/ files to agent-native projections for Claude Code, Cursor, and Codex.",
+  "meta": {
+    "canonicalRoot": ".github/instructions",
+    "generatedMarker": "Generated from .github/instructions/ — do not edit directly. See docs/agent-support.md",
+    "agentsmdHandAuthored": true
+  },
+  "instructions": [
+    {
+      "id": "00-before-you-start",
+      "canonical": "00-before-you-start.instructions.md",
+      "role": "setup",
+      "scope": { "applyTo": "**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/setup.md", "mode": "summary" },
+        "cursor": { "file": ".cursor/rules/00-before-you-start.mdc", "alwaysApply": true },
+        "codex": null
+      }
+    },
+    {
+      "id": "00-environment-setup",
+      "canonical": "00-environment-setup.instructions.md",
+      "role": "setup",
+      "scope": { "applyTo": "scripts/**,.env,.env.template,.github/workflows/**,power.config.json,*.sh" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/environment-setup.md", "mode": "summary", "paths": ["scripts/**", ".env", ".env.template", ".env.local", ".github/workflows/**", "power.config.json", "*.sh"] },
+        "cursor": { "file": ".cursor/rules/00-environment-setup.mdc", "globs": "scripts/**,.env,.env.template,.env.local,.github/workflows/**,power.config.json,*.sh" },
+        "codex": { "file": "scripts/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
+      "id": "00a-business-problem-decomposition",
+      "canonical": "00a-business-problem-decomposition.instructions.md",
+      "role": "planning",
+      "scope": {},
+      "description": "Read when the user is describing an app idea, business problem, workflow, or desired outcome. Use to decompose freeform narratives, identify ambiguities, and ask high-value follow-up questions.",
+      "projections": {
+        "claude": { "file": ".claude/rules/planning.md", "mode": "combined" },
+        "cursor": { "file": ".cursor/rules/00a-business-problem-decomposition.mdc", "description": true },
+        "codex": null
+      }
+    },
+    {
+      "id": "00b-scope-refinement",
+      "canonical": "00b-scope-refinement-and-solution-shaping.instructions.md",
+      "role": "planning",
+      "scope": {},
+      "description": "Read when the user's business problem is partially understood and needs to be refined into a complete enterprise solution scope.",
+      "projections": {
+        "claude": { "file": ".claude/rules/planning.md", "mode": "combined" },
+        "cursor": { "file": ".cursor/rules/00b-scope-refinement.mdc", "description": true },
+        "codex": null
+      }
+    },
+    {
+      "id": "00c-solution-concept",
+      "canonical": "00c-solution-concept-to-dataverse-plan.instructions.md",
+      "role": "planning",
+      "scope": { "applyTo": "scripts/**,solution/**" },
+      "description": "Read when a refined business scope needs to be translated into candidate entities, relationships, ownership patterns, lifecycle states, and Dataverse planning inputs.",
+      "projections": {
+        "claude": { "file": ".claude/rules/planning.md", "mode": "combined" },
+        "cursor": { "file": ".cursor/rules/00c-solution-concept.mdc", "description": true, "globs": "scripts/**,solution/**" },
+        "codex": null
+      }
+    },
+    {
+      "id": "00d-prototype-validation",
+      "canonical": "00d-prototype-validation.instructions.md",
+      "role": "planning",
+      "scope": { "applyTo": "src/**,scripts/**,dataverse/**" },
+      "description": "Read when a refined scope or draft Dataverse planning payload needs to be validated through a clickable UX prototype before schema provisioning.",
+      "projections": {
+        "claude": { "file": ".claude/rules/prototype-validation.md", "mode": "summary", "paths": ["src/**", "scripts/**", "dataverse/**"] },
+        "cursor": { "file": ".cursor/rules/00d-prototype-validation.mdc", "description": true, "globs": "src/**,scripts/**,dataverse/**" },
+        "codex": null
+      }
+    },
+    {
+      "id": "01-scaffold",
+      "canonical": "01-scaffold.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/**,vite.config.ts,tsconfig.json,package.json,power.config.json" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/scaffold.md", "mode": "summary", "paths": ["src/**", "vite.config.ts", "tsconfig.json", "package.json", "power.config.json"] },
+        "cursor": { "file": ".cursor/rules/01-scaffold.mdc", "globs": "src/**,vite.config.ts,tsconfig.json,package.json,power.config.json" },
+        "codex": { "file": "src/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
+      "id": "02-connectors",
+      "canonical": "02-connectors.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/generated/**,src/hooks/**,src/services/**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/connectors.md", "mode": "summary", "paths": ["src/generated/**", "src/hooks/**", "src/services/**"] },
+        "cursor": { "file": ".cursor/rules/02-connectors.mdc", "globs": "src/generated/**,src/hooks/**,src/services/**" },
+        "codex": [
+          { "file": "src/hooks/AGENTS.md", "mode": "combined" },
+          { "file": "src/services/AGENTS.md", "mode": "combined" }
+        ]
+      }
+    },
+    {
+      "id": "03-components",
+      "canonical": "03-components.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/components/**,src/pages/**,src/App.tsx" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/components.md", "mode": "summary", "paths": ["src/components/**", "src/pages/**", "src/App.tsx"] },
+        "cursor": { "file": ".cursor/rules/03-components.mdc", "globs": "src/components/**,src/pages/**,src/App.tsx" },
+        "codex": [
+          { "file": "src/components/AGENTS.md", "mode": "combined" },
+          { "file": "src/pages/AGENTS.md", "mode": "combined" }
+        ]
+      }
+    },
+    {
+      "id": "04-deployment",
+      "canonical": "04-deployment.instructions.md",
+      "role": "validation",
+      "scope": { "applyTo": ".github/workflows/**,power.config.json,vite.config.ts" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/deployment.md", "mode": "summary", "paths": [".github/workflows/**", "power.config.json", "vite.config.ts"] },
+        "cursor": { "file": ".cursor/rules/04-deployment.mdc", "globs": ".github/workflows/**,power.config.json,vite.config.ts" },
+        "codex": null
+      }
+    },
+    {
+      "id": "05-testing",
+      "canonical": "05-testing.instructions.md",
+      "role": "validation",
+      "scope": { "applyTo": "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/testing.md", "mode": "summary", "paths": ["tests/**", "src/**/*.test.tsx", "src/**/*.test.ts", "playwright.config.ts", "vitest.config.ts"] },
+        "cursor": { "file": ".cursor/rules/05-testing.mdc", "globs": "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts,vitest.config.ts" },
+        "codex": { "file": "scripts/tests/AGENTS.md", "mode": "summary" }
+      }
+    },
+    {
+      "id": "06-security",
+      "canonical": "06-security.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/security.md", "mode": "summary", "paths": ["src/**"] },
+        "cursor": { "file": ".cursor/rules/06-security.mdc", "globs": "src/**" },
+        "codex": { "file": "src/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
+      "id": "07-dataverse-schema",
+      "canonical": "07-dataverse-schema.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "scripts/**,src/**,solution/**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/dataverse-schema.md", "mode": "summary", "paths": ["scripts/**", "src/**", "solution/**"] },
+        "cursor": { "file": ".cursor/rules/07-dataverse-schema.mdc", "globs": "scripts/**,src/**,solution/**" },
+        "codex": { "file": "scripts/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
+      "id": "08-copilot-studio",
+      "canonical": "08-copilot-studio.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/**,src/hooks/**,src/components/**,src/services/**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/copilot-studio.md", "mode": "summary", "paths": ["src/**", "src/hooks/**", "src/components/**", "src/services/**"] },
+        "cursor": { "file": ".cursor/rules/08-copilot-studio.mdc", "globs": "src/**,src/hooks/**,src/components/**,src/services/**" },
+        "codex": null
+      }
+    },
+    {
+      "id": "09-form-field-pattern",
+      "canonical": "09-form-field-pattern.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "src/**" },
+      "description": null,
+      "projections": {
+        "claude": { "file": ".claude/rules/form-field-pattern.md", "mode": "summary", "paths": ["src/**"] },
+        "cursor": { "file": ".cursor/rules/09-form-field-pattern.mdc", "globs": "src/**" },
+        "codex": { "file": "src/AGENTS.md", "mode": "combined" }
+      }
+    }
+  ]
+}

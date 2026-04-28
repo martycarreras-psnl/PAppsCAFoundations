@@ -32,7 +32,7 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 ## What We're Looking For
 
 - Bug fixes in wizard steps or helper scripts
-- Improvements to GitHub Copilot instruction files
+- Improvements to coding-agent instruction files (`.github/instructions/`, `.claude/rules/`, `.cursor/rules/`)
 - New validation checks in `validate-schema-plan.mjs`
 - Better error messages and recovery guidance
 - Documentation clarity and typo fixes
@@ -63,6 +63,8 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 - Instruction files (`.github/instructions/*.md`) must include a YAML frontmatter `applyTo` scope.
 - Keep instruction content prescriptive, not conversational.
 - Reference concrete file paths and commands — avoid vague guidance.
+- After editing canonical instruction files, run `npm run guidance:generate` to update agent-native projections, then `npm run guidance:check` to verify no drift.
+- Do not edit `.claude/rules/`, `.cursor/rules/`, or nested `AGENTS.md` files directly — they are generated.
 
 ## Pull Request Checklist
 

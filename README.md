@@ -1,6 +1,6 @@
 # Power Apps Code Apps — Foundations
 
-A **GitHub template repository** with opinionated, comprehensive GitHub Copilot instruction files for building Power Apps Code Apps. Each new project starts from this template — you get the full instruction set, setup wizard, and scaffolding tools from your first commit.
+A **GitHub template repository** with opinionated, comprehensive coding-agent instruction files for building Power Apps Code Apps. Native guidance ships for **GitHub Copilot**, **Claude Code**, **Cursor**, and **Codex** — each agent reads the same rules in its own format. Each new project starts from this template — you get the full instruction set, setup wizard, and scaffolding tools from your first commit.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -13,7 +13,7 @@ A **GitHub template repository** with opinionated, comprehensive GitHub Copilot 
 | Requirement | Minimum | Notes |
 |-------------|---------|-------|
 | **Node.js** | 20+ | Required for wizard and all scripts |
-| **VS Code** | Latest | With GitHub Copilot extension for instruction-file support |
+| **VS Code / Cursor / Codex IDE** | Latest | With your preferred coding agent (Copilot, Claude Code, Cursor, Codex) |
 | **Git** | 2.30+ | For template cloning and version control |
 | **.NET SDK** | 8.0+ | Required for PAC CLI installation |
 | **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
@@ -45,7 +45,8 @@ The wizard and all scripts run natively on all three platforms. Two notes for Wi
 
 - [AGENTS.md](AGENTS.md) — Top-level agent directive. Read this if you are (or are using) a coding agent.
 - [docs/glossary.md](docs/glossary.md) — One-page reference for Power Platform terminology. Skim before diving in.
-- [.github/instructions/README.md](.github/instructions/README.md) — Map of the Copilot instruction set. **You probably do not need to read the individual files** — Copilot reads them for you.
+- [.github/instructions/README.md](.github/instructions/README.md) — Map of the canonical instruction set. **You probably do not need to read the individual files** — your coding agent reads them for you.
+- [docs/agent-support.md](docs/agent-support.md) — Which files each coding agent reads (Copilot, Claude Code, Cursor, Codex) and how to verify.
 
 ## Quick Start
 
@@ -169,7 +170,7 @@ The new instruction files are:
 - `00c-solution-concept-to-dataverse-plan.instructions.md`
 - `00d-prototype-validation.instructions.md`
 
-These files are intentionally not questionnaire-first. They teach Copilot how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into prototype validation, connectors, schema execution, and connected UI implementation.
+These files are intentionally not questionnaire-first. They teach coding agents how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into prototype validation, connectors, schema execution, and connected UI implementation.
 
 For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
 
@@ -227,7 +228,7 @@ If you started in the guide and want the concise repo overview, come back here t
 ```
 PAppsCAFoundations/
 ├── .github/
-│   └── instructions/                              # GitHub Copilot instruction files
+│   └── instructions/                              # Canonical coding-agent instructions
 │       ├── 00-before-you-start.instructions.md    # Publisher, environments, solution setup
 │       ├── 00-environment-setup.instructions.md   # App Registration, 1Password, headless auth
 │       ├── 00a-business-problem-decomposition.instructions.md   # Decompose freeform business narratives
@@ -286,9 +287,17 @@ PAppsCAFoundations/
 
 ## How It Works
 
-When you open this project in VS Code with GitHub Copilot, the `.github/instructions/*.instructions.md` files are automatically loaded. Copilot uses them to generate code and planning guidance that follows your team's standards — from narrative-first business discovery through Fluent UI v9 components, TanStack Query hooks, connector usage, and solution-aware Dataverse patterns.
+This repo ships native guidance for four coding agents. Each reads the same architectural rules in its own format:
 
-Most files use `applyTo` scopes so Copilot only loads the relevant instructions based on which files you're editing. The narrative-first planning files also rely on rich `description` text so they can be discovered during planning conversations before implementation files even exist.
+| Agent | Root Entry Point | Scoped Rules |
+|-------|-----------------|---------------|
+| **GitHub Copilot** | `AGENTS.md` | `.github/instructions/*.instructions.md` (canonical source) |
+| **Claude Code** | `CLAUDE.md` → imports `AGENTS.md` | `.claude/rules/*.md` |
+| **Cursor** | `AGENTS.md` | `.cursor/rules/*.mdc` |
+| **Codex** | `AGENTS.md` | Nested `AGENTS.md` in subdirectories |
+| **Cline / Aider** | `AGENTS.md` | (fallback — scoped rules not provided) |
+
+The `.github/instructions/` files are the canonical source. Claude, Cursor, and Codex projections are generated from them. See [docs/agent-support.md](docs/agent-support.md) for the full matrix and verification steps.
 
 ## Dataverse Helper Flow
 

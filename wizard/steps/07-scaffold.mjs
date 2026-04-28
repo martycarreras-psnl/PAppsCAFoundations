@@ -393,7 +393,9 @@ ${appName.toLowerCase().replace(/\\s+/g, '-')}/
 │   ├── mockData/          # Prototype data generated from planning payload
 │   ├── types/             # Domain contracts used by the UI
 │   └── App.tsx            # Root component
-├── .github/instructions/  # GitHub Copilot instruction files
+├── .github/instructions/  # Coding agent instruction files (canonical source)
+├── .claude/rules/         # Claude Code path-scoped rules
+├── .cursor/rules/         # Cursor project rules
 ├── .power/                # Power Platform metadata
 ├── power.config.json      # Code App configuration
 ├── vite.config.ts         # Build configuration
@@ -435,9 +437,21 @@ Manual fallback:
 
 > **Never edit files in \`src/generated/\`** — PAC refreshes them when connector output is regenerated.
 
-## GitHub Copilot Instructions
+## Coding Agent Guidance
 
-This project includes \`.github/instructions/*.instructions.md\` files that guide GitHub Copilot to generate code following the team's standards. They cover scaffolding, connectors, components, deployment, testing, security, and Dataverse schema design.
+This project includes native guidance for **GitHub Copilot**, **Claude Code**, **Cursor**, and **Codex**:
+
+| Agent | Files |
+|-------|-------|
+| GitHub Copilot | \`.github/instructions/*.instructions.md\` (canonical source) |
+| Claude Code | \`CLAUDE.md\` + \`.claude/rules/\` |
+| Cursor | \`AGENTS.md\` + \`.cursor/rules/\` |
+| Codex | \`AGENTS.md\` + nested \`AGENTS.md\` in subdirectories |
+| Cline / Aider | \`AGENTS.md\` (fallback) |
+
+See \`docs/agent-support.md\` for the full support matrix and verification steps.
+
+> **Do not edit** \`.claude/rules/\`, \`.cursor/rules/\`, or nested \`AGENTS.md\` files directly. Edit the canonical \`.github/instructions/\` files, then run \`npm run guidance:generate\`.
 
 ## Scripts
 
@@ -454,6 +468,8 @@ This project includes \`.github/instructions/*.instructions.md\` files that guid
 | \`npm run generate:dataverse-plan\` | Generate normalized Dataverse execution plans from the planning artifact |
 | \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and refresh generated connector output |
 | \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
+| \`npm run guidance:generate\` | Regenerate agent-native guidance from canonical instructions |
+| \`npm run guidance:check\` | Verify projected guidance files match canonical source |
 
 ## Staying Updated
 

@@ -1,0 +1,19 @@
+---
+globs: "src/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/09-form-field-pattern.instructions.md — do not edit directly -->
+# Form Field Pattern — Metadata-Backed Required Indicators
+
+**Non-negotiable.** Every editable field bound to a Dataverse column must use `<DataverseFieldLabel>`.
+
+1. Never render plain `<Label>`, raw `<label>`, or hardcoded `*` for Dataverse-bound fields
+2. Use `<DataverseFieldLabel tableLogicalName="..." fieldLogicalName="..." fallback="..." />`
+3. Map domain keys via `toDataverseFieldName(key)` in `src/lib/dataverse-field-name.ts`
+4. Set `aria-required={required || undefined}` using `useDataverseFieldRequired`
+5. Guard submit: `disabled={(required && !(value ?? '').trim()) || mutation.isPending}`
+6. Guard mutations for `ApplicationRequired` columns — Web API does NOT enforce it
+7. Register each table's `getMetadata` in `fieldMetadataServiceRegistry`
+8. `RequiredLevel.Value` is a **string**, not numeric
+
+Full details: `.github/instructions/09-form-field-pattern.instructions.md`

@@ -1,5 +1,5 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { runSafe, IS_WIN } from './shell.mjs';
 
 const noopLogger = {
@@ -566,7 +566,7 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
   const scriptsDir = join(rootDir, 'scripts');
   if (existsSync(scriptsDir)) {
     mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'export-solution.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs', 'seed-prototype-assets.mjs']) {
+    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'export-solution.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs', 'seed-prototype-assets.mjs', 'generate-agent-guidance.mjs']) {
       const src = join(scriptsDir, f);
       if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
     }
@@ -601,6 +601,42 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
     copyFileSync(agentsFile, join(projectDir, 'AGENTS.md'));
     logger.ok('AGENTS.md copied');
   }
+
+  // ── Copy agent-native guidance artifacts ──
+  const claudeFile = join(rootDir, 'CLAUDE.md');
+  if (existsSync(claudeFile)) {
+    copyFileSync(claudeFile, join(projectDir, 'CLAUDE.md'));
+    logger.ok('CLAUDE.md copied');
+  }
+
+  const agentGuidanceConfig = join(rootDir, 'agent-guidance.config.json');
+  if (existsSync(agentGuidanceConfig)) {
+    copyFileSync(agentGuidanceConfig, join(projectDir, 'agent-guidance.config.json'));
+    logger.ok('agent-guidance.config.json copied');
+  }
+
+  for (const agentDir of ['.claude/rules', '.cursor/rules']) {
+    const srcDir = join(rootDir, agentDir);
+    if (existsSync(srcDir)) {
+      const destDir = join(projectDir, agentDir);
+      mkdirSync(destDir, { recursive: true });
+      for (const f of readdirSync(srcDir)) {
+        try { copyFileSync(join(srcDir, f), join(destDir, f)); } catch { /* skip */ }
+      }
+      logger.ok(`${agentDir}/ copied`);
+    }
+  }
+
+  // Copy nested Codex AGENTS.md into src/ subdirectories
+  for (const sub of ['src', 'src/components', 'src/pages', 'src/hooks', 'src/services']) {
+    const srcAgents = join(rootDir, sub, 'AGENTS.md');
+    if (existsSync(srcAgents)) {
+      const dest = join(projectDir, sub, 'AGENTS.md');
+      mkdirSync(dirname(dest), { recursive: true });
+      copyFileSync(srcAgents, dest);
+    }
+  }
+  logger.ok('Agent-native guidance artifacts copied (Claude, Cursor, Codex)');
 
   for (const f of ['.env.local', '.env', '.env.template']) {
     const src = join(rootDir, f);
