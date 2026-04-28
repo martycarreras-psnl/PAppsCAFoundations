@@ -125,101 +125,215 @@ h4 { font-size: 1.1rem; }
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  transition: box-shadow var(--motion-duration) var(--motion-ease);
+  background:
+    linear-gradient(90deg, rgba(0,120,212,0.95), rgba(92,45,145,0.95), rgba(0,130,114,0.95)) top / 100% 3px no-repeat,
+    rgba(31,34,39,0.96);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.2);
+  transition: background var(--motion-duration) var(--motion-ease),
+              box-shadow var(--motion-duration) var(--motion-ease);
 }
 
 .nav.scrolled {
-  box-shadow: var(--depth-8);
+  background:
+    linear-gradient(90deg, rgba(0,120,212,1), rgba(92,45,145,1), rgba(0,130,114,1)) top / 100% 3px no-repeat,
+    rgba(32,31,30,0.98);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.24);
 }
 
 .nav-inner {
-  max-width: var(--max-width);
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  gap: 22px;
+  min-height: 76px;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-width: 280px;
   font-weight: 700;
-  font-size: 1rem;
-  color: var(--neutral-dark);
+  color: var(--white);
+  text-decoration: none;
 }
 
 .nav-brand svg {
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+}
+
+.nav-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+.nav-brand-title {
+  color: var(--white);
+  font-size: 0.98rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.nav-brand-subtitle {
+  color: rgba(255,255,255,0.58);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: flex-end;
+  gap: clamp(14px, 1.55vw, 24px);
   list-style: none;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .nav-links a {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--neutral-secondary);
+  display: inline-flex;
+  align-items: center;
+  height: 76px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(255,255,255,0.68);
+  letter-spacing: 0.01em;
   transition: color var(--motion-duration) var(--motion-ease);
   position: relative;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-links a:hover {
-  color: var(--brand-primary);
+  color: var(--white);
   text-decoration: none;
 }
 
 .nav-links a::after {
   content: '';
   position: absolute;
-  bottom: -4px;
-  left: 0;
+  bottom: 15px;
+  left: 50%;
   width: 0;
   height: 2px;
-  background: var(--brand-primary);
-  border-radius: 1px;
-  transition: width var(--motion-duration) var(--motion-ease);
+  background: linear-gradient(90deg, #7c3aed, #38bdf8);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  transition: width var(--motion-duration) var(--motion-ease),
+              opacity var(--motion-duration) var(--motion-ease);
+  opacity: 0;
 }
 
 .nav-links a:hover::after {
   width: 100%;
+  opacity: 1;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 .nav-cta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
-  background: var(--brand-primary);
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #0078d4, #2563eb);
   color: var(--white) !important;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.15;
   transition: all var(--motion-duration) var(--motion-ease);
-  border: none;
+  border: 1px solid rgba(255,255,255,0.16);
   cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0,120,212,0.28);
+  text-decoration: none !important;
+  white-space: nowrap;
 }
 
 .nav-cta:hover {
-  background: var(--brand-dark);
+  background: linear-gradient(135deg, #106ebe, #1d4ed8);
   text-decoration: none !important;
-  transform: translateY(-1px);
-  box-shadow: var(--depth-8);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0,120,212,0.34);
+}
+
+.nav-pdf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #7c3aed, #0ea5e9);
+  color: var(--white) !important;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 0.78rem;
+  transition: all var(--motion-duration) var(--motion-ease);
+  cursor: pointer;
+  text-decoration: none !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 22px rgba(92,45,145,0.26);
+  white-space: nowrap;
+}
+
+.nav-pdf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(92,45,145,0.34);
+}
+
+.nav-pdf svg { width: 14px; height: 14px; }
+
+@media (max-width: 1180px) {
+  .nav-brand { min-width: auto; }
+  .nav-brand-subtitle { display: none; }
+  .nav-links { gap: 14px; }
+  .nav-links a { font-size: 0.78rem; }
+}
+
+@media (max-width: 1020px) {
+  .nav-links { display: none; }
 }
 
 @media (max-width: 768px) {
-  .nav-links { display: none; }
+  .nav-inner {
+    min-height: 68px;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .nav-brand svg { width: 34px; height: 34px; }
+  .nav-brand-title { font-size: 0.92rem; }
+  .nav-actions { gap: 8px; }
+  .nav-pdf,
+  .nav-cta {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 0.74rem;
+  }
 }
 
 /* ============================================================
@@ -1527,31 +1641,6 @@ h4 { font-size: 1.1rem; }
   .workflow-overview-figure { border-radius: var(--radius-md); }
 }
 
-/* PDF download button in nav */
-.nav-pdf {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 16px;
-  background: transparent;
-  color: var(--brand-primary) !important;
-  border: 1.5px solid var(--brand-primary);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.8rem;
-  transition: all var(--motion-duration) var(--motion-ease);
-  cursor: pointer;
-  text-decoration: none !important;
-  letter-spacing: 0.02em;
-}
-.nav-pdf:hover {
-  background: var(--brand-primary);
-  color: var(--white) !important;
-  transform: translateY(-1px);
-  box-shadow: var(--depth-4);
-}
-.nav-pdf svg { width: 14px; height: 14px; }
-
 /* ============================================================
    Print / PDF Styles
    ============================================================ */
@@ -1603,26 +1692,31 @@ h4 { font-size: 1.1rem; }
   <div class="nav-inner">
     <div class="nav-brand">
       <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="url(#navGrad)"/><path d="M8 10h4v8H8zM14 8h4v10h-4zM20 12h0" stroke="#fff" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="navGrad" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#0078d4"/><stop offset="1" stop-color="#5c2d91"/></linearGradient></defs></svg>
-      Code Apps Foundations
+      <span class="nav-brand-text">
+        <span class="nav-brand-title">Code Apps Foundations</span>
+        <span class="nav-brand-subtitle">Power Platform template</span>
+      </span>
     </div>
     <ul class="nav-links">
       <li><a href="#overview">Overview</a></li>
-      <li><a href="#why">Why Code Apps</a></li>
+      <li><a href="#why">Why</a></li>
       <li><a href="#methodology">Methodology</a></li>
       <li><a href="#wizard">Wizard</a></li>
       <li><a href="#dataverse">Dataverse</a></li>
       <li><a href="#connectors">Connectors</a></li>
-      <li><a href="#copilot">Copilot Studio</a></li>
-      <li><a href="#inside">What's Inside</a></li>
+      <li><a href="#copilot">Copilot</a></li>
+      <li><a href="#inside">Inside</a></li>
     </ul>
-    <a href="assets/code-apps-foundations.pdf" download class="nav-pdf" title="Download as PDF">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
-      PDF
-    </a>
-    <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations" class="nav-cta" target="_blank" rel="noopener">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      Use Template
-    </a>
+    <div class="nav-actions">
+      <a href="assets/code-apps-foundations.pdf" download class="nav-pdf" title="Download as PDF">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+        PDF
+      </a>
+      <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations" class="nav-cta" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Use Template
+      </a>
+    </div>
   </div>
 </nav>
 
