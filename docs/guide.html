@@ -1243,7 +1243,12 @@
             </div>
 
             <h4>Connector &amp; Data Source Setup</h4>
-            <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later with <code>node wizard/index.mjs --from 8</code> once the planning payload and prototype are stable enough to bind real systems.</p>
+            <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later once the planning payload and prototype are stable enough to bind real systems.</p>
+            <pre style="margin-top:4px; display:inline-block;"><em># Terminal wizard:</em>
+node wizard/index.mjs --from 8
+
+<em># Browser wizard — navigate to Step 8 (Bind Connectors):</em>
+npm run wizard:ux</pre>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
@@ -1369,7 +1374,11 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
 
       <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
       <p>Preferred path: rerun the wizard when you are ready to connect real data.</p>
-      <pre style="margin-bottom:8px;">node wizard/index.mjs --from 8</pre>
+      <pre style="margin-bottom:8px;"><em># Terminal wizard:</em>
+node wizard/index.mjs --from 8
+
+<em># Or use the browser wizard — navigate to Step 8:</em>
+npm run wizard:ux</pre>
       <p>The wizard will create the solution-level connection references, try to discover existing environment connections with <code>pac connection list</code>, and let you select one when matches are found.</p>
 
       <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
@@ -1562,7 +1571,11 @@ export default defineConfig(({ command }) =&gt; ({
 
       <h4>Adding a Data Source</h4>
       <p>Recommended order: prototype first, then rerun the wizard from the dedicated connector step once the planning payload is stable.</p>
-      <pre style="margin-bottom:8px;">node wizard/index.mjs --from 8</pre>
+      <pre style="margin-bottom:8px;"><em># Terminal wizard:</em>
+node wizard/index.mjs --from 8
+
+<em># Or use the browser wizard — navigate to Step 8:</em>
+npm run wizard:ux</pre>
       <pre><em># Dataverse (no connection ID needed):</em>
 pac code add-data-source -a dataverse -t myprefix_project
 
@@ -1905,6 +1918,7 @@ pac code push</pre>
       <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. The wizard compensates for this by discovering existing environment connections with <code>pac connection list</code> and letting you select one when possible. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
+      <p style="margin-bottom: var(--s2); font-size: 14px;">Both the terminal wizard and the browser wizard (<code>npm run wizard:ux</code>) share <code>.wizard-state.json</code>, so you can switch between them freely. The browser wizard lets you jump directly to any step from the step navigator.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
@@ -1912,6 +1926,7 @@ pac code push</pre>
           <tr><td><code>node wizard/index.mjs --from 7</code></td><td>Re-run from scaffold onward, including the later connector and deploy steps</td></tr>
           <tr><td><code>node wizard/index.mjs --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
           <tr><td><code>node wizard/index.mjs --reset</code></td><td>Start completely fresh</td></tr>
+          <tr><td><code>npm run wizard:ux</code></td><td>Open the browser wizard — jump to any step from the step navigator</td></tr>
         </tbody>
       </table></div>
 
