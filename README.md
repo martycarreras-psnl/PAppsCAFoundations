@@ -385,3 +385,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and security p
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+> **Disclaimer:** This content is **not a formal statement, position, or endorsement from Microsoft**. It is an observational perspective from [Marty Carreras](https://www.linkedin.com/in/martycarreras/), Microsoft's US Healthcare & Life Sciences AI Business Solutions CTO, offered to help organizations think through enterprise application strategy. Opinions are the author's own.
