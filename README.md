@@ -4,6 +4,10 @@ A **GitHub template repository** with opinionated, comprehensive GitHub Copilot 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+![Power Apps Code Apps Foundations — From Template to Production: a 10-step developer journey covering Use the Template, Run the Wizard, Sample App Live, Plan Mode in VS Code, Agent Mode Builds the POC, Connect Connectors, Bind to Dataverse, Test, Share & Collaborate, and Promote with Pipelines.](docs/assets/code-apps-foundations-overview.png)
+
+> **The whole journey, one picture.** Click _Use this template_ on GitHub → run the Wizard → ship your first app. The rest of this README explains _how_ — and the [visual guide](docs/guide.html) walks you through it section by section.
+
 ## Prerequisites
 
 | Requirement | Minimum | Notes |

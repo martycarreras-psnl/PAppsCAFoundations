@@ -40,9 +40,8 @@ Three things, working together.
 Click **Use this template**. Give your new repo a name. Clone it. You now have:
 
 - A complete `.github/instructions/` set that GitHub Copilot reads automatically — every file, every chat, every agent invocation, in the right order
-- A `wizard/` directory with a battle-tested setup wizard
 - A `wizard-ux/` directory with a beautiful Fluent UI v9 browser wizard built on the **same** stack you're about to use
-- An `AGENTS.md` at the root that puts non-negotiable guardrails in place for any coding agent that enters the repo (Copilot, Cursor, Claude Code, Aider, Cline)
+- An `AGENTS.md` at the root that puts non-negotiable guardrails in place for any coding agent that enters the repo (GitHub Copilot, Cursor, Claude Code, Aider, Cline)
 - A `docs/` folder with a glossary, a visual guide, a marketing landing page, and a printable PDF reference
 
 You don't read most of it. **Copilot reads it for you.** The point is that the repo encodes a methodology, and any agent that opens it inherits the methodology automatically.

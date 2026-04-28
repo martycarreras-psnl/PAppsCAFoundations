@@ -1393,6 +1393,47 @@ h4 { font-size: 1.1rem; }
 .cross { color: var(--neutral-tertiary); }
 .partial { color: var(--accent-gold); font-weight: 600; }
 
+/* ============================================================
+   Workflow Overview Banner
+   ============================================================ */
+.workflow-overview {
+  padding: var(--section-padding) 0 calc(var(--section-padding) * 0.6);
+  background:
+    radial-gradient(ellipse at top left, rgba(0,120,212,0.04), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(92,45,145,0.04), transparent 60%),
+    var(--white);
+}
+.workflow-overview .section-header { margin-bottom: 48px; }
+.workflow-overview-figure {
+  margin: 0 auto;
+  max-width: 1180px;
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  border: 1px solid var(--neutral-light);
+  box-shadow: var(--depth-16);
+  overflow: hidden;
+  transition: transform var(--motion-duration) var(--motion-ease),
+              box-shadow var(--motion-duration) var(--motion-ease);
+}
+.workflow-overview-figure:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--depth-64);
+}
+.workflow-overview-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.workflow-overview-caption {
+  text-align: center;
+  margin-top: 20px;
+  color: var(--neutral-secondary);
+  font-size: 0.95rem;
+}
+@media (max-width: 768px) {
+  .workflow-overview-figure { border-radius: var(--radius-md); }
+}
+
 /* PDF download button in nav */
 .nav-pdf {
   display: inline-flex;
@@ -1472,6 +1513,7 @@ h4 { font-size: 1.1rem; }
       Code Apps Foundations
     </div>
     <ul class="nav-links">
+      <li><a href="#overview">Overview</a></li>
       <li><a href="#why">Why Code Apps</a></li>
       <li><a href="#methodology">Methodology</a></li>
       <li><a href="#wizard">Wizard</a></li>
@@ -1571,6 +1613,25 @@ h4 { font-size: 1.1rem; }
     </div>
   </div>
 </div>
+
+<!-- ============================================================
+     Workflow Overview — One-Glance Journey Map
+     ============================================================ -->
+<section class="workflow-overview" id="overview">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">The Journey at a Glance</span>
+      <h2>Template to Production — <span class="gradient-text">in 10 Steps</span></h2>
+      <p class="subtitle">From clicking <em>Use this template</em> to promoting through Power Platform Pipelines — Foundations gives every team the same proven path. One picture says it all.</p>
+    </div>
+    <figure class="workflow-overview-figure fade-in">
+      <img src="assets/code-apps-foundations-overview.png"
+           alt="Power Apps Code Apps Foundations — From Template to Production: a 10-step journey showing Use the Template, Run the Wizard, Sample App Live, Plan Mode in VS Code, Agent Mode Builds the POC, Connect Connectors, Bind to Dataverse, Test, Share & Collaborate, and Promote with Pipelines."
+           loading="lazy" />
+    </figure>
+    <p class="workflow-overview-caption fade-in">Click <strong>Use this template</strong> on GitHub → run the Wizard → ship your first app. The rest of this page explains <em>how</em>.</p>
+  </div>
+</section>
 
 <!-- ============================================================
      Why Power Apps Code Apps

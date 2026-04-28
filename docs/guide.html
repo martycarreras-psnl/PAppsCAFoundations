@@ -318,6 +318,28 @@
   }
 
   /* ============================================================
+     Workflow Overview Banner
+     ============================================================ */
+  .workflow-overview-figure {
+    margin: var(--s5) 0 var(--s3);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    border: 1px solid var(--neutralLight);
+    box-shadow: var(--depth8);
+    overflow: hidden;
+    transition: box-shadow var(--motion-duration) var(--motion-ease);
+  }
+  .workflow-overview-figure:hover { box-shadow: var(--depth16, 0 6.4px 14.4px rgba(0,0,0,.132), 0 1.2px 3.6px rgba(0,0,0,.108)); }
+  .workflow-overview-figure img { display: block; width: 100%; height: auto; }
+  .workflow-overview-caption {
+    text-align: center;
+    color: var(--neutralSecondary);
+    font-size: 13px;
+    line-height: 18px;
+    margin-bottom: var(--s5);
+  }
+
+  /* ============================================================
      Accordion (collapsible sections)
      ============================================================ */
   .accordion { margin-bottom: var(--s4); }
@@ -574,6 +596,9 @@
       <button class="nav-item active" data-target="hero-section" onclick="navTo(this)">
         <span class="nav-icon">🏠</span> Getting Started
       </button>
+      <button class="nav-item" data-target="journey-overview" onclick="navTo(this)">
+        <span class="nav-icon">🗺️</span> The Journey
+      </button>
       <button class="nav-item" data-target="whats-inside" onclick="navTo(this)">
         <span class="nav-icon">📁</span> What's Inside
       </button>
@@ -659,6 +684,17 @@
         <a href="#planning-layer" class="btn btn-outline">🧠 Planning Layer</a>
         <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
       </div>
+    </section>
+
+    <section class="section" id="journey-overview">
+      <h2 class="section-title">🗺️ Template to Production — in 10 Steps</h2>
+      <p class="section-subtitle">From clicking <em>Use this template</em> on GitHub to promoting through Power Platform Pipelines, every Foundations team follows the same proven path. One picture says it all.</p>
+      <figure class="workflow-overview-figure">
+        <img src="assets/code-apps-foundations-overview.png"
+             alt="Power Apps Code Apps Foundations — From Template to Production: a 10-step journey showing Use the Template, Run the Wizard, Sample App Live, Plan Mode in VS Code, Agent Mode Builds the POC, Connect Connectors, Bind to Dataverse, Test, Share & Collaborate, and Promote with Pipelines."
+             loading="lazy" />
+      </figure>
+      <p class="workflow-overview-caption">The rest of this guide explains <em>how</em> — section by section.</p>
     </section>
 
     <section class="section" id="start-here">
