@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  makeStyles, tokens, Body1, Title1, Title2, Title3, Subtitle2,
+  makeStyles, tokens, Body1, Title2, Title3, Subtitle2,
   Button, Spinner, Caption1, Badge, MessageBar, MessageBarBody, MessageBarTitle,
   Dialog, DialogTrigger, DialogSurface, DialogTitle, DialogBody, DialogActions, DialogContent,
 } from '@fluentui/react-components';
@@ -35,6 +35,10 @@ const useStyles = makeStyles({
     zIndex: 1,
     textAlign: 'center',
     maxWidth: '760px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px',
   },
   pill: {
     display: 'inline-flex',
@@ -50,7 +54,7 @@ const useStyles = makeStyles({
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: tokens.colorBrandForeground1,
-    marginBottom: '24px',
+    alignSelf: 'center',
   },
   title: {
     margin: 0,
@@ -58,19 +62,17 @@ const useStyles = makeStyles({
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
-    letterSpacing: '-0.025em',
-    fontSize: '56px',
-    lineHeight: 1.05,
+    letterSpacing: '-0.02em',
+    fontSize: 'clamp(34px, 5vw, 52px)',
+    lineHeight: 1.1,
     fontWeight: 700,
+    width: '100%',
   },
   subtitle: {
-    marginTop: '20px',
     color: tokens.colorNeutralForeground2,
-    fontSize: tokens.fontSizeBase500,
+    fontSize: tokens.fontSizeBase400,
     lineHeight: 1.55,
-    maxWidth: '640px',
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    maxWidth: '620px',
   },
 
   // ─── BODY ─────────────────────────────────────────────────────
@@ -313,9 +315,9 @@ export function Welcome() {
           <div className={s.pill}>
             <RocketRegular /> Power Apps Code Apps · Foundations
           </div>
-          <Title1 as="h1" className={s.title}>
+          <h1 className={s.title}>
             Set up a Code App the right way, the first time.
-          </Title1>
+          </h1>
           <Body1 className={s.subtitle}>
             A guided, opinionated setup for Power Apps Code Apps. The wizard walks you through
             every prerequisite, every Power Platform decision, and every CLI command — in order,
