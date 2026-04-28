@@ -299,6 +299,19 @@ This repo ships native guidance for four coding agents. Each reads the same arch
 
 The `.github/instructions/` files are the canonical source. Claude, Cursor, and Codex projections are generated from them. See [docs/agent-support.md](docs/agent-support.md) for the full matrix and verification steps.
 
+### How agent guidance stays in sync
+
+Every coding agent needs its instructions in a different format, but the underlying rules must be identical. Foundations solves this with a **single canonical source → multiple generated projections** model:
+
+1. **Canonical source** — `.github/instructions/*.instructions.md` (Copilot-native format with `applyTo` and `description` frontmatter). Plus the hand-authored root `AGENTS.md`.
+2. **Generated projections** — A manifest (`agent-guidance.config.json`) maps each canonical file to its Claude, Cursor, and Codex equivalents. A generator script reads the manifest and validates (or regenerates) the projected files:
+   - Claude Code: `CLAUDE.md` + `.claude/rules/*.md` (uses `paths` frontmatter)
+   - Cursor: `.cursor/rules/*.mdc` (uses `globs` and `description` frontmatter)
+   - Codex: nested `AGENTS.md` files in subdirectories (concise summaries + links)
+3. **Drift prevention** — `npm run guidance:check` fails if any projected file is missing or unmarked, so CI and contributors catch drift before it ships. `npm run guidance:generate` regenerates all projections.
+
+**The rule:** edit the canonical `.github/instructions/` files, then run `npm run guidance:generate`. Never edit `.claude/rules/`, `.cursor/rules/`, or nested `AGENTS.md` files directly — they carry a "do not edit" marker and will be overwritten.
+
 ## Dataverse Helper Flow
 
 Foundations now includes a reusable Dataverse execution layer that sits after prototype validation and before connector generation:

@@ -812,6 +812,20 @@
           </div>
         </div></div>
       </div>
+
+      <div class="callout callout-info" style="margin-top: 24px;">
+        <span class="callout-icon">🔗</span>
+        <div>
+          <strong>How agent guidance stays in sync</strong>
+          <p style="margin-top:8px;">Every coding agent needs its instructions in a different format, but the underlying rules must be identical. Foundations solves this with a <strong>single canonical source → multiple generated projections</strong> model:</p>
+          <ol style="margin-top:8px; padding-left:20px;">
+            <li><strong>Canonical source</strong> — <code>.github/instructions/*.instructions.md</code> (Copilot-native format) plus the hand-authored root <code>AGENTS.md</code>.</li>
+            <li><strong>Generated projections</strong> — A manifest (<code>agent-guidance.config.json</code>) maps each canonical file to its Claude (<code>.claude/rules/</code>), Cursor (<code>.cursor/rules/</code>), and Codex (nested <code>AGENTS.md</code>) equivalents.</li>
+            <li><strong>Drift prevention</strong> — <code>npm run guidance:check</code> fails if any projected file is missing or unmarked. <code>npm run guidance:generate</code> regenerates all projections.</li>
+          </ol>
+          <p style="margin-top:8px;"><strong>The rule:</strong> edit the canonical <code>.github/instructions/</code> files, then run <code>npm run guidance:generate</code>. Never edit projected files directly — they carry a "do not edit" marker and will be overwritten.</p>
+        </div>
+      </div>
     </section>
 
     <!-- Tech Stack -->
