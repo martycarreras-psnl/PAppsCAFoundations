@@ -148,7 +148,15 @@ export function StepRunner() {
 
               {/* Terminal handoff card */}
               {meta && !meta.canRunInBrowser && meta.terminalHandoff && (
-                <TerminalHandoff command={meta.terminalHandoff.command} explanation={meta.terminalHandoff.explanation} />
+                <TerminalHandoff
+                  command={meta.terminalHandoff.command}
+                  explanation={meta.terminalHandoff.explanation}
+                  onSessionEnd={() => {
+                    qc.invalidateQueries({ queryKey: ['state'] });
+                    qc.invalidateQueries({ queryKey: ['steps'] });
+                    qc.invalidateQueries({ queryKey: ['questions', stepNumber] });
+                  }}
+                />
               )}
 
               {/* Optional/skip note */}

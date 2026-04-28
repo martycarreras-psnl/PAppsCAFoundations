@@ -13,6 +13,7 @@ import stateRoutes from './routes/state.mjs';
 import systemRoutes from './routes/system.mjs';
 import stepsRoutes from './routes/steps.mjs';
 import streamRoutes from './routes/stream.mjs';
+import ptyRoutes from './routes/pty.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UX_DIR = resolve(__dirname, '..');
@@ -70,6 +71,7 @@ await app.register(stateRoutes, { prefix: '/api/state', rootDir: ROOT_DIR });
 await app.register(systemRoutes, { prefix: '/api/system', rootDir: ROOT_DIR });
 await app.register(stepsRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(streamRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
+await app.register(ptyRoutes, { rootDir: ROOT_DIR, csrfToken: CSRF_TOKEN });
 
 // Serve the UI — Vite middleware in dev, static dist/ in prod
 if (IS_PROD) {
@@ -93,14 +95,14 @@ if (IS_PROD) {
   });
   // Mount Vite's connect-style middleware
   app.addHook('onRequest', async (req, reply) => {
-    if (req.url.startsWith('/api/')) return;
+    if (req.url.startsWith('/api/') || req.url.startsWith('/ws/')) return;
     return new Promise((resolveP) => {
       vite.middlewares(req.raw, reply.raw, () => resolveP());
       reply.raw.on('finish', () => resolveP());
     });
   });
   app.setNotFoundHandler(async (req, reply) => {
-    if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'Not found' });
+    if (req.url.startsWith('/api/') || req.url.startsWith('/ws/')) return reply.code(404).send({ error: 'Not found' });
     try {
       const indexHtml = readFileSync(join(UX_DIR, 'index.html'), 'utf-8');
       const html = await vite.transformIndexHtml(req.url, indexHtml);

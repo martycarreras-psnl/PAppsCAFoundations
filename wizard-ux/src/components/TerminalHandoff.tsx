@@ -1,15 +1,17 @@
 import {
-  makeStyles, tokens, MessageBar, MessageBarBody, MessageBarTitle, Body1, Button,
+  makeStyles, tokens, MessageBar, MessageBarBody, MessageBarTitle, Body1, Button, Caption1,
 } from '@fluentui/react-components';
-import { CopyRegular, CheckmarkCircleRegular, OpenRegular } from '@fluentui/react-icons';
+import { CopyRegular, CheckmarkCircleRegular, PlayRegular } from '@fluentui/react-icons';
 import { useState } from 'react';
+import { gradients } from '../theme/tokens';
+import { EmbeddedTerminal, EmbeddedTerminalStatus } from './EmbeddedTerminal';
 
 const useStyles = makeStyles({
   card: {
-    border: `1px dashed ${tokens.colorBrandStroke1}`,
-    borderRadius: '10px',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: '12px',
     padding: '16px',
-    backgroundColor: tokens.colorBrandBackground2,
+    background: gradients.accentSoft,
     display: 'flex', flexDirection: 'column', gap: '12px',
   },
   cmd: {
@@ -23,17 +25,21 @@ const useStyles = makeStyles({
     userSelect: 'all',
     overflowX: 'auto',
   },
-  row: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
+  row: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' },
+  hint: { color: tokens.colorNeutralForeground3 },
 });
 
 interface Props {
   command: string;
   explanation: string;
+  /** Optional callback when the embedded terminal session ends (success or otherwise). */
+  onSessionEnd?: (info: { exitCode?: number; signal?: number }) => void;
 }
 
-export function TerminalHandoff({ command, explanation }: Props) {
+export function TerminalHandoff({ command, explanation, onSessionEnd }: Props) {
   const s = useStyles();
   const [copied, setCopied] = useState(false);
+  const [running, setRunning] = useState(false);
 
   function copy() {
     navigator.clipboard.writeText(command).then(() => {
@@ -42,27 +48,43 @@ export function TerminalHandoff({ command, explanation }: Props) {
     });
   }
 
+  function handleStatus(status: EmbeddedTerminalStatus, info?: { exitCode?: number; signal?: number; message?: string }) {
+    if (status === 'closed' || status === 'error') {
+      onSessionEnd?.({ exitCode: info?.exitCode, signal: info?.signal });
+    }
+  }
+
   return (
     <div className={s.card}>
       <MessageBar intent="info" layout="multiline">
         <MessageBarBody>
-          <MessageBarTitle>This step runs in your terminal</MessageBarTitle>
+          <MessageBarTitle>This step runs in a real shell</MessageBarTitle>
           <Body1 style={{ whiteSpace: 'pre-wrap' }}>{explanation}</Body1>
         </MessageBarBody>
       </MessageBar>
       <div className={s.cmd}>{command}</div>
-      <div className={s.row}>
-        <Button appearance="primary" icon={copied ? <CheckmarkCircleRegular /> : <CopyRegular />} onClick={copy}>
-          {copied ? 'Copied!' : 'Copy command'}
-        </Button>
-        <Button
-          appearance="secondary"
-          icon={<OpenRegular />}
-          onClick={() => alert('Open a terminal in your repo root and paste the command.')}
-        >
-          How do I open a terminal?
-        </Button>
-      </div>
+
+      {!running && (
+        <div className={s.row}>
+          <Button appearance="primary" icon={<PlayRegular />} onClick={() => setRunning(true)}>
+            Run here
+          </Button>
+          <Button appearance="secondary" icon={copied ? <CheckmarkCircleRegular /> : <CopyRegular />} onClick={copy}>
+            {copied ? 'Copied!' : 'Copy command'}
+          </Button>
+          <Caption1 className={s.hint}>
+            Run here opens a real terminal inside this page (zsh / pwsh) — device-code prompts, biometric prompts, and live output all work.
+          </Caption1>
+        </div>
+      )}
+
+      {running && (
+        <EmbeddedTerminal
+          initialCommand={command}
+          onStatusChange={handleStatus}
+          onClose={() => setRunning(false)}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
 
 let csrfToken: string | null = null;
 
-async function ensureToken(): Promise<string> {
+export async function ensureToken(): Promise<string> {
   if (csrfToken) return csrfToken;
   const res = await fetch('/api/handshake', { credentials: 'same-origin' });
   if (!res.ok) throw new Error('Handshake failed');
