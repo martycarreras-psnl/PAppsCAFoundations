@@ -396,35 +396,6 @@ h4 { font-size: 1.1rem; }
   box-shadow: 0 14px 30px rgba(0,120,212,0.34);
 }
 
-.nav-pdf {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 42px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, #7c3aed, #0ea5e9);
-  color: var(--white) !important;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: var(--radius-md);
-  font-weight: 800;
-  font-size: 0.78rem;
-  transition: all var(--motion-duration) var(--motion-ease);
-  cursor: pointer;
-  text-decoration: none !important;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  box-shadow: 0 10px 22px rgba(92,45,145,0.26);
-  white-space: nowrap;
-}
-
-.nav-pdf:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(92,45,145,0.34);
-}
-
-.nav-pdf svg { width: 14px; height: 14px; }
-
 @media (max-width: 1180px) {
   .nav-brand { min-width: auto; }
   .nav-brand-subtitle { display: none; }
@@ -447,7 +418,6 @@ h4 { font-size: 1.1rem; }
   .nav-brand-title { font-size: 0.92rem; }
   .nav-actions { gap: 8px; }
   .nav-mobile-panel { right: 16px; }
-  .nav-pdf,
   .nav-cta {
     min-height: 38px;
     padding: 9px 12px;
@@ -458,7 +428,6 @@ h4 { font-size: 1.1rem; }
 @media (max-width: 520px) {
   .nav-inner { gap: 8px; }
   .nav-brand-title { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-  .nav-pdf { display: none; }
   .nav-cta span { display: none; }
   .nav-cta { width: 38px; padding: 9px; }
 }
@@ -1867,7 +1836,7 @@ h4 { font-size: 1.1rem; }
 @media print {
   /* Hide interactive-only elements */
   .nav, .hero-terminal, #particle-canvas,
-  .nav-pdf, .hero-badge .pulse,
+  .hero-badge .pulse,
   .cta-section, footer { display: none !important; }
 
   /* Reset backgrounds for clean print */
@@ -1931,10 +1900,6 @@ h4 { font-size: 1.1rem; }
       <button class="nav-menu-toggle" type="button" aria-label="Open navigation menu" aria-controls="nav-mobile-menu" aria-expanded="false">
         <span class="nav-menu-icon" aria-hidden="true"><span></span></span>
       </button>
-      <a href="assets/code-apps-foundations.pdf" download class="nav-pdf" title="Download as PDF">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
-        PDF
-      </a>
       <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations" class="nav-cta" target="_blank" rel="noopener">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         <span>Use Template</span>
