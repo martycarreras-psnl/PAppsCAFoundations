@@ -2,9 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  PanelGroup, Panel, PanelResizeHandle,
-} from 'react-resizable-panels';
-import {
   makeStyles, tokens, Title2, Body1, Button, Spinner, Badge,
   MessageBar, MessageBarBody, MessageBarTitle, Caption1,
 } from '@fluentui/react-components';
@@ -21,14 +18,14 @@ import { Question } from '../types/schema';
 
 const useStyles = makeStyles({
   root: { height: '100%', display: 'flex' },
-  main: { flex: 1, height: '100%', minWidth: 0 },
+  main: { flex: 1, height: '100%', minWidth: 0, overflow: 'hidden' },
   pane: { height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
   formWrap: {
     height: '100%',
     overflowY: 'auto',
-    padding: '24px 32px',
+    padding: '24px 32px 32px',
     display: 'flex', flexDirection: 'column', gap: '16px',
-    maxWidth: '720px',
+    maxWidth: '820px',
     margin: '0 auto',
     width: '100%',
   },
@@ -47,14 +44,16 @@ const useStyles = makeStyles({
     marginTop: '8px',
   },
   spacer: { flex: 1 },
-  resizer: {
-    width: '4px',
-    background: tokens.colorNeutralStroke2,
-    cursor: 'col-resize',
-    transition: 'background-color 150ms',
-    ':hover': { background: tokens.colorBrandStroke2 },
+  inlineLog: {
+    marginTop: '4px',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: '10px',
+    overflow: 'hidden',
+    minHeight: '180px',
+    maxHeight: '320px',
+    display: 'flex',
+    flexDirection: 'column',
   },
-  logPane: { padding: '16px' },
 });
 
 export function StepRunner() {
@@ -128,9 +127,8 @@ export function StepRunner() {
       {stepsQ.data && <StepNav steps={stepsQ.data.steps} current={stepNumber} />}
 
       <div className={s.main}>
-        <PanelGroup direction="horizontal" autoSaveId="wizardux-step-split">
-          <Panel defaultSize={60} minSize={40} className={s.pane}>
-            <div className={s.formWrap}>
+        <div className={s.pane}>
+          <div className={s.formWrap}>
               <div className={s.header}>
                 <div className={s.headerText}>
                   <Caption1 style={{ color: tokens.colorBrandForeground1 }}>STEP {stepNumber} OF {stepsQ.data?.totalSteps ?? 9}</Caption1>
@@ -222,6 +220,13 @@ export function StepRunner() {
                 </MessageBar>
               )}
 
+              {/* Inline live output — only shown when an in-browser run is active or has output */}
+              {meta?.canRunInBrowser && (stream.status === 'running' || stream.lines.length > 0) && (
+                <div className={s.inlineLog}>
+                  <LiveLog lines={stream.lines} status={stream.status} />
+                </div>
+              )}
+
               <div className={s.actions}>
                 <Button
                   appearance="secondary"
@@ -257,16 +262,7 @@ export function StepRunner() {
                 </Button>
               </div>
             </div>
-          </Panel>
-
-          <PanelResizeHandle className={s.resizer} />
-
-          <Panel defaultSize={40} minSize={25} className={s.pane}>
-            <div className={s.logPane} style={{ height: '100%', boxSizing: 'border-box' }}>
-              <LiveLog lines={stream.lines} status={stream.status} />
-            </div>
-          </Panel>
-        </PanelGroup>
+        </div>
       </div>
     </div>
   );
