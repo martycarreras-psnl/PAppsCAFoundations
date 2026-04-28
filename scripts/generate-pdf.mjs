@@ -14,38 +14,70 @@ await fs.mkdir(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({
   headless: 'new',
-  args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
+  protocolTimeout: 300_000,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--font-render-hinting=none',
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+  ],
 });
 
 try {
   const page = await browser.newPage();
+  page.setDefaultTimeout(60_000);
   await page.setViewport({ width: 1280, height: 1800, deviceScaleFactor: 2 });
 
   const url = pathToFileURL(indexPath).href;
   console.log(`Loading ${url}`);
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: 90_000 });
+  // Use 'load' instead of 'networkidle0' — the particle canvas animation
+  // keeps the network activity alive indefinitely, preventing networkidle0
+  // from resolving on slower CI runners.
+  await page.goto(url, { waitUntil: 'load', timeout: 90_000 });
 
-  // Force-open all <details> so collapsible content is included.
+  // Kill any running animations/requestAnimationFrame loops so the page
+  // settles into a static state for PDF rendering.
   await page.evaluate(() => {
+    // Stop the particle canvas animation
+    const canvas = document.getElementById('particle-canvas');
+    if (canvas) canvas.remove();
+
+    // Force-open all <details> so collapsible content is included.
     document.querySelectorAll('details').forEach((d) => d.setAttribute('open', ''));
-    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
+    document.querySelectorAll('.reveal').forEach((el) => {
+      el.classList.add('in');
+      el.style.opacity = '1';
+      el.style.transform = 'none';
+    });
   });
 
-  // Wait for fonts + images
-  await page.evaluateHandle('document.fonts.ready');
-  await page.evaluate(async () => {
+  // Wait for fonts — with a safety timeout so CI doesn't hang if system
+  // fonts (e.g. Segoe UI) aren't available on the runner.
+  await Promise.race([
+    page.evaluateHandle('document.fonts.ready'),
+    new Promise((res) => setTimeout(res, 10_000)),
+  ]);
+  console.log('Fonts settled');
+
+  // Wait for images — with a per-image timeout.
+  await page.evaluate(() => {
     const imgs = Array.from(document.images);
-    await Promise.all(
+    return Promise.all(
       imgs.map((img) =>
         img.complete
           ? Promise.resolve()
-          : new Promise((res) => {
-              img.addEventListener('load', res, { once: true });
-              img.addEventListener('error', res, { once: true });
-            })
+          : Promise.race([
+              new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              }),
+              new Promise((res) => setTimeout(res, 5_000)),
+            ])
       )
     );
   });
+  console.log('Images settled');
 
   await page.emulateMediaType('print');
 
