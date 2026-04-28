@@ -10,7 +10,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 const TEMPLATE_REPO = 'martycarreras-psnl/PAppsCAFoundations';
 const TEMPLATE_BRANCH = 'main';
 const TEMPLATE_GIT_URL = `https://github.com/${TEMPLATE_REPO}.git`;
-const SYNC_DIRS = ['.github/instructions', 'wizard', 'scripts', 'docs'];
+const SYNC_DIRS = ['.github/instructions', 'wizard', 'wizard-ux', 'scripts', 'docs'];
 const SYNC_FILES = ['.env.template', '.foundations-version.json', 'AGENTS.md'];
 
 const args = new Set(process.argv.slice(2));
@@ -124,6 +124,9 @@ function mergeRequiredScripts() {
     'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
     'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
     'sync:foundations': 'node scripts/sync-foundations.mjs',
+    wizard: 'cd wizard && node index.mjs',
+    'wizard:ux': 'cd wizard-ux && (test -d node_modules || npm install) && node server/index.mjs',
+    'wizard:ux:build': 'cd wizard-ux && npm run build',
   };
 
   const before = JSON.stringify(pkg.scripts || {});

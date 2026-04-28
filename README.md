@@ -326,7 +326,7 @@ npm run sync:foundations -- --dry-run   # Preview only, no changes
 > node scripts/sync-foundations.mjs         # Any platform
 > ```
 
-**What gets synced:** `.github/instructions/`, `wizard/`, `scripts/`, `docs/`, `.env.template`, `.foundations-version.json`
+**What gets synced:** `.github/instructions/`, `wizard/`, `wizard-ux/`, `scripts/`, `docs/`, `.env.template`, `.foundations-version.json`, `AGENTS.md`. The `wizard:ux` npm script is also auto-merged into your `package.json` so existing repos can run `npm run wizard:ux` immediately after syncing.
 
 **What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
 
