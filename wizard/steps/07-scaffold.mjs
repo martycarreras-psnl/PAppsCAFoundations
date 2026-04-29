@@ -20,6 +20,10 @@ import {
   copyFoundationFiles,
   createMinimalProject,
   mergePackageJsonScripts,
+  normalizePackageJsonDependencies,
+  packageSpecs,
+  REQUIRED_DEV_PACKAGES,
+  REQUIRED_RUNTIME_PACKAGES,
   writeConfig,
   writeStarterFiles,
 } from '../lib/scaffold-foundations.mjs';
@@ -37,6 +41,10 @@ export {
   copyFoundationFiles,
   createMinimalProject,
   mergePackageJsonScripts,
+  normalizePackageJsonDependencies,
+  packageSpecs,
+  REQUIRED_DEV_PACKAGES,
+  REQUIRED_RUNTIME_PACKAGES,
   writeConfig,
   writeStarterFiles,
   writeSmokeTestFiles,
@@ -90,6 +98,7 @@ export default async function stepScaffold() {
     createMinimalProject(projectDir, appName);
     ui.ok('Minimal structure created');
   }
+  normalizePackageJsonDependencies(projectDir, ui);
 
   // ── Ensure vite-env.d.ts exists (declares SVG/asset imports for TypeScript) ──
   const viteEnvPath = join(projectDir, 'src', 'vite-env.d.ts');
@@ -114,23 +123,12 @@ export default async function stepScaffold() {
   runSafeLive(npmBin, ['install'], { cwd: projectDir }) && ui.ok('Base dependencies installed');
 
   ui.line('Installing required packages...');
-  const prodPkgs = [
-    'react@^18.3.1', 'react-dom@^18.3.1', '@fluentui/react-components@^9.56.0',
-    '@tanstack/react-query@^5.62.0', 'react-router-dom@^7.1.0',
-    '@microsoft/power-apps@^1.0.3', 'concurrently@^9.1.0',
-  ];
+  const prodPkgs = packageSpecs(REQUIRED_RUNTIME_PACKAGES);
   runSafeLive(npmBin, ['install', ...prodPkgs], { cwd: projectDir })
     ? ui.ok('React + Fluent UI + TanStack Query + SDK installed')
     : ui.warn('Some packages failed to install');
 
-  const devPkgs = [
-    'typescript@^5.7.0', '@types/react@^18.3.12', '@types/react-dom@^18.3.1',
-    'vite@^5.4.0', '@vitejs/plugin-react@^4.3.0',
-    'vitest@^2.1.0', '@testing-library/react@^16.1.0', '@testing-library/jest-dom@^6.6.0', 'jsdom@^25.0.0',
-    '@playwright/test@^1.49.0',
-    'eslint@^9.16.0', 'typescript-eslint@^8.18.0', '@eslint/js@^9.16.0', 'eslint-plugin-react-hooks@^5.1.0',
-    'prettier@^3.4.0',
-  ];
+  const devPkgs = packageSpecs(REQUIRED_DEV_PACKAGES);
   runSafeLive(npmBin, ['install', '-D', ...devPkgs], { cwd: projectDir })
     ? ui.ok('Dev dependencies installed')
     : ui.warn('Some dev packages failed to install');
@@ -171,7 +169,7 @@ export default async function stepScaffold() {
         rootDir: ROOT,
         projectDir,
         credentialValues,
-        profileType: 'spn',
+        profileType: 'user',
         requirePowerConfig: false,
         requirePowerConfigTarget: false,
       });
@@ -213,7 +211,7 @@ export default async function stepScaffold() {
         rootDir: ROOT,
         projectDir,
         credentialValues,
-        profileType: 'spn',
+        profileType: 'user',
         requirePowerConfig: true,
         requirePowerConfigTarget: true,
       });
@@ -225,6 +223,7 @@ export default async function stepScaffold() {
         ui.warn(`Quarantined invalid power.config.json at ${quarantinePath}`);
       }
       ui.warn(error.message);
+      ui.warn('pac code init requires the repo-scoped interactive PAC profile. Re-run Step 4, create the user profile, complete browser/device sign-in, then retry Step 7.');
       ui.warn('pac code init failed. You can run it manually later:');
       ui.line(`  cd ${projectDir}`);
       ui.line(`  pac code init --displayName "${appName}" --buildPath "./dist" --fileEntryPoint "index.html"`);

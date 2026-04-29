@@ -215,6 +215,7 @@ export default {
     } else {
       log.ok('Starter template downloaded');
     }
+    SCAFFOLD.normalizePackageJsonDependencies(projectDir, foundationLogger);
 
     const viteEnvPath = join(projectDir, 'src', 'vite-env.d.ts');
     if (!existsSync(viteEnvPath)) {
@@ -235,22 +236,11 @@ export default {
     if (await runFile(log, toolCommand('npm'), ['install'], { cwd: projectDir })) log.ok('Base dependencies installed');
     else log.warn('Base dependency install reported errors; continuing to merge required packages.');
 
-    const prodPkgs = [
-      'react@^18.3.1', 'react-dom@^18.3.1', '@fluentui/react-components@^9.56.0',
-      '@tanstack/react-query@^5.62.0', 'react-router-dom@^7.1.0',
-      '@microsoft/power-apps@^1.0.3', 'concurrently@^9.1.0',
-    ];
+    const prodPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_RUNTIME_PACKAGES);
     if (await runFile(log, toolCommand('npm'), ['install', ...prodPkgs], { cwd: projectDir })) log.ok('Runtime packages installed');
     else log.warn('Some runtime packages failed to install.');
 
-    const devPkgs = [
-      'typescript@^5.7.0', '@types/react@^18.3.12', '@types/react-dom@^18.3.1',
-      'vite@^5.4.0', '@vitejs/plugin-react@^4.3.0',
-      'vitest@^2.1.0', '@testing-library/react@^16.1.0', '@testing-library/jest-dom@^6.6.0', 'jsdom@^25.0.0',
-      '@playwright/test@^1.49.0',
-      'eslint@^9.16.0', 'typescript-eslint@^8.18.0', '@eslint/js@^9.16.0', 'eslint-plugin-react-hooks@^5.1.0',
-      'prettier@^3.4.0',
-    ];
+    const devPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_DEV_PACKAGES);
     if (await runFile(log, toolCommand('npm'), ['install', '-D', ...devPkgs], { cwd: projectDir })) log.ok('Dev packages installed');
     else log.warn('Some dev packages failed to install.');
 
@@ -272,7 +262,11 @@ export default {
     if (pac) {
       log.info('Registering Code App in Power Platform...');
       const credentialValues = resolveCredentialValues(state);
-      verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'spn', requirePowerConfig: false, requirePowerConfigTarget: false });
+      try {
+        verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: false, requirePowerConfigTarget: false });
+      } catch (error) {
+        throw new Error(`${error.message}\n\npac code init requires the repo-scoped interactive PAC profile. Return to Step 4, enable user profile creation, complete browser/device sign-in, then retry Step 7.`);
+      }
       const powerConfigPath = join(projectDir, 'power.config.json');
       let skipInit = false;
       if (existsSync(powerConfigPath)) {
@@ -297,7 +291,7 @@ export default {
         if (!initOk) throw new Error('pac code init failed. Check the live output above, then retry this step.');
         if (!existsSync(powerConfigPath)) throw new Error('pac code init completed without creating power.config.json. Check the PAC output above, then retry Step 7 after resolving that PAC error.');
       }
-      verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'spn', requirePowerConfig: true, requirePowerConfigTarget: true });
+      verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: true, requirePowerConfigTarget: true });
       log.ok('power.config.json created and verified');
     } else {
       log.warn('PAC CLI not found; skipping pac code init.');

@@ -8,6 +8,63 @@ const noopLogger = {
   warn() {},
 };
 
+export const REQUIRED_RUNTIME_PACKAGES = {
+  react: '^18.3.1',
+  'react-dom': '^18.3.1',
+  '@fluentui/react-components': '^9.56.0',
+  '@tanstack/react-query': '^5.62.0',
+  'react-router-dom': '^7.1.0',
+  '@microsoft/power-apps': '^1.0.3',
+  concurrently: '^9.1.0',
+};
+
+export const REQUIRED_DEV_PACKAGES = {
+  typescript: '5.7.3',
+  '@types/react': '^18.3.12',
+  '@types/react-dom': '^18.3.1',
+  vite: '^5.4.0',
+  '@vitejs/plugin-react': '^4.3.0',
+  vitest: '^2.1.0',
+  '@testing-library/react': '^16.1.0',
+  '@testing-library/jest-dom': '^6.6.0',
+  jsdom: '^25.0.0',
+  '@playwright/test': '^1.49.0',
+  eslint: '^9.16.0',
+  'typescript-eslint': '^8.18.0',
+  '@eslint/js': '^9.16.0',
+  'eslint-plugin-react-hooks': '^5.1.0',
+  prettier: '^3.4.0',
+};
+
+export function packageSpecs(packages) {
+  return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
+}
+
+export function normalizePackageJsonDependencies(dir, logger = noopLogger) {
+  const pkgPath = join(dir, 'package.json');
+  let pkg = {};
+  if (existsSync(pkgPath)) {
+    try {
+      pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    } catch {
+      pkg = {};
+    }
+  }
+
+  pkg.dependencies = { ...(pkg.dependencies || {}), ...REQUIRED_RUNTIME_PACKAGES };
+  pkg.devDependencies = { ...(pkg.devDependencies || {}), ...REQUIRED_DEV_PACKAGES };
+
+  for (const name of Object.keys(REQUIRED_RUNTIME_PACKAGES)) {
+    delete pkg.devDependencies[name];
+  }
+  for (const name of Object.keys(REQUIRED_DEV_PACKAGES)) {
+    delete pkg.dependencies[name];
+  }
+
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+  logger.ok('package.json dependencies normalized');
+}
+
 export function createMinimalProject(dir, appName) {
   mkdirSync(join(dir, 'src'), { recursive: true });
   mkdirSync(join(dir, 'public'), { recursive: true });
@@ -37,6 +94,8 @@ export function createMinimalProject(dir, appName) {
     private: true,
     version: '1.0.0',
     type: 'module',
+    dependencies: REQUIRED_RUNTIME_PACKAGES,
+    devDependencies: REQUIRED_DEV_PACKAGES,
     scripts: {
       dev: 'concurrently "vite --port 3000" "pac code run"',
       'dev:local': crossPlatformDevLocal,
