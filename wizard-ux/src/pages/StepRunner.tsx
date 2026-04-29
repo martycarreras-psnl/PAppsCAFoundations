@@ -181,12 +181,15 @@ export function StepRunner() {
 
               {questionsQ.isLoading && (
                 stepNumber === 8 ? (
-                  <MessageBar intent="info">
-                    <MessageBarBody>
-                      <MessageBarTitle>Loading connector details</MessageBarTitle>
-                      This step can take a little longer while WizardUX checks existing connection references and environment connections.
-                    </MessageBarBody>
-                  </MessageBar>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Spinner size="small" />
+                    <MessageBar intent="info" style={{ flex: 1 }}>
+                      <MessageBarBody>
+                        <MessageBarTitle>Loading connector details</MessageBarTitle>
+                        This step can take a little longer while WizardUX checks existing connection references and environment connections.
+                      </MessageBarBody>
+                    </MessageBar>
+                  </div>
                 ) : <Spinner size="small" />
               )}
 

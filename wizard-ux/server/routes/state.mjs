@@ -26,21 +26,26 @@ function readPowerAppInfo(rootDir, state) {
     const appId = String(parsed?.appId || '').trim();
     if (!appId) return null;
 
+    // The canonical Code App play URL is written into power.config.json by
+    // `pac code push` as `localAppUrl` (form:
+    //   https://apps.powerapps.com/play/e/<environmentId>/app/<appId>
+    // ). Prefer that exact value over any synthesized URL — model-driven
+    // `/main.aspx?appid=...` URLs do NOT work for Code Apps.
+    const localAppUrl = String(
+      parsed?.localAppUrl
+      || parsed?.appUrl
+      || parsed?.urls?.localAppUrl
+      || parsed?.urls?.appUrl
+      || '',
+    ).trim();
+
     const { target, environmentUrl } = pickTargetEnvUrl(state);
-    if (!environmentUrl) {
-      return {
-        appId,
-        targetEnv: target,
-        environmentUrl: '',
-        launchUrl: '',
-      };
-    }
 
     return {
       appId,
       targetEnv: target,
       environmentUrl,
-      launchUrl: `${environmentUrl}/main.aspx?appid=${encodeURIComponent(appId)}`,
+      launchUrl: localAppUrl,
     };
   } catch {
     return null;
