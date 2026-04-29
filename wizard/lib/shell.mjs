@@ -18,10 +18,6 @@ export function resolveWindowsCommandShim(file, { isWindows = IS_WIN, existsImpl
   return existsImpl(exePath) ? exePath : path;
 }
 
-function quoteWindowsShellArg(value) {
-  return `"${String(value ?? '').replace(/(["^%&|<>()])/g, '^$1')}"`;
-}
-
 function commandNameFromWindowsShim(file) {
   return String(file || '')
     .split(/[\\/]/)
@@ -35,12 +31,9 @@ export function prepareFileCommand(file, args = [], { isWindows = IS_WIN, comspe
   const commandName = commandNameFromWindowsShim(resolvedFile);
 
   return {
-    file: comspec,
-    args: [
-      '/d',
-      '/c',
-      [commandName, ...args].map(quoteWindowsShellArg).join(' '),
-    ],
+    file: commandName,
+    args,
+    shell: comspec,
     shellShim: true,
   };
 }
@@ -101,7 +94,7 @@ export function runLive(cmd, opts = {}) {
 export function runSafe(file, args, opts = {}) {
   try {
     const command = prepareFileCommand(file, args);
-    return execFileSync(command.file, command.args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts }).trim();
+    return execFileSync(command.file, command.args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], shell: command.shell, ...opts }).trim();
   } catch {
     return null;
   }
@@ -111,7 +104,7 @@ export function runSafe(file, args, opts = {}) {
 export function runSafeLive(file, args, opts = {}) {
   try {
     const command = prepareFileCommand(file, args);
-    execFileSync(command.file, command.args, { stdio: 'inherit', ...opts });
+    execFileSync(command.file, command.args, { stdio: 'inherit', shell: command.shell, ...opts });
     return true;
   } catch {
     return false;
@@ -121,7 +114,7 @@ export function runSafeLive(file, args, opts = {}) {
 /** Spawn a command array, routing Windows .cmd/.bat shims through cmd.exe. */
 export function spawnSafe(file, args, opts = {}) {
   const command = prepareFileCommand(file, args);
-  return spawn(command.file, command.args, opts);
+  return spawn(command.file, command.args, { shell: command.shell, ...opts });
 }
 
 /**
@@ -131,7 +124,7 @@ export function spawnSafe(file, args, opts = {}) {
 export function runSafeCapture(file, args, opts = {}) {
   try {
     const command = prepareFileCommand(file, args);
-    const stdout = execFileSync(command.file, command.args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...opts });
+    const stdout = execFileSync(command.file, command.args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], shell: command.shell, ...opts });
     return { ok: true, stdout: stdout || '', stderr: '' };
   } catch (err) {
     return { ok: false, stdout: err.stdout || '', stderr: err.stderr || err.message || '' };

@@ -8,12 +8,9 @@ test('Windows cmd shims are routed through cmd.exe', () => {
     comspec: 'C:\\Windows\\System32\\cmd.exe',
   });
 
-  assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(command.args.slice(0, 2), ['/d', '/c']);
-  assert.match(command.args[2], /^"pac"/);
-  assert.doesNotMatch(command.args[2], /PowerAppsCLI/);
-  assert.doesNotMatch(command.args[2], /pac\.cmd/);
-  assert.match(command.args[2], /"auth"/);
+  assert.equal(command.file, 'pac');
+  assert.deepEqual(command.args, ['auth', 'list']);
+  assert.equal(command.shell, 'C:\\Windows\\System32\\cmd.exe');
   assert.equal(command.shellShim, true);
 });
 
@@ -39,13 +36,14 @@ test('non-Windows command shims stay direct', () => {
   assert.equal(command.shellShim, false);
 });
 
-test('Windows shell arguments escape cmd metacharacters', () => {
+test('Windows shell fallback preserves arguments for Node shell execution', () => {
   const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['--clientSecret', 'a&b%c^d'], {
     isWindows: true,
     comspec: 'cmd.exe',
   });
 
-  assert.match(command.args[2], /a\^&b\^%c\^\^d/);
+  assert.deepEqual(command.args, ['--clientSecret', 'a&b%c^d']);
+  assert.equal(command.shell, 'cmd.exe');
 });
 
 test('Windows cmd shims prefer sibling exe when present', () => {
