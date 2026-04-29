@@ -1,10 +1,10 @@
 // Step 5 — Publisher. List existing or create one via Dataverse API.
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const VALIDATE = await import(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs'));
+const VALIDATE = await import(pathToFileURL(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs')).href);
 
 export default {
   meta: {

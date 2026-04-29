@@ -125,8 +125,11 @@ console.log('');
 
 if (process.env.WIZARD_UX_OPEN !== '0') {
   // Best-effort browser open
-  const opener = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-  try { spawn(opener, [url], { detached: true, stdio: 'ignore' }).unref(); } catch { /* best effort */ }
+  const opener = process.platform === 'win32'
+    ? spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' })
+    : spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [url], { detached: true, stdio: 'ignore' });
+  opener.on('error', () => { /* best effort */ });
+  opener.unref();
 }
 
 // Idle auto-shutdown

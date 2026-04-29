@@ -11,7 +11,7 @@ export default {
     description: 'Generate the project, install dependencies, register with Power Platform, and run smoke tests.',
     canRunInBrowser: false,
     terminalHandoff: {
-      command: 'cd wizard && node index.mjs --from 7',
+      command: 'node wizard-ux/server/run-cli-step.mjs 7',
       explanation: [
         'Scaffolding takes several minutes (npm install, pac code init, smoke tests).',
         'Run the command in your terminal so you can watch progress and answer any',

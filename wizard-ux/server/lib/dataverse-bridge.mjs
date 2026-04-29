@@ -2,14 +2,14 @@
 // Refreshes wizard/lib/state.mjs from disk before each Dataverse call so the
 // existing dvGet/dvPost helpers see the latest state written by WizardUX.
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WIZARD_LIB = resolve(__dirname, '..', '..', '..', 'wizard', 'lib');
 
-const stateMod = await import(resolve(WIZARD_LIB, 'state.mjs'));
-const dvMod = await import(resolve(WIZARD_LIB, 'dataverse.mjs'));
-const secretsMod = await import(resolve(WIZARD_LIB, 'secrets.mjs'));
+const stateMod = await import(pathToFileURL(resolve(WIZARD_LIB, 'state.mjs')).href);
+const dvMod = await import(pathToFileURL(resolve(WIZARD_LIB, 'dataverse.mjs')).href);
+const secretsMod = await import(pathToFileURL(resolve(WIZARD_LIB, 'secrets.mjs')).href);
 
 function refresh() {
   // Reload disk state into the wizard's in-memory singleton

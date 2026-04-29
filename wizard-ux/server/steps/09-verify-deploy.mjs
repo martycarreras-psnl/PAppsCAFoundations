@@ -9,7 +9,7 @@ export default {
     description: 'Build the project, push it to Power Platform, and surface the live app URL.',
     canRunInBrowser: false,
     terminalHandoff: {
-      command: 'cd wizard && node index.mjs --from 9',
+      command: 'node wizard-ux/server/run-cli-step.mjs 9',
       explanation: [
         '`pac code push` requires interactive (user) auth and benefits from terminal',
         'visibility while it uploads. Run the command, then return to WizardUX — the',

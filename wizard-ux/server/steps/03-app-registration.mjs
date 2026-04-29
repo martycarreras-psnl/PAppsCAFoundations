@@ -6,7 +6,7 @@ export default {
     description: 'Create or reuse an Entra ID App Registration with a client secret stored in 1Password.',
     canRunInBrowser: false,
     terminalHandoff: {
-      command: 'cd wizard && node index.mjs --from 3',
+      command: 'node wizard-ux/server/run-cli-step.mjs 3',
       explanation: [
         'This step interacts with 1Password (which prompts in your terminal) and may',
         'walk you through Azure AD app registration. WizardUX delegates to the CLI for',

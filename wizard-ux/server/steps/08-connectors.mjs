@@ -7,7 +7,7 @@ export default {
     canRunInBrowser: false,
     optional: true,
     terminalHandoff: {
-      command: 'cd wizard && node index.mjs --from 8',
+      command: 'node wizard-ux/server/run-cli-step.mjs 8',
       explanation: [
         'Connector binding interacts with `pac connection list` and may need',
         'interactive auth refreshes. Run it in the terminal. You can also skip this',

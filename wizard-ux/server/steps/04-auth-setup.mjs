@@ -6,7 +6,7 @@ export default {
     description: 'Create the PAC SPN auth profile and the interactive user profile required for pac code commands.',
     canRunInBrowser: false,
     terminalHandoff: {
-      command: 'cd wizard && node index.mjs --from 4',
+      command: 'node wizard-ux/server/run-cli-step.mjs 4',
       explanation: [
         'Auth setup runs `pac auth create` — for the user profile, this opens a',
         'device-code login flow that needs your terminal. WizardUX delegates to the',

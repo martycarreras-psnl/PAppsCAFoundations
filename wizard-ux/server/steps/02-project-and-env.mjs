@@ -1,10 +1,10 @@
 // Step 2 — Project name + environment URLs.
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE_PATH = resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs');
-const { isValidDataverseUrl, normalizeDataverseUrl } = await import(VALIDATE_PATH);
+const { isValidDataverseUrl, normalizeDataverseUrl } = await import(pathToFileURL(VALIDATE_PATH).href);
 
 const URL_HINT = 'Format: https://org-name.crm.dynamics.com (the wizard adds https:// for you if you paste it without).';
 
