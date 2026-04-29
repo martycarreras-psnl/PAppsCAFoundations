@@ -75,11 +75,12 @@ export default async function stepScaffold() {
   mkdirSync(projectDir, { recursive: true });
 
   const dirNotEmpty = existsSync(projectDir) && readdirSync(projectDir).length > 0;
-  const degitForce = dirNotEmpty ? ' --force' : '';
+  const degitArgs = ['--yes', 'degit', 'microsoft/PowerAppsCodeApps/templates/starter', projectDir];
+  if (dirNotEmpty) degitArgs.push('--force');
 
   let templateOk = false;
   try {
-    templateOk = runLive(`npx --yes degit microsoft/PowerAppsCodeApps/templates/starter "${projectDir}"${degitForce}`);
+    templateOk = runSafeLive(IS_WIN ? 'npx.cmd' : 'npx', degitArgs);
     if (templateOk) ui.ok('Template downloaded');
   } catch { /* fall through */ }
 
@@ -109,27 +110,28 @@ export default async function stepScaffold() {
   // ── npm install ──
   ui.line('');
   ui.line('Installing dependencies...');
-  runLive('npm install', { cwd: projectDir }) && ui.ok('Base dependencies installed');
+  const npmBin = IS_WIN ? 'npm.cmd' : 'npm';
+  runSafeLive(npmBin, ['install'], { cwd: projectDir }) && ui.ok('Base dependencies installed');
 
   ui.line('Installing required packages...');
   const prodPkgs = [
-    'react@^19.0.0', 'react-dom@^19.0.0', '@fluentui/react-components@^9.56.0',
+    'react@^18.3.1', 'react-dom@^18.3.1', '@fluentui/react-components@^9.56.0',
     '@tanstack/react-query@^5.62.0', 'react-router-dom@^7.1.0',
     '@microsoft/power-apps@^1.0.3', 'concurrently@^9.1.0',
-  ].join(' ');
-  runLive(`npm install ${prodPkgs}`, { cwd: projectDir })
+  ];
+  runSafeLive(npmBin, ['install', ...prodPkgs], { cwd: projectDir })
     ? ui.ok('React + Fluent UI + TanStack Query + SDK installed')
     : ui.warn('Some packages failed to install');
 
   const devPkgs = [
-    'typescript@^5.7.0', '@types/react@^19.0.0', '@types/react-dom@^19.0.0',
-    'vite@^6.0.0', '@vitejs/plugin-react@^4.3.0',
+    'typescript@^5.7.0', '@types/react@^18.3.12', '@types/react-dom@^18.3.1',
+    'vite@^5.4.0', '@vitejs/plugin-react@^4.3.0',
     'vitest@^2.1.0', '@testing-library/react@^16.1.0', '@testing-library/jest-dom@^6.6.0', 'jsdom@^25.0.0',
     '@playwright/test@^1.49.0',
     'eslint@^9.16.0', 'typescript-eslint@^8.18.0', '@eslint/js@^9.16.0', 'eslint-plugin-react-hooks@^5.1.0',
     'prettier@^3.4.0',
-  ].join(' ');
-  runLive(`npm install -D ${devPkgs}`, { cwd: projectDir })
+  ];
+  runSafeLive(npmBin, ['install', '-D', ...devPkgs], { cwd: projectDir })
     ? ui.ok('Dev dependencies installed')
     : ui.warn('Some dev packages failed to install');
 
