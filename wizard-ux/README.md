@@ -2,7 +2,7 @@
 
 A browser-based UX for the PAppsCAFoundations setup wizard. Runs alongside the CLI wizard, sharing the same `.wizard-state.json` so you can switch between them at any time.
 
-> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX provides a richer experience for steps that are pure data-collection, with terminal handoffs for steps that need interactive auth or long-running processes.
+> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX provides a richer experience for data collection, credential setup, and server-side checks, with terminal handoffs reserved for the longer scaffold/connect/deploy orchestration steps.
 
 ## Quick start
 
@@ -28,15 +28,15 @@ This installs `wizard-ux` dependencies on first run, starts the Fastify server o
 |---|---|
 | 1. Prerequisites | Read-only check screen |
 | 2. Project & environment | Full form |
-| 3. App Registration | Terminal handoff |
-| 4. Auth Setup | Terminal handoff |
+| 3. App Registration | Full form with optional 1Password read/save |
+| 4. Auth Setup | Full form + live PAC auth output |
 | 5. Publisher | Full form (auto or create new) |
 | 6. Solution | Full form (auto or create new) |
 | 7. Scaffold | Terminal handoff |
 | 8. Connectors | Terminal handoff (or skip) |
 | 9. Verify & deploy | Terminal handoff |
 
-Steps that need interactive 1Password prompts, device-code auth, or long pac CLI sessions show a "Run this in your terminal" card with a one-click copy of the exact command. WizardUX detects completion when the state file advances.
+Steps 3 and 4 now stay inside WizardUX: app registration values are collected in browser forms, credentials can be read from or synced to 1Password, SPN profiles are created server-side, and PAC user auth output streams through the live log. Long-running scaffold, connector, and deploy orchestration still show a terminal handoff card while those flows are being ported.
 
 ## Architecture
 
@@ -79,7 +79,7 @@ In production mode, Vite is not loaded — Fastify serves the prebuilt SPA from 
 
 ## Roadmap
 
-- v1: Stream `pac code push` and `npm install` output through the LiveLog (run scaffold + deploy in-browser).
+- v1: Stream scaffold, connector binding, and deploy output through the LiveLog.
 - v1: Connector picker UI for step 8.
 - v1: One-click open `make.powerapps.com` to the right environment.
 - v2: Replace `react-resizable-panels` with a Fluent-native splitter when one ships.

@@ -1,20 +1,324 @@
-// Step 4 — Auth Setup. Terminal handoff (device-code flow).
+// Step 4 - Auth Setup. Browser-native credential persistence and PAC profile setup.
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, chmodSync } from 'node:fs';
+import { spawn, execFileSync } from 'node:child_process';
+import { dirname, join, resolve } from 'node:path';
+import { platform } from 'node:os';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { getSecret, recoverSecret, setSecret } from '../lib/dataverse-bridge.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = resolve(__dirname, '..', '..', '..');
+const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const CRYPTO = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+
+function hasCommand(name) {
+  try {
+    execFileSync(platform() === 'win32' ? 'where' : 'which', [name], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '').toLowerCase();
+}
+
+function warnOnUrlDrift(log, key, stateUrl, credentialUrl) {
+  if (!credentialUrl || normalizeUrl(stateUrl) === normalizeUrl(credentialUrl)) return;
+  log.warn(`${key} in your credential source (${credentialUrl}) differs from wizard state (${stateUrl}). Update the credential source so downstream scripts stay in sync.`);
+}
+
+function formatPacAuthCreateError(profileName, url, output = '') {
+  const lines = String(output || '').trim().split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const detail = lines.find((line) => /^Error:/i.test(line)) || lines.at(-1) || 'pac auth create failed without a readable error message.';
+  return [
+    `${profileName} profile failed to create for ${url}.`,
+    `PAC reported: ${detail}`,
+    'Check that the app registration is added as an Application User, the client secret is current, and the credential source points at the intended environment.',
+  ].join('\n');
+}
+
+function createPacProfile(log, pac, targetKey, url, appId, secret, tenantId) {
+  const profileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'spn', url });
+  const result = SHELL.runSafeCapture(pac, [
+    'auth', 'create', '--name', profileName, '--environment', url,
+    '--applicationId', appId, '--clientSecret', secret, '--tenant', tenantId,
+  ]);
+  if (!result.ok) throw new Error(formatPacAuthCreateError(profileName, url, result.stderr || result.stdout));
+  log.ok(`${profileName} profile created`);
+}
+
+function createProfiles(log, pac, credentialValues, state) {
+  const tenantId = credentialValues.PP_TENANT_ID;
+  const clientId = credentialValues.PP_APP_ID;
+  const secret = credentialValues.PP_CLIENT_SECRET;
+  const devUrl = String(state.PP_ENV_DEV || '').trim();
+  const testUrl = String(state.PP_ENV_TEST || '').trim();
+  const prodUrl = String(state.PP_ENV_PROD || '').trim();
+  if (!tenantId || !clientId || !secret || !devUrl) {
+    throw new Error('Resolved credentials are incomplete. Expected tenant ID, app ID, client secret, and Dev environment URL.');
+  }
+  warnOnUrlDrift(log, 'PP_ENV_DEV', devUrl, credentialValues.PP_ENV_DEV);
+  if (testUrl) warnOnUrlDrift(log, 'PP_ENV_TEST', testUrl, credentialValues.PP_ENV_TEST);
+  if (prodUrl) warnOnUrlDrift(log, 'PP_ENV_PROD', prodUrl, credentialValues.PP_ENV_PROD);
+  log.info('Creating PAC SPN auth profiles...');
+  createPacProfile(log, pac, 'dev', devUrl, clientId, secret, tenantId);
+  if (testUrl) createPacProfile(log, pac, 'test', testUrl, clientId, secret, tenantId);
+  if (prodUrl) createPacProfile(log, pac, 'prod', prodUrl, clientId, secret, tenantId);
+}
+
+function installPreCommitHook(log) {
+  const hookDir = join(ROOT_DIR, '.git', 'hooks');
+  const hookPath = join(hookDir, 'pre-commit');
+  const hookSource = join(ROOT_DIR, 'scripts', 'pre-commit-hook.sh');
+  if (!existsSync(join(ROOT_DIR, '.git')) || !existsSync(hookSource)) return;
+  if (existsSync(hookPath)) {
+    const existing = readFileSync(hookPath, 'utf-8');
+    if (!existing.includes('papps-secret-guard')) return;
+  }
+  try {
+    mkdirSync(hookDir, { recursive: true });
+    copyFileSync(hookSource, hookPath);
+    if (platform() !== 'win32') chmodSync(hookPath, 0o755);
+    log.ok('Installed pre-commit hook');
+  } catch {
+    log.warn('Could not install pre-commit hook. Install scripts/pre-commit-hook.sh manually if desired.');
+  }
+}
+
+function runLivePac(log, pac, args, opts = {}) {
+  return new Promise((resolvePromise) => {
+    log.info(`$ ${pac} ${args.join(' ')}`);
+    const child = spawn(pac, args, { cwd: ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    let settled = false;
+    const timeout = opts.timeoutMs
+      ? setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try { child.kill('SIGINT'); } catch { /* best effort */ }
+        log.warn(`${args.slice(0, 2).join(' ')} timed out.`);
+        resolvePromise(false);
+      }, opts.timeoutMs)
+      : null;
+    timeout?.unref?.();
+    child.stdout.setEncoding('utf-8');
+    child.stderr.setEncoding('utf-8');
+    child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
+    child.stderr.on('data', (chunk) => log.warn(String(chunk).trimEnd()));
+    child.on('error', (error) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      log.fail(`Failed to start PAC: ${error.message}`);
+      resolvePromise(false);
+    });
+    child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      resolvePromise(code === 0);
+    });
+  });
+}
+
 export default {
   meta: {
     number: 4,
     title: 'PAC Auth Profiles',
-    description: 'Create the PAC SPN auth profile and the interactive user profile required for pac code commands.',
-    canRunInBrowser: false,
-    terminalHandoff: {
-      command: 'node wizard-ux/server/run-cli-step.mjs 4',
-      explanation: [
-        'Auth setup runs `pac auth create` — for the user profile, this opens a',
-        'device-code login flow that needs your terminal. WizardUX delegates to the',
-        'CLI here. Run the command shown; come back when both profiles are listed in',
-        '`pac auth list`.',
-      ].join('\n'),
-    },
+    description: 'Persist credentials, create PAC SPN profiles, verify the target environment, and optionally create the user profile for pac code commands.',
+    canRunInBrowser: true,
   },
-  questions() { return []; },
-  async apply() { throw new Error('Step 4 must be run via the CLI. See terminal handoff.'); },
+
+  questions(state) {
+    const hasOp = hasCommand('op') || state.HAS_OP === true;
+    const defaultAuthMode = state.AUTH_MODE === '1password' && hasOp ? '1password' : 'envlocal';
+    return [
+      {
+        id: 'PP_CLIENT_SECRET',
+        type: 'secret',
+        label: 'Client secret',
+        help: 'Only needed if WizardUX cannot recover it from this session, .env.local, or 1Password.',
+        defaultValue: '',
+      },
+      {
+        id: 'AUTH_MODE',
+        type: 'select',
+        label: 'Credential storage mode',
+        defaultValue: defaultAuthMode,
+        options: [
+          ...(hasOp ? [{ value: '1password', label: '1Password references in .env' }] : []),
+          { value: 'envlocal', label: '.env.local file (encrypted secret, gitignored)' },
+        ],
+      },
+      {
+        id: 'OP_VAULT',
+        type: 'text',
+        label: '1Password vault name',
+        defaultValue: state.OP_VAULT || 'Engineering',
+        hideIf: { id: 'AUTH_MODE', equals: 'envlocal' },
+      },
+      {
+        id: 'OP_ITEM',
+        type: 'text',
+        label: '1Password item name',
+        defaultValue: state.OP_ITEM || `PowerApps CodeApps - ${state.APP_NAME || 'My App'}`,
+        hideIf: { id: 'AUTH_MODE', equals: 'envlocal' },
+      },
+      {
+        id: 'CREATE_USER_PROFILE',
+        type: 'confirm',
+        label: 'Create the interactive user auth profile now',
+        help: 'Required once for pac code run, pac code push, and pac code add-data-source.',
+        defaultValue: true,
+      },
+      {
+        id: 'USER_SIGN_IN_METHOD',
+        type: 'select',
+        label: 'User sign-in method',
+        defaultValue: 'deviceCode',
+        options: [
+          { value: 'deviceCode', label: 'Device code - most reliable' },
+          { value: 'browser', label: 'Browser - fastest when callback works' },
+        ],
+        hideIf: { id: 'CREATE_USER_PROFILE', equals: false },
+      },
+    ];
+  },
+
+  async apply(answers, state, log) {
+    const pac = SHELL.pacPath();
+    if (!pac) throw new Error('PAC CLI was not found. Install it before creating auth profiles.');
+
+    const enteredSecret = String(answers.PP_CLIENT_SECRET || '').trim();
+    if (enteredSecret) setSecret(enteredSecret);
+    const secret = getSecret() || recoverSecret();
+    if (!secret) throw new Error('Client secret is required. Enter it in this step or complete Step 3 first.');
+
+    const authMode = String(answers.AUTH_MODE || state.AUTH_MODE || 'envlocal');
+    const tenantId = String(state.PP_TENANT_ID || '').trim();
+    const clientId = String(state.PP_APP_ID || '').trim();
+    const devUrl = String(state.PP_ENV_DEV || '').trim();
+    const testUrl = String(state.PP_ENV_TEST || '').trim();
+    const prodUrl = String(state.PP_ENV_PROD || '').trim();
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    if (!tenantId || !clientId || !devUrl) throw new Error('Step 3 and the Dev environment URL must be complete before auth setup.');
+
+    if (authMode === '1password') {
+      const vault = String(answers.OP_VAULT || state.OP_VAULT || '').trim();
+      const itemName = String(answers.OP_ITEM || state.OP_ITEM || '').trim();
+      if (!hasCommand('op')) throw new Error('1Password storage was selected, but op CLI is not available.');
+      if (!vault || !itemName) throw new Error('1Password vault and item name are required.');
+      const envContent = [
+        '# .env - Safe to commit. Contains 1Password references, not secrets.',
+        `# Generated by setup wizard on ${dateStr}`,
+        '',
+        `PP_TENANT_ID=op://${vault}/${itemName}/tenant-id`,
+        `PP_APP_ID=op://${vault}/${itemName}/app-id`,
+        `PP_CLIENT_SECRET=op://${vault}/${itemName}/client-secret`,
+        `PP_ENV_DEV=op://${vault}/${itemName}/env-dev`,
+        testUrl ? `PP_ENV_TEST=op://${vault}/${itemName}/env-test` : '',
+        prodUrl ? `PP_ENV_PROD=op://${vault}/${itemName}/env-prod` : '',
+        '',
+      ].filter((line) => line !== '').join('\n');
+      writeFileSync(join(ROOT_DIR, '.env'), `${envContent}\n`, 'utf-8');
+      log.ok('Wrote .env with 1Password references');
+    } else {
+      const gitignorePath = join(ROOT_DIR, '.gitignore');
+      if (existsSync(gitignorePath)) {
+        const gitignore = readFileSync(gitignorePath, 'utf-8');
+        if (!gitignore.includes('.env.local')) appendFileSync(gitignorePath, '\n.env.local\n');
+      } else {
+        writeFileSync(gitignorePath, '.env.local\n', 'utf-8');
+      }
+      const envLocalContent = [
+        '# .env.local - DO NOT commit to Git.',
+        `# Generated by setup wizard on ${dateStr}`,
+        '',
+        `PP_TENANT_ID=${tenantId}`,
+        `PP_APP_ID=${clientId}`,
+        `PP_CLIENT_SECRET=${CRYPTO.encrypt(secret)}`,
+        `PP_ENV_DEV=${devUrl}`,
+        testUrl ? `PP_ENV_TEST=${testUrl}` : '',
+        prodUrl ? `PP_ENV_PROD=${prodUrl}` : '',
+        '',
+      ].filter((line) => line !== '').join('\n');
+      writeFileSync(join(ROOT_DIR, '.env.local'), `${envLocalContent}\n`, 'utf-8');
+      if (platform() !== 'win32') {
+        try { chmodSync(join(ROOT_DIR, '.env.local'), 0o600); } catch { /* best effort */ }
+      }
+      log.ok('Wrote .env.local');
+    }
+
+    const opBin = hasCommand('op') ? 'op' : null;
+    const credentialValues = PAC_TARGET.resolveCredentialValues({ rootDir: ROOT_DIR, opBin });
+    createProfiles(log, pac, credentialValues, state);
+    installPreCommitHook(log);
+
+    const envTemplate = [
+      '# .env.template - Copy to .env.local and fill in values',
+      '# DO NOT commit .env.local to Git',
+      '',
+      'PP_TENANT_ID=',
+      'PP_APP_ID=',
+      'PP_CLIENT_SECRET=',
+      `PP_ENV_DEV=${devUrl}`,
+      testUrl ? `PP_ENV_TEST=${testUrl}` : '',
+      prodUrl ? `PP_ENV_PROD=${prodUrl}` : '',
+      '',
+    ].filter((line) => line !== '').join('\n');
+    writeFileSync(join(ROOT_DIR, '.env.template'), `${envTemplate}\n`, 'utf-8');
+    log.ok('Wrote .env.template');
+
+    const wizardState = {
+      WIZARD_TARGET_ENV: state.WIZARD_TARGET_ENV || 'dev',
+      PP_ENV_DEV: devUrl,
+      PP_ENV_TEST: testUrl,
+      PP_ENV_PROD: prodUrl,
+    };
+    const verification = PAC_TARGET.selectAndVerifyPacProfile({
+      pac,
+      rootDir: ROOT_DIR,
+      wizardState,
+      targetKey: state.WIZARD_TARGET_ENV || 'dev',
+      profileType: 'spn',
+      credentialValues,
+      powerConfigPath: join(ROOT_DIR, 'power.config.json'),
+      requireCredentialMatch: true,
+      requirePowerConfig: false,
+      requirePowerConfigTarget: false,
+    });
+    log.ok(`Verified ${verification.profileName}`);
+    log.info(verification.whoInfo.raw.split('\n').map((line) => `  ${line}`).join('\n'));
+
+    if (answers.CREATE_USER_PROFILE === true) {
+      const targetKey = state.WIZARD_TARGET_ENV || 'dev';
+      const userProfileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'user', url: devUrl });
+      const method = answers.USER_SIGN_IN_METHOD === 'browser' ? 'browser' : 'deviceCode';
+      log.warn('PAC code commands require a user auth profile. Starting user sign-in now.');
+      const userArgs = ['auth', 'create', '--name', userProfileName, '--environment', devUrl];
+      if (method === 'deviceCode') userArgs.push('--deviceCode');
+      const userOk = await runLivePac(log, pac, userArgs, { timeoutMs: method === 'browser' ? 180000 : 0 });
+      if (userOk) {
+        log.ok(`User profile ${userProfileName} created`);
+        const spnProfileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'spn', url: devUrl });
+        SHELL.runSafeCapture(pac, ['auth', 'select', '--name', spnProfileName]);
+        log.ok('Switched back to SPN profile for the next setup steps');
+      } else {
+        log.warn(`Could not create user profile. Run later: ${pac} auth create --name ${userProfileName} --environment ${devUrl} --deviceCode`);
+      }
+    }
+
+    return {
+      stateUpdate: {
+        AUTH_MODE: authMode,
+        HAS_OP: opBin !== null,
+        OP_VAULT: authMode === '1password' ? answers.OP_VAULT : state.OP_VAULT,
+        OP_ITEM: authMode === '1password' ? answers.OP_ITEM : state.OP_ITEM,
+      },
+      completedStep: 4,
+    };
+  },
 };
