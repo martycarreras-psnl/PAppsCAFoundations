@@ -19,37 +19,32 @@ function pickTargetEnvUrl(state) {
 function readPowerAppInfo(rootDir, state) {
   const projectDir = resolve(rootDir, String(state.PROJECT_DIR || '.'));
   const powerConfigPath = join(projectDir, 'power.config.json');
-  if (!existsSync(powerConfigPath)) return null;
 
-  try {
-    const parsed = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
-    const appId = String(parsed?.appId || '').trim();
-    if (!appId) return null;
+  // The deployed Code App URL (apps.powerapps.com/play/...) is captured from
+  // `pac code push` stdout in Step 9 and persisted to wizard state as
+  // DEPLOYED_APP_URL. NOTE: power.config.json's `localAppUrl` is the *local*
+  // dev server URL (http://localhost:3000) — never use it for the launch CTA.
+  const deployedUrl = String(state.DEPLOYED_APP_URL || '').trim();
 
-    // The canonical Code App play URL is written into power.config.json by
-    // `pac code push` as `localAppUrl` (form:
-    //   https://apps.powerapps.com/play/e/<environmentId>/app/<appId>
-    // ). Prefer that exact value over any synthesized URL — model-driven
-    // `/main.aspx?appid=...` URLs do NOT work for Code Apps.
-    const localAppUrl = String(
-      parsed?.localAppUrl
-      || parsed?.appUrl
-      || parsed?.urls?.localAppUrl
-      || parsed?.urls?.appUrl
-      || '',
-    ).trim();
-
-    const { target, environmentUrl } = pickTargetEnvUrl(state);
-
-    return {
-      appId,
-      targetEnv: target,
-      environmentUrl,
-      launchUrl: localAppUrl,
-    };
-  } catch {
-    return null;
+  let appId = '';
+  if (existsSync(powerConfigPath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
+      appId = String(parsed?.appId || '').trim();
+    } catch {
+      // ignore — appId is optional for the launch CTA
+    }
   }
+
+  if (!deployedUrl && !appId) return null;
+
+  const { target, environmentUrl } = pickTargetEnvUrl(state);
+  return {
+    appId,
+    targetEnv: target,
+    environmentUrl,
+    launchUrl: deployedUrl,
+  };
 }
 
 export default async function stateRoutes(app, opts) {

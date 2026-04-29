@@ -190,8 +190,22 @@ export default {
     if (!pushResult.ok || PAC_HTTP_ERROR_RE.test(pushOutput)) throw new Error('pac code push failed. Check the live output above, then retry.');
     log.ok('Code App pushed to Power Platform');
 
+    // pac code push prints the deployed Code App URL in stdout, e.g.
+    //   "The app was successfully published. URL: https://apps.powerapps.com/play/e/<envId>/a/<appId>"
+    // Capture the first matching apps.powerapps.com/play URL and persist it
+    // to wizard state so the Summary can show the real launch URL.
+    const deployedUrlMatch = pushOutput.match(/https:\/\/apps\.powerapps\.com\/play\/[^\s'"<>)]+/i);
+    const stateUpdate = { PROJECT_DIR: projectDir };
+    if (deployedUrlMatch) {
+      const deployedUrl = deployedUrlMatch[0].replace(/[.,;]+$/, '');
+      stateUpdate.DEPLOYED_APP_URL = deployedUrl;
+      log.ok(`App URL: ${deployedUrl}`);
+    } else {
+      log.warn('Could not detect deployed app URL in pac output. Open the app from Power Apps Maker Portal.');
+    }
+
     await addAppToSolution(log, pac, projectDir, state.SOLUTION_UNIQUE_NAME || '');
 
-    return { stateUpdate: { PROJECT_DIR: projectDir }, completedStep: 9 };
+    return { stateUpdate, completedStep: 9 };
   },
 };
