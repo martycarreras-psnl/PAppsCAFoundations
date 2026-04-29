@@ -12,13 +12,26 @@ A **GitHub template repository** with opinionated, comprehensive coding-agent in
 
 | Requirement | Minimum | Notes |
 |-------------|---------|-------|
+| **Editor** | Latest | VS Code (recommended), Cursor, or any editor with coding-agent support |
+| **Coding Agent** | — | GitHub Copilot, Claude Code, Cursor, Codex, or another LLM-backed agent (see note below) |
 | **Node.js** | 20+ | Required for wizard and all scripts |
-| **VS Code / Cursor / Codex IDE** | Latest | With your preferred coding agent (Copilot, Claude Code, Cursor, Codex) |
 | **Git** | 2.30+ | For template cloning and version control |
 | **.NET SDK** | 8.0+ | Required for PAC CLI installation |
 | **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
 | **Power Platform** | Access to at least one environment with Dataverse enabled | See licensing note below |
 | **1Password CLI** | Optional | Recommended for secret management (`op`) |
+
+> **Tip:** Once your editor and coding agent are set up, you can ask the agent to install the remaining prerequisites (Node.js, Git, .NET SDK, PAC CLI) for you — it can run the install commands directly in the integrated terminal.
+
+### Coding agent options
+
+This repo ships native guidance for multiple coding agents. Pick whichever your team prefers:
+
+- **GitHub Copilot** — built into VS Code; uses OpenAI or Azure OpenAI models
+- **Claude Code** — Anthropic's Claude models, available via direct API or Azure AI Foundry
+- **Cursor** — built-in agent with its own model access
+- **Codex** — OpenAI's coding agent, available via ChatGPT subscription or API
+- **Other LLMs** — any agent backed by Azure OpenAI, Azure AI Foundry, or a direct paid API works; the repo's `AGENTS.md` provides the root guidance contract that any tool can read
 
 ### Power Apps Code Apps licensing
 

@@ -845,6 +845,8 @@
             <tr><td>Routing</td><td>React Router</td><td>v6</td><td>Nested layouts, data loaders</td></tr>
             <tr><td>Power Apps SDK</td><td><code>@microsoft/power-apps</code></td><td>^1.0.3</td><td>Connector access, auth context</td></tr>
             <tr><td>CLI</td><td>PAC CLI</td><td>latest (not 2.3.2)</td><td>Scaffold, add data sources, deploy</td></tr>
+            <tr><td>Editor</td><td>VS Code / Cursor</td><td>Latest</td><td>Or any editor with coding-agent support</td></tr>
+            <tr><td>Coding Agent</td><td>Copilot / Claude / Cursor / Codex</td><td>—</td><td>Any LLM-backed agent reads the repo's native guidance</td></tr>
           </tbody>
         </table>
       </div>
@@ -1033,12 +1035,22 @@
           <div class="accordion-body"><div class="accordion-content">
             <p>The wizard checks for required tools and offers to install missing ones:</p>
             <ul>
+              <li><strong>Editor</strong> — VS Code (<a href="https://code.visualstudio.com/" target="_blank" rel="noopener">Install</a>), Cursor, or any editor with coding-agent support</li>
+              <li><strong>Coding Agent</strong> — GitHub Copilot, Claude Code, Cursor, Codex, or another LLM-backed agent (see below)</li>
               <li><strong>Node.js 20+</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>Git</strong> — <a href="https://git-scm.com/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>.NET SDK</strong> — <a href="https://dotnet.microsoft.com/download" target="_blank" rel="noopener">Install</a></li>
               <li><strong>PAC CLI</strong> — The wizard will install it automatically via <code>dotnet tool install -g Microsoft.PowerApps.CLI.Tool</code> if missing</li>
               <li><strong>1Password CLI</strong> (optional) — <a href="https://developer.1password.com/docs/cli/get-started" target="_blank" rel="noopener">Install</a></li>
             </ul>
+            <div class="callout callout-info" style="margin-top:8px; font-size:13px;">
+              <span class="callout-icon">💡</span>
+              <div><strong>Tip:</strong> Once your editor and coding agent are set up, you can ask the agent to install the remaining prerequisites (Node.js, Git, .NET SDK, PAC CLI) for you — it can run the install commands directly in the integrated terminal.</div>
+            </div>
+            <div class="callout callout-info" style="margin-top:8px; font-size:13px;">
+              <span class="callout-icon">🤖</span>
+              <div><strong>Coding agent options:</strong> GitHub Copilot (uses OpenAI or Azure OpenAI models), Claude Code (Anthropic's Claude via direct API or Azure AI Foundry), Cursor (built-in agent), Codex (OpenAI via ChatGPT subscription or API), or any agent backed by Azure OpenAI, Azure AI Foundry, or a direct paid LLM API. The repo ships native guidance for all of them.</div>
+            </div>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
               <div>PAC CLI version <strong>2.3.2</strong> has a known bug that breaks <code>pac code push</code>. The wizard detects this and helps you downgrade.</div>
