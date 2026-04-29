@@ -1,9 +1,10 @@
 // Shared types (mirror server schema)
-export type QuestionType = 'text' | 'url' | 'select' | 'confirm' | 'secret' | 'multiselect';
+export type QuestionType = 'text' | 'url' | 'select' | 'confirm' | 'secret' | 'multiselect' | 'checkboxes';
 
 export interface QuestionCondition {
   id: string;
-  equals: unknown;
+  equals?: unknown;
+  contains?: unknown;
 }
 
 export interface Question {

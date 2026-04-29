@@ -1,6 +1,6 @@
 import { Question, QuestionCondition } from '../types/schema';
 import {
-  Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2,
+  Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Checkbox,
 } from '@fluentui/react-components';
 import { ChangeEvent } from 'react';
 
@@ -22,11 +22,16 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
     whiteSpace: 'pre-wrap',
   },
+  checkboxList: { display: 'flex', flexDirection: 'column', gap: '6px' },
 });
 
 function matchesCondition(condition: QuestionCondition | QuestionCondition[], answers: Record<string, unknown>): boolean {
   const conditions: QuestionCondition[] = Array.isArray(condition) ? condition : [condition];
-  return conditions.every((c) => answers[c.id] === c.equals);
+  return conditions.every((c) => {
+    const value = answers[c.id];
+    if ('contains' in c) return Array.isArray(value) && value.includes(c.contains);
+    return value === c.equals;
+  });
 }
 
 export function isQuestionHidden(q: Question, answers: Record<string, unknown>): boolean {
@@ -104,6 +109,25 @@ export function QuestionCard({ question: q, answers, value, onChange, showError 
             value={Array.isArray(value) ? (value as string[]).join(', ') : ''}
             onChange={(_e, d) => onChange(q.id, d.value.split(',').map((x) => x.trim()).filter(Boolean))}
           />
+        ) : q.type === 'checkboxes' ? (
+          <div className={s.checkboxList}>
+            {(q.options || []).map((o) => {
+              const checked = Array.isArray(value) && (value as string[]).includes(o.value);
+              return (
+                <Checkbox
+                  key={o.value}
+                  label={o.label}
+                  checked={checked}
+                  onChange={(_e, d) => {
+                    const current = Array.isArray(value) ? [...(value as string[])] : [];
+                    onChange(q.id, d.checked
+                      ? Array.from(new Set([...current, o.value]))
+                      : current.filter((entry) => entry !== o.value));
+                  }}
+                />
+              );
+            })}
+          </div>
         ) : (
           <Caption1>Unsupported question type: {q.type}</Caption1>
         )}
