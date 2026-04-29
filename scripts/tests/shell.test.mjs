@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { firstCommandPath, prepareFileCommand, resolveWindowsCommandShim } from '../../wizard/lib/shell.mjs';
+import {
+  firstCommandPath,
+  formatCommandForLog,
+  prepareFileCommand,
+  quoteWindowsCmdCommand,
+  resolveWindowsCommandShim,
+} from '../../wizard/lib/shell.mjs';
 
 test('Windows cmd shims are routed through cmd.exe', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
@@ -8,9 +14,8 @@ test('Windows cmd shims are routed through cmd.exe', () => {
     comspec: 'C:\\Windows\\System32\\cmd.exe',
   });
 
-  assert.equal(command.file, 'pac');
-  assert.deepEqual(command.args, ['auth', 'list']);
-  assert.equal(command.shell, 'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(command.args, ['/d', '/s', '/c', 'pac auth list']);
   assert.equal(command.shellShim, true);
 });
 
@@ -36,14 +41,25 @@ test('non-Windows command shims stay direct', () => {
   assert.equal(command.shellShim, false);
 });
 
-test('Windows shell fallback preserves arguments for Node shell execution', () => {
-  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['--clientSecret', 'a&b%c^d'], {
+test('Windows shell fallback quotes arguments for cmd execution', () => {
+  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'init', '--displayName', 'Windows Hello'], {
     isWindows: true,
     comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, ['--clientSecret', 'a&b%c^d']);
-  assert.equal(command.shell, 'cmd.exe');
+  assert.deepEqual(command.args, ['/d', '/s', '/c', 'pac code init --displayName "Windows Hello"']);
+});
+
+test('Windows command quoting escapes cmd metacharacters', () => {
+  const commandLine = quoteWindowsCmdCommand('pac', ['auth', 'create', '--clientSecret', 'a&b%c^d']);
+
+  assert.equal(commandLine, 'pac auth create --clientSecret a^&b%%c^^d');
+});
+
+test('command logging quotes arguments with spaces', () => {
+  const logged = formatCommandForLog('pac.cmd', ['code', 'init', '--displayName', 'Windows Hello']);
+
+  assert.equal(logged, 'pac.cmd code init --displayName "Windows Hello"');
 });
 
 test('Windows cmd shims prefer sibling exe when present', () => {

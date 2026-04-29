@@ -131,7 +131,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 
 function runFileCapture(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
-    log.info(`$ ${file} ${args.join(' ')}`);
+    log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
     const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';

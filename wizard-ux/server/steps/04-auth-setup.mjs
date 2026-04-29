@@ -90,7 +90,7 @@ function installPreCommitHook(log) {
 
 function runLivePac(log, pac, args, opts = {}) {
   return new Promise((resolvePromise) => {
-    log.info(`$ ${pac} ${args.join(' ')}`);
+    log.info(`$ ${SHELL.formatCommandForLog(pac, args)}`);
     const child = SHELL.spawnSafe(pac, args, { cwd: ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let settled = false;
     const timeout = opts.timeoutMs
