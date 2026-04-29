@@ -29,15 +29,17 @@ export default {
       });
     }
 
-    questions.push({
-      id: 'PP_CLIENT_SECRET',
-      type: 'secret',
-      label: 'Client secret',
-      help: 'Needed for Dataverse API calls. Not stored — held in memory for this server only.',
-      required: !hasUsableSecret(),
-      defaultValue: '',
-      hideIf: { id: '__resume', equals: true },
-    });
+    if (!hasUsableSecret()) {
+      questions.push({
+        id: 'PP_CLIENT_SECRET',
+        type: 'secret',
+        label: 'Client secret',
+        help: 'Needed for Dataverse API calls. Not stored — held in memory for this server only.',
+        required: true,
+        defaultValue: '',
+        hideIf: { id: '__resume', equals: true },
+      });
+    }
 
     // We can't query publishers ahead of time without the secret. The "list" comes
     // back as part of the apply step's first phase, surfaced through the run log.
