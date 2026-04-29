@@ -18,13 +18,6 @@ export function resolveWindowsCommandShim(file, { isWindows = IS_WIN, existsImpl
   return existsImpl(exePath) ? exePath : path;
 }
 
-function commandNameFromWindowsShim(file) {
-  return String(file || '')
-    .split(/[\\/]/)
-    .pop()
-    ?.replace(/\.(cmd|bat)$/i, '') || String(file || '');
-}
-
 function quoteWindowsCmdArgument(value) {
   const arg = String(value ?? '');
   if (arg.length === 0) return '""';
@@ -42,7 +35,7 @@ function quoteWindowsCmdArgument(value) {
 }
 
 export function quoteWindowsCmdCommand(file, args = []) {
-  return `"${[quoteWindowsCmdArgument(file), ...args.map(quoteWindowsCmdArgument)].join(' ')}"`;
+  return ['call', quoteWindowsCmdArgument(file), ...args.map(quoteWindowsCmdArgument)].join(' ');
 }
 
 export function formatCommandForLog(file, args = []) {
@@ -58,11 +51,10 @@ export function formatCommandForLog(file, args = []) {
 export function prepareFileCommand(file, args = [], { isWindows = IS_WIN, comspec = process.env.ComSpec || process.env.COMSPEC || 'cmd.exe' } = {}) {
   const resolvedFile = resolveWindowsCommandShim(file, { isWindows });
   if (!isWindows || !isWindowsCommandShim(resolvedFile)) return { file: resolvedFile, args, shellShim: false };
-  const commandName = commandNameFromWindowsShim(resolvedFile);
 
   return {
     file: comspec,
-    args: ['/d', '/s', '/c', quoteWindowsCmdCommand(commandName, args)],
+    args: ['/d', '/s', '/c', quoteWindowsCmdCommand(resolvedFile, args)],
     shellShim: true,
   };
 }
