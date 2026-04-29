@@ -946,6 +946,7 @@ function resolvePacCredentialValues(rootDir) {
   return resolveCredentialValues({
     rootDir,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+    source: stateGet('AUTH_MODE', 'auto'),
   });
 }
 

@@ -62,10 +62,11 @@ function hasCommand(name) {
   }
 }
 
-function resolveCredentialValues() {
+function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
     rootDir: ROOT_DIR,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+    source: state.AUTH_MODE || 'auto',
   });
 }
 
@@ -256,7 +257,7 @@ export default {
     const pac = SHELL.pacPath();
     if (pac) {
       log.info('Registering Code App in Power Platform...');
-      const credentialValues = resolveCredentialValues();
+      const credentialValues = resolveCredentialValues(state);
       verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'spn', requirePowerConfig: false, requirePowerConfigTarget: false });
       const powerConfigPath = join(projectDir, 'power.config.json');
       let skipInit = false;

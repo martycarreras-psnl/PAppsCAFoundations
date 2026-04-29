@@ -4,7 +4,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { getSecret, recoverSecret, setSecret } from '../lib/dataverse-bridge.mjs';
+import { getSecret, hasUsableSecret, recoverSecret, setSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, '..', '..', '..');
@@ -134,14 +134,17 @@ export default {
   questions(state) {
     const hasOp = hasCommand('op') || state.HAS_OP === true;
     const defaultAuthMode = state.AUTH_MODE === '1password' && hasOp ? '1password' : 'envlocal';
-    return [
-      {
+    const questions = [];
+    if (!hasUsableSecret()) {
+      questions.push({
         id: 'PP_CLIENT_SECRET',
         type: 'secret',
         label: 'Client secret',
         help: 'Only needed if WizardUX cannot recover it from this session, .env.local, or 1Password.',
         defaultValue: '',
-      },
+      });
+    }
+    questions.push(
       {
         id: 'AUTH_MODE',
         type: 'select',
@@ -184,7 +187,8 @@ export default {
         ],
         hideIf: { id: 'CREATE_USER_PROFILE', equals: false },
       },
-    ];
+    );
+    return questions;
   },
 
   async apply(answers, state, log) {
@@ -253,7 +257,7 @@ export default {
     }
 
     const opBin = hasCommand('op') ? 'op' : null;
-    const credentialValues = PAC_TARGET.resolveCredentialValues({ rootDir: ROOT_DIR, opBin });
+    const credentialValues = PAC_TARGET.resolveCredentialValues({ rootDir: ROOT_DIR, opBin, source: authMode });
     createProfiles(log, pac, credentialValues, state);
     installPreCommitHook(log);
 

@@ -52,10 +52,11 @@ function runFile(log, file, args, opts = {}) {
   });
 }
 
-function resolveCredentialValues() {
+function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
     rootDir: ROOT_DIR,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+    source: state.AUTH_MODE || 'auto',
   });
 }
 
@@ -148,7 +149,7 @@ export default {
 
     const pac = SHELL.pacPath();
     if (!pac) throw new Error('PAC CLI was not found. Install it before deploying.');
-    const credentialValues = resolveCredentialValues();
+    const credentialValues = resolveCredentialValues(state);
     const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
     log.ok(`Verified user profile ${verification.profileName}`);
 

@@ -133,7 +133,7 @@ export default async function stepAuthSetup() {
   }
 
   try {
-    persistedCredentialValues = resolveCredentialValues({ rootDir: ROOT, opBin });
+    persistedCredentialValues = resolveCredentialValues({ rootDir: ROOT, opBin, source: authMode });
   } catch (error) {
     ui.fail(`Could not resolve persisted credentials: ${error.message}`);
     process.exit(1);

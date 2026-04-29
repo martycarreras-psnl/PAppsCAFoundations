@@ -7,6 +7,7 @@ import {
   buildPacProfileName,
   extractPowerConfigTargetMetadata,
   isRepoScopedProfileName,
+  resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../../wizard/lib/pac-target.mjs';
 
@@ -156,4 +157,42 @@ test('power.config metadata extraction uses environmentId from the local app URL
 
   assert.equal(info.environmentId, ENV_ID);
   assert.equal(info.hasTargetMetadata, true);
+});
+
+test('explicit envlocal credential resolution ignores stale 1Password references', (t) => {
+  const rootDir = createTempDir();
+  t.after(() => rmSync(rootDir, { recursive: true, force: true }));
+
+  writeFileSync(join(rootDir, '.env'), [
+    'PP_TENANT_ID=op://Engineering/Stale/tenant-id',
+    'PP_APP_ID=op://Engineering/Stale/app-id',
+    'PP_CLIENT_SECRET=op://Engineering/Stale/client-secret',
+    'PP_ENV_DEV=op://Engineering/Stale/env-dev',
+    '',
+  ].join('\n'));
+  writeFileSync(join(rootDir, '.env.local'), [
+    'PP_TENANT_ID=tenant-from-envlocal',
+    'PP_APP_ID=app-from-envlocal',
+    'PP_CLIENT_SECRET=secret-from-envlocal',
+    `PP_ENV_DEV=${DEV_URL}`,
+    '',
+  ].join('\n'));
+
+  const values = resolveCredentialValues({ rootDir, opBin: null, source: 'envlocal' });
+
+  assert.equal(values.PP_TENANT_ID, 'tenant-from-envlocal');
+  assert.equal(values.PP_APP_ID, 'app-from-envlocal');
+  assert.equal(values.PP_CLIENT_SECRET, 'secret-from-envlocal');
+  assert.equal(values.PP_ENV_DEV, DEV_URL);
+});
+
+test('auto credential resolution still reports missing op when only 1Password references exist', (t) => {
+  const rootDir = createTempDir();
+  t.after(() => rmSync(rootDir, { recursive: true, force: true }));
+
+  writeFileSync(join(rootDir, '.env'), 'PP_TENANT_ID=op://Engineering/Stale/tenant-id\n');
+
+  assert.throws(() => {
+    resolveCredentialValues({ rootDir, opBin: null });
+  }, /op CLI is not available/i);
 });

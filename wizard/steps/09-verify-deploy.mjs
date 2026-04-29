@@ -30,6 +30,7 @@ export default async function stepVerifyAndDeploy() {
   const credentialValues = resolveCredentialValues({
     rootDir,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
+    source: authMode || 'auto',
   });
 
   // ── Build ──

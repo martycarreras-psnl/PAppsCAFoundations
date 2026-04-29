@@ -116,7 +116,63 @@ export function hasOpReferences(rootDir) {
   return existsSync(envPath) && /^PP_.*=op:\/\//m.test(readFileSync(envPath, 'utf8'));
 }
 
-export function resolveCredentialValues({ rootDir, opBin }) {
+function resolveOpCredentialValues({ rootDir, opBin }) {
+  if (!opBin) {
+    throw new Error('1Password references exist in .env, but the op CLI is not available to resolve them.');
+  }
+
+  const envPath = join(rootDir, '.env');
+  if (!existsSync(envPath)) {
+    throw new Error('1Password credential storage was selected, but .env was not found.');
+  }
+
+  const rawValues = parseEnvFile(envPath);
+  const out = {};
+
+  for (const key of ['PP_TENANT_ID', 'PP_APP_ID', 'PP_CLIENT_SECRET', 'PP_ENV_DEV', 'PP_ENV_TEST', 'PP_ENV_PROD']) {
+    const ref = rawValues[key];
+    if (!ref) continue;
+
+    if (/^op:\/\//.test(ref)) {
+      try {
+        out[key] = execFileSync(opBin, ['read', ref], {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          cwd: rootDir,
+        }).trim();
+      } catch {
+        // Field not found in 1Password — skip optional fields (TEST/PROD)
+      }
+    } else {
+      out[key] = ref;
+    }
+  }
+
+  return out;
+}
+
+function resolveEnvLocalCredentialValues(rootDir) {
+  const envLocalPath = join(rootDir, '.env.local');
+  if (!existsSync(envLocalPath)) {
+    throw new Error('.env.local credential storage was selected, but .env.local could not be found.');
+  }
+
+  const values = parseEnvFile(envLocalPath);
+  if (values.PP_CLIENT_SECRET && isEncrypted(values.PP_CLIENT_SECRET)) {
+    values.PP_CLIENT_SECRET = decrypt(values.PP_CLIENT_SECRET);
+  }
+  return values;
+}
+
+export function resolveCredentialValues({ rootDir, opBin, source = 'auto' }) {
+  if (source === 'envlocal') {
+    return resolveEnvLocalCredentialValues(rootDir);
+  }
+
+  if (source === '1password') {
+    return resolveOpCredentialValues({ rootDir, opBin });
+  }
+
   if (hasOpReferences(rootDir)) {
     if (!opBin) {
       throw new Error('1Password references exist in .env, but the op CLI is not available to resolve them.');
@@ -126,42 +182,13 @@ export function resolveCredentialValues({ rootDir, opBin }) {
     // We avoid `op run --env-file` because 1Password's secret-concealment
     // feature replaces values with "<concealed by 1Password>" in subprocess
     // output, which silently breaks credential resolution.
-    const envPath = join(rootDir, '.env');
-    const rawValues = parseEnvFile(envPath);
-    const out = {};
-
-    for (const key of ['PP_TENANT_ID', 'PP_APP_ID', 'PP_CLIENT_SECRET', 'PP_ENV_DEV', 'PP_ENV_TEST', 'PP_ENV_PROD']) {
-      const ref = rawValues[key];
-      if (!ref) continue;
-
-      if (/^op:\/\//.test(ref)) {
-        try {
-          out[key] = execFileSync(opBin, ['read', ref], {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'pipe'],
-            cwd: rootDir,
-          }).trim();
-        } catch {
-          // Field not found in 1Password — skip optional fields (TEST/PROD)
-        }
-      } else {
-        out[key] = ref;
-      }
-    }
-
-    return out;
+    return resolveOpCredentialValues({ rootDir, opBin });
   }
 
-  const envLocalPath = join(rootDir, '.env.local');
-  if (!existsSync(envLocalPath)) {
+  if (!existsSync(join(rootDir, '.env.local'))) {
     throw new Error('Neither .env.local nor resolvable 1Password-backed .env could be found.');
   }
-
-  const values = parseEnvFile(envLocalPath);
-  if (values.PP_CLIENT_SECRET && isEncrypted(values.PP_CLIENT_SECRET)) {
-    values.PP_CLIENT_SECRET = decrypt(values.PP_CLIENT_SECRET);
-  }
-  return values;
+  return resolveEnvLocalCredentialValues(rootDir);
 }
 
 export function getWizardTarget(wizardState = {}, explicitTargetKey = '') {
