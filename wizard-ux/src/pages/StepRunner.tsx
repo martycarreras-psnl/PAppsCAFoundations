@@ -12,7 +12,6 @@ import { useStepStream } from '../hooks/useStepStream';
 import { StepNav } from '../components/StepNav';
 import { QuestionCard } from '../components/QuestionCard';
 import { LiveLog } from '../components/LiveLog';
-import { TerminalHandoff } from '../components/TerminalHandoff';
 import { api } from '../services/api';
 import { Question } from '../types/schema';
 
@@ -143,19 +142,6 @@ export function StepRunner() {
               </div>
 
               {questionsQ.isLoading && <Spinner size="small" />}
-
-              {/* Terminal handoff card */}
-              {meta && !meta.canRunInBrowser && meta.terminalHandoff && (
-                <TerminalHandoff
-                  command={meta.terminalHandoff.command}
-                  explanation={meta.terminalHandoff.explanation}
-                  onSessionEnd={() => {
-                    qc.invalidateQueries({ queryKey: ['state'] });
-                    qc.invalidateQueries({ queryKey: ['steps'] });
-                    qc.invalidateQueries({ queryKey: ['questions', stepNumber] });
-                  }}
-                />
-              )}
 
               {/* Optional/skip note */}
               {meta?.optional && (

@@ -2,7 +2,7 @@
 
 A browser-based UX for the PAppsCAFoundations setup wizard. Runs alongside the CLI wizard, sharing the same `.wizard-state.json` so you can switch between them at any time.
 
-> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX provides a richer experience for data collection, credential setup, and server-side checks, with terminal handoffs reserved for the longer scaffold/connect/deploy orchestration steps.
+> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX now keeps the full nine-step setup flow in the browser, using server-side runners and live logs for long-running commands.
 
 ## Quick start
 
@@ -32,11 +32,11 @@ This installs `wizard-ux` dependencies on first run, starts the Fastify server o
 | 4. Auth Setup | Full form + live PAC auth output |
 | 5. Publisher | Full form (auto or create new) |
 | 6. Solution | Full form (auto or create new) |
-| 7. Scaffold | Terminal handoff |
-| 8. Connectors | Terminal handoff (or skip) |
-| 9. Verify & deploy | Terminal handoff |
+| 7. Scaffold | Full form + live scaffold output |
+| 8. Connectors | Native defer/notes step |
+| 9. Verify & deploy | Full form + live build/deploy output |
 
-Steps 3 and 4 now stay inside WizardUX: app registration values are collected in browser forms, credentials can be read from or synced to 1Password, SPN profiles are created server-side, and PAC user auth output streams through the live log. Long-running scaffold, connector, and deploy orchestration still show a terminal handoff card while those flows are being ported.
+All nine steps now stay inside WizardUX. App registration values are collected in browser forms, credentials can be read from or synced to 1Password, PAC auth output streams through the live log, scaffolding runs server-side, and verify/deploy can build and push without opening the old CLI wizard.
 
 ## Architecture
 
@@ -47,7 +47,7 @@ wizard-ux/
 │   └── steps/     Per-step questions() + apply() modules (mirror wizard/steps/*)
 └── src/           React 19 + Fluent UI v9 + TanStack Query
     ├── pages/     Welcome, StepRunner, Summary, Diagnostics
-    ├── components/ AppHeader, StepNav, QuestionCard, LiveLog, TerminalHandoff, HeroBackground
+    ├── components/ AppHeader, StepNav, QuestionCard, LiveLog, EmbeddedTerminal, HeroBackground
     └── theme/     Custom Power Platform brand ramp + light/dark/system mode
 ```
 
@@ -79,7 +79,6 @@ In production mode, Vite is not loaded — Fastify serves the prebuilt SPA from 
 
 ## Roadmap
 
-- v1: Stream scaffold, connector binding, and deploy output through the LiveLog.
-- v1: Connector picker UI for step 8.
+- v1: Connector picker UI for step 8 with connection discovery and data-source registration.
 - v1: One-click open `make.powerapps.com` to the right environment.
 - v2: Replace `react-resizable-panels` with a Fluent-native splitter when one ships.

@@ -105,7 +105,7 @@ function StatusRow({
 }: {
   icon?: ReactNode;
   label: string;
-  value: string | undefined;
+  value: string | null | undefined;
   ok?: boolean;
   neutral?: boolean;
 }) {

@@ -1,21 +1,49 @@
-// Step 8 — Connectors. Terminal handoff (interactive `pac connection list` rescans).
+// Step 8 - Connectors. Native defer/acknowledge step.
 export default {
   meta: {
     number: 8,
     title: 'Bind Connectors',
-    description: 'Pick connectors, create connection references, and register data sources. Optional during initial scaffold.',
-    canRunInBrowser: false,
+    description: 'Decide whether to bind real connectors now or defer until prototype validation is complete.',
+    canRunInBrowser: true,
     optional: true,
-    terminalHandoff: {
-      command: 'node wizard-ux/server/run-cli-step.mjs 8',
-      explanation: [
-        'Connector binding interacts with `pac connection list` and may need',
-        'interactive auth refreshes. Run it in the terminal. You can also skip this',
-        'step entirely and let your coding agent wire up data sources later with',
-        '`pac code add-data-source` when needed.',
-      ].join('\n'),
-    },
   },
-  questions() { return []; },
-  async apply() { throw new Error('Run via CLI or skip — see handoff card.'); },
+
+  questions() {
+    return [
+      {
+        id: 'DEFER_CONNECTORS',
+        type: 'confirm',
+        label: 'Defer real connector binding until after prototype validation',
+        help: 'Recommended. Keep the scaffold mock-backed until the planning payload and UX are stable.',
+        defaultValue: true,
+      },
+      {
+        id: 'CONNECTOR_NOTES',
+        type: 'multiselect',
+        label: 'Connector notes or planned apiIds',
+        help: 'Optional. Enter comma-separated connectors or notes, such as shared_office365users, shared_sharepointonline, Dataverse tables later.',
+        defaultValue: [],
+      },
+    ];
+  },
+
+  async apply(answers, _state, log) {
+    const notes = Array.isArray(answers.CONNECTOR_NOTES) ? answers.CONNECTOR_NOTES : [];
+    if (answers.DEFER_CONNECTORS !== true) {
+      log.warn('Interactive connector binding is no longer delegated to the old CLI wizard.');
+      log.info('Use a coding agent or PAC directly when the prototype is stable:');
+      log.info('  pac code add-data-source -a dataverse -t <table_logical_name>');
+      log.info('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
+    } else {
+      log.ok('Connector binding deferred until prototype validation is complete');
+    }
+    if (notes.length > 0) log.info(`Recorded connector notes: ${notes.join(', ')}`);
+    return {
+      stateUpdate: {
+        CONNECTOR_BINDING_DEFERRED: answers.DEFER_CONNECTORS !== false,
+        CONNECTOR_NOTES: notes,
+      },
+      completedStep: 8,
+    };
+  },
 };

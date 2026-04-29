@@ -27,7 +27,6 @@ export interface StepMeta {
   readOnly?: boolean;
   optional?: boolean;
   needsSecret?: boolean;
-  terminalHandoff?: { command: string; explanation: string };
 }
 
 export interface StepInfo extends StepMeta {

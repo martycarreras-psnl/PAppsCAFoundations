@@ -1,13 +1,9 @@
 // wizard-ux/server/steps/index.mjs — Step registry for WizardUX.
 //
 // Each step module exports:
-//   meta:      { number, title, description, canRunInBrowser, terminalHandoff? }
+//   meta:      { number, title, description, canRunInBrowser }
 //   questions: (state) => Question[]   — pure, called on every render
 //   apply:     async (answers, state, log) => Partial<State>  — side effects
-//
-// Steps that can't safely run in the browser (interactive 1Password, device-code auth,
-// long pac connection list rescans) set canRunInBrowser=false and provide a
-// terminalHandoff string with the exact command to run.
 import step1 from './01-prerequisites.mjs';
 import step2 from './02-project-and-env.mjs';
 import step3 from './03-app-registration.mjs';

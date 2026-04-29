@@ -38,10 +38,7 @@ export default async function stepsRoutes(app, { rootDir }) {
     if (!n || n < 1 || n > TOTAL_STEPS) return reply.code(404).send({ error: 'Unknown step' });
     const step = getStep(n);
     if (!step.meta.canRunInBrowser) {
-      return reply.code(409).send({
-        error: 'Step requires terminal handoff',
-        terminalHandoff: step.meta.terminalHandoff,
-      });
+      return reply.code(409).send({ error: 'Step cannot run in WizardUX' });
     }
     const answers = req.body?.answers || {};
     const run = newRun();
