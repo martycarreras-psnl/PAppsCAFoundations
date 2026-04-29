@@ -575,7 +575,33 @@ h4 { font-size: 1.1rem; }
 }
 .btn-listen svg { width: 18px; height: 18px; }
 
-/* Hero Terminal Preview */
+/* Hero Image */
+.hero-image {
+  margin: 60px auto 0;
+  max-width: 1100px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--white);
+  border: 1px solid rgba(0,120,212,0.10);
+  box-shadow: var(--depth-64);
+  animation: fadeInUp 0.8s var(--motion-ease) 0.5s both;
+  transition: transform var(--motion-duration) var(--motion-ease),
+              box-shadow var(--motion-duration) var(--motion-ease);
+}
+.hero-image:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 64px -24px rgba(92,45,145,0.30), 0 12px 24px -12px rgba(0,120,212,0.20);
+}
+.hero-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 768px) {
+  .hero-image { border-radius: var(--radius-lg); margin-top: 40px; }
+}
+
+/* Hero Terminal Preview (legacy) */
 .hero-terminal {
   margin-top: 60px;
   max-width: 700px;
@@ -2063,33 +2089,13 @@ h4 { font-size: 1.1rem; }
       </a>
     </div>
 
-    <!-- Terminal Preview -->
-    <div class="hero-terminal">
-      <div class="terminal">
-        <div class="terminal-bar">
-          <span class="terminal-dot red"></span>
-          <span class="terminal-dot yellow"></span>
-          <span class="terminal-dot green"></span>
-          <span class="terminal-title">Terminal — Getting Started</span>
-        </div>
-        <div class="terminal-body" id="terminal-body">
-          <div class="terminal-line"><span class="comment"># Clone the template and start the wizard (terminal or browser)</span></div>
-          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">npx</span> <span class="flag">degit</span> <span class="string">martycarreras-psnl/PAppsCAFoundations</span> my-app</div>
-          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">cd</span> my-app <span class="flag">&&</span> <span class="cmd">npm</span> run wizard:ux  <span class="comment"># ✨ browser experience</span></div>
-          <div class="terminal-line"><span class="comment"># …or stick with the classic terminal flow:</span></div>
-          <div class="terminal-line"><span class="prompt">$</span> <span class="cmd">cd</span> wizard <span class="flag">&&</span> <span class="cmd">npm</span> install <span class="flag">&&</span> <span class="cmd">node</span> index.mjs</div>
-          <div class="terminal-line"></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">Prerequisites verified</span></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">Project identity captured</span></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">Auth profiles created</span></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">React + Fluent UI scaffolded</span></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">Smoke tests passing</span></div>
-          <div class="terminal-line"><span class="success">✓</span> <span class="output">Prototype assets seeded</span></div>
-          <div class="terminal-line"></div>
-          <div class="terminal-line"><span class="highlight">→ Ready to build.</span> Run <span class="cmd">npm run dev:local</span> to start prototyping.<span class="typing-cursor"></span></div>
-        </div>
-      </div>
-    </div>
+    <!-- Hero Image -->
+    <figure class="hero-image">
+      <img src="assets/CodeAppsFoundations.png"
+           alt="Power Apps Code Apps Foundations — a proven foundation, a clear path, faster to value."
+           loading="eager"
+           decoding="async" />
+    </figure>
   </div>
 </section>
 
