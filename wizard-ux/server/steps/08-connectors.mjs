@@ -69,6 +69,14 @@ function connectorLabel(connector, existingApiIds) {
   return existingApiIds.has(connector.apiId) ? `${connector.name} (connection reference exists)` : connector.name;
 }
 
+function connectorGroup(connector) {
+  return {
+    id: `connector-${connector.apiId}`,
+    label: connector.name,
+    help: 'Choose whether this app should bind this connector, then pick its environment connection when data-source registration is enabled.',
+  };
+}
+
 function discoverConnections(pac, apiId) {
   if (!pac) return [];
   try {
@@ -80,13 +88,13 @@ function discoverConnections(pac, apiId) {
 
 function connectionOptions(connections, savedConnectionId = '') {
   const savedOption = savedConnectionId && !connections.some((entry) => entry.connectionId === savedConnectionId)
-    ? [{ value: savedConnectionId, label: `Saved connection (${savedConnectionId})` }]
+    ? [{ value: savedConnectionId, label: 'Saved connection from prior setup' }]
     : [];
   return [
     ...savedOption,
     ...connections.map((entry) => ({
       value: entry.connectionId,
-      label: `${entry.displayName} (${entry.connectionId})`,
+      label: entry.displayName || 'Environment connection',
     })),
     { value: CREATE_MANUAL, label: 'Paste a connection URL or ID' },
     { value: SKIP_CONNECTION, label: 'Create connection reference only' },
@@ -250,6 +258,7 @@ export default {
     for (const connector of COMMON_CONNECTORS) {
       const toggleId = connectorToggleId(connector.apiId);
       const referenceExists = existingApiIds.has(connector.apiId);
+      const group = connectorGroup(connector);
       questions.push({
         id: toggleId,
         type: 'confirm',
@@ -258,6 +267,7 @@ export default {
           ? 'This connector already has a connection reference in the selected solution. Leave on to keep it in this app setup.'
           : 'Creates a solution connection reference for this connector when you save Step 8.',
         defaultValue: selectedDefaults.includes(connector.apiId),
+        group,
         showIf: { id: 'DEFER_CONNECTORS', equals: false },
       });
 
@@ -275,6 +285,7 @@ export default {
           : 'No existing environment connection was discovered. Paste a connection URL/ID, or create only the connection reference for now.',
         defaultValue,
         options: connectionOptions(discovered, savedConnectionId),
+        group,
         showIf: [
           { id: 'DEFER_CONNECTORS', equals: false },
           { id: 'REGISTER_DATA_SOURCES', equals: true },
@@ -285,8 +296,9 @@ export default {
         id: manualQuestionId(connector.apiId),
         type: 'text',
         label: `${connector.name} connection URL or ID`,
-        help: 'Paste the full Maker Portal connection details URL or the connection GUID.',
+        help: 'Paste the full Maker Portal connection details URL or connection ID.',
         defaultValue: '',
+        group,
         showIf: [
           { id: 'DEFER_CONNECTORS', equals: false },
           { id: 'REGISTER_DATA_SOURCES', equals: true },

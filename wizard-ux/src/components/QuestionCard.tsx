@@ -1,6 +1,6 @@
-import { Question, QuestionCondition } from '../types/schema';
+import { Question, QuestionCondition, QuestionGroup } from '../types/schema';
 import {
-  Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Checkbox,
+  Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Body1, Checkbox,
 } from '@fluentui/react-components';
 import { ChangeEvent } from 'react';
 
@@ -14,6 +14,14 @@ const useStyles = makeStyles({
   },
   required: { color: tokens.colorPaletteRedForeground1, marginLeft: '4px' },
   help: { color: tokens.colorNeutralForeground3 },
+  groupHeader: { display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '4px' },
+  groupTitle: { fontWeight: tokens.fontWeightSemibold },
+  groupItems: { display: 'flex', flexDirection: 'column' },
+  groupItem: {
+    padding: '12px 0',
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  firstGroupItem: { paddingTop: '8px' },
   why: {
     background: tokens.colorNeutralBackground3,
     borderRadius: '6px',
@@ -57,14 +65,17 @@ interface Props {
   showError?: boolean;
 }
 
-export function QuestionCard({ question: q, answers, value, onChange, showError }: Props) {
-  const s = useStyles();
-  if (isQuestionHidden(q, answers)) return null;
-
-  const error =
+function questionError(q: Question, value: unknown, showError?: boolean): string | null {
+  return (
     (q.required && (value == null || value === '') && showError) ? 'Required' :
     (q.validatePattern === 'dataverseUrl' && typeof value === 'string') ? validateUrl(value) :
-    null;
+    null
+  );
+}
+
+function QuestionContent({ question: q, value, onChange, showError }: Omit<Props, 'answers'>) {
+  const s = useStyles();
+  const error = questionError(q, value, showError);
 
   const labelEl = (
     <span>
@@ -73,7 +84,7 @@ export function QuestionCard({ question: q, answers, value, onChange, showError 
   );
 
   return (
-    <div className={s.card}>
+    <>
       <Field
         label={labelEl}
         validationState={error ? 'error' : undefined}
@@ -135,6 +146,52 @@ export function QuestionCard({ question: q, answers, value, onChange, showError 
 
       {q.help && <Body2 className={s.help}>{q.help}</Body2>}
       {q.why && <div className={s.why}>{q.why}</div>}
+    </>
+  );
+}
+
+export function QuestionCard({ question: q, answers, value, onChange, showError }: Props) {
+  const s = useStyles();
+  if (isQuestionHidden(q, answers)) return null;
+
+  return (
+    <div className={s.card}>
+      <QuestionContent question={q} value={value} onChange={onChange} showError={showError} />
+    </div>
+  );
+}
+
+interface GroupProps {
+  group: QuestionGroup;
+  questions: Question[];
+  answers: Record<string, unknown>;
+  onChange: (id: string, value: unknown) => void;
+  showError?: boolean;
+}
+
+export function QuestionGroupCard({ group, questions, answers, onChange, showError }: GroupProps) {
+  const s = useStyles();
+  const visibleQuestions = questions.filter((q) => !isQuestionHidden(q, answers));
+  if (visibleQuestions.length === 0) return null;
+
+  return (
+    <div className={s.card}>
+      <div className={s.groupHeader}>
+        <Body1 className={s.groupTitle}>{group.label}</Body1>
+        {group.help && <Body2 className={s.help}>{group.help}</Body2>}
+      </div>
+      <div className={s.groupItems}>
+        {visibleQuestions.map((q, index) => (
+          <div key={q.id} className={`${s.groupItem} ${index === 0 ? s.firstGroupItem : ''}`}>
+            <QuestionContent
+              question={q}
+              value={answers[q.id]}
+              onChange={onChange}
+              showError={showError}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

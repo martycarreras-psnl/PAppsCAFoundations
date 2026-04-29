@@ -7,6 +7,12 @@ export interface QuestionCondition {
   contains?: unknown;
 }
 
+export interface QuestionGroup {
+  id: string;
+  label: string;
+  help?: string;
+}
+
 export interface Question {
   id: string;
   type: QuestionType;
@@ -16,6 +22,7 @@ export interface Question {
   required?: boolean;
   defaultValue?: unknown;
   options?: Array<{ value: string; label: string }>;
+  group?: QuestionGroup;
   validatePattern?: 'dataverseUrl';
   hideIf?: QuestionCondition | QuestionCondition[];
   showIf?: QuestionCondition | QuestionCondition[];

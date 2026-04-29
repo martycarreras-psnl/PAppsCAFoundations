@@ -10,10 +10,14 @@ import { ArrowLeftRegular, ArrowRightFilled, PlayRegular } from '@fluentui/react
 import { useStepQuestions, useSteps } from '../hooks/useWizardData';
 import { useStepStream } from '../hooks/useStepStream';
 import { StepNav } from '../components/StepNav';
-import { isQuestionHidden, QuestionCard } from '../components/QuestionCard';
+import { isQuestionHidden, QuestionCard, QuestionGroupCard } from '../components/QuestionCard';
 import { LiveLog } from '../components/LiveLog';
 import { api } from '../services/api';
-import { Question } from '../types/schema';
+import { Question, QuestionGroup } from '../types/schema';
+
+type QuestionBlock =
+  | { kind: 'question'; question: Question }
+  | { kind: 'group'; group: QuestionGroup; questions: Question[] };
 
 const useStyles = makeStyles({
   root: { height: '100%', display: 'flex' },
@@ -110,6 +114,22 @@ export function StepRunner() {
 
   const meta = questionsQ.data?.meta;
   const questions = questionsQ.data?.questions ?? [];
+  const questionBlocks = useMemo(() => {
+    const blocks: QuestionBlock[] = [];
+    for (const q of questions) {
+      if (!q.group) {
+        blocks.push({ kind: 'question', question: q });
+        continue;
+      }
+      const previous = blocks[blocks.length - 1];
+      if (previous?.kind === 'group' && previous.group.id === q.group.id) {
+        previous.questions.push(q);
+      } else {
+        blocks.push({ kind: 'group', group: q.group, questions: [q] });
+      }
+    }
+    return blocks;
+  }, [questions]);
 
   const hasUnsavedChanges = useMemo(
     () => JSON.stringify(answers) !== JSON.stringify(initialAnswers),
@@ -184,16 +204,31 @@ export function StepRunner() {
               {/* Question form */}
               {meta?.canRunInBrowser && questions.length > 0 && (
                 <div className={s.questions}>
-                  {questions.map((q: Question) => (
-                    <QuestionCard
-                      key={q.id}
-                      question={q}
-                      answers={answers}
-                      value={answers[q.id]}
-                      onChange={(id, v) => setAnswers((a) => ({ ...a, [id]: v }))}
-                      showError={showErrors}
-                    />
-                  ))}
+                  {questionBlocks.map((block) => {
+                    const onChange = (id: string, v: unknown) => setAnswers((a) => ({ ...a, [id]: v }));
+                    if (block.kind === 'group') {
+                      return (
+                        <QuestionGroupCard
+                          key={block.group.id}
+                          group={block.group}
+                          questions={block.questions}
+                          answers={answers}
+                          onChange={onChange}
+                          showError={showErrors}
+                        />
+                      );
+                    }
+                    return (
+                      <QuestionCard
+                        key={block.question.id}
+                        question={block.question}
+                        answers={answers}
+                        value={answers[block.question.id]}
+                        onChange={onChange}
+                        showError={showErrors}
+                      />
+                    );
+                  })}
                 </div>
               )}
 
