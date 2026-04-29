@@ -44,6 +44,10 @@ function connectionQuestionId(apiId) {
   return `CONNECTION_${apiId.replace(/[^a-z0-9_]/gi, '_')}`;
 }
 
+function connectorToggleId(apiId) {
+  return `CONNECTOR_${apiId.replace(/[^a-z0-9_]/gi, '_')}`;
+}
+
 function manualQuestionId(apiId) {
   return `${connectionQuestionId(apiId)}_MANUAL`;
 }
@@ -74,8 +78,12 @@ function discoverConnections(pac, apiId) {
   }
 }
 
-function connectionOptions(connections) {
+function connectionOptions(connections, savedConnectionId = '') {
+  const savedOption = savedConnectionId && !connections.some((entry) => entry.connectionId === savedConnectionId)
+    ? [{ value: savedConnectionId, label: `Saved connection (${savedConnectionId})` }]
+    : [];
   return [
+    ...savedOption,
     ...connections.map((entry) => ({
       value: entry.connectionId,
       label: `${entry.displayName} (${entry.connectionId})`,
@@ -197,13 +205,12 @@ export default {
     const pac = SHELL.pacPath();
     const hasSecret = hasUsableSecret();
     let existingRefs = [];
-    let discoveryHelp = '';
 
     if (hasSecret) {
       try {
         existingRefs = await listConnectionReferences(prefix);
       } catch (err) {
-        discoveryHelp = `Could not load existing connection references: ${err.message}`;
+        // Missing discovery should not block users from choosing connector intent.
       }
     }
 
@@ -232,28 +239,6 @@ export default {
     }
 
     questions.push({
-      id: 'CONNECTOR_SELECTION',
-      type: 'checkboxes',
-      label: 'Connectors',
-      help: discoveryHelp || 'Choose the connectors this app needs. Existing connection references are preselected when found.',
-      defaultValue: selectedDefaults,
-      options: COMMON_CONNECTORS.map((connector) => ({
-        value: connector.apiId,
-        label: connectorLabel(connector, existingApiIds),
-      })),
-      showIf: { id: 'DEFER_CONNECTORS', equals: false },
-    });
-
-    questions.push({
-      id: 'CUSTOM_CONNECTORS',
-      type: 'multiselect',
-      label: 'Additional connector URLs or apiIds',
-      help: 'Optional. Paste Maker Portal connection URLs or apiIds, separated by commas or new lines. URLs can include the connection ID.',
-      defaultValue: Array.isArray(state.CUSTOM_CONNECTORS) ? state.CUSTOM_CONNECTORS : [],
-      showIf: { id: 'DEFER_CONNECTORS', equals: false },
-    });
-
-    questions.push({
       id: 'REGISTER_DATA_SOURCES',
       type: 'confirm',
       label: 'Register selected non-Dataverse connectors as Code App data sources now',
@@ -262,9 +247,25 @@ export default {
       showIf: { id: 'DEFER_CONNECTORS', equals: false },
     });
 
-    for (const connector of COMMON_CONNECTORS.filter((entry) => entry.apiId !== 'shared_commondataserviceforapps')) {
+    for (const connector of COMMON_CONNECTORS) {
+      const toggleId = connectorToggleId(connector.apiId);
+      const referenceExists = existingApiIds.has(connector.apiId);
+      questions.push({
+        id: toggleId,
+        type: 'confirm',
+        label: `Set up ${connectorLabel(connector, existingApiIds)}`,
+        help: referenceExists
+          ? 'This connector already has a connection reference in the selected solution. Leave on to keep it in this app setup.'
+          : 'Creates a solution connection reference for this connector when you save Step 8.',
+        defaultValue: selectedDefaults.includes(connector.apiId),
+        showIf: { id: 'DEFER_CONNECTORS', equals: false },
+      });
+
+      if (connector.apiId === 'shared_commondataserviceforapps') continue;
+
       const discovered = discoverConnections(pac, connector.apiId);
-      const defaultValue = discovered.length === 1 ? discovered[0].connectionId : SKIP_CONNECTION;
+      const savedConnectionId = state.CONNECTOR_CONNECTION_IDS?.[connector.apiId] || '';
+      const defaultValue = savedConnectionId || (discovered.length === 1 ? discovered[0].connectionId : SKIP_CONNECTION);
       questions.push({
         id: connectionQuestionId(connector.apiId),
         type: 'select',
@@ -273,11 +274,11 @@ export default {
           ? 'Choose an existing environment connection, paste one manually, or create only the connection reference for now.'
           : 'No existing environment connection was discovered. Paste a connection URL/ID, or create only the connection reference for now.',
         defaultValue,
-        options: connectionOptions(discovered),
+        options: connectionOptions(discovered, savedConnectionId),
         showIf: [
           { id: 'DEFER_CONNECTORS', equals: false },
           { id: 'REGISTER_DATA_SOURCES', equals: true },
-          { id: 'CONNECTOR_SELECTION', contains: connector.apiId },
+          { id: toggleId, equals: true },
         ],
       });
       questions.push({
@@ -286,15 +287,31 @@ export default {
         label: `${connector.name} connection URL or ID`,
         help: 'Paste the full Maker Portal connection details URL or the connection GUID.',
         defaultValue: '',
-        showIf: { id: connectionQuestionId(connector.apiId), equals: CREATE_MANUAL },
+        showIf: [
+          { id: 'DEFER_CONNECTORS', equals: false },
+          { id: 'REGISTER_DATA_SOURCES', equals: true },
+          { id: toggleId, equals: true },
+          { id: connectionQuestionId(connector.apiId), equals: CREATE_MANUAL },
+        ],
       });
     }
+
+    questions.push({
+      id: 'CUSTOM_CONNECTORS',
+      type: 'multiselect',
+      label: 'Other connector URLs or apiIds',
+      help: 'Optional. Paste uncommon/custom connector apiIds or full Maker Portal connection URLs. Full URLs let WizardUX capture both the connector and connection ID.',
+      defaultValue: Array.isArray(state.CUSTOM_CONNECTORS) ? state.CUSTOM_CONNECTORS : [],
+      showIf: { id: 'DEFER_CONNECTORS', equals: false },
+    });
 
     return questions;
   },
 
   async apply(answers, state, log) {
-    const selectedCommon = normalizeList(answers.CONNECTOR_SELECTION);
+    const selectedCommon = COMMON_CONNECTORS
+      .filter((connector) => answers[connectorToggleId(connector.apiId)] === true)
+      .map((connector) => connector.apiId);
     const customRaw = normalizeList(answers.CUSTOM_CONNECTORS);
 
     if (answers.DEFER_CONNECTORS !== false) {
