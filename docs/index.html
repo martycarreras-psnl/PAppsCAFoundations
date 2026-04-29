@@ -560,6 +560,19 @@ h4 { font-size: 1.1rem; }
   box-shadow: var(--depth-8);
 }
 
+.btn-listen {
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--white);
+  border: 1px solid rgba(255,255,255,0.30);
+}
+.btn-listen:hover {
+  background: rgba(255,255,255,0.20);
+  transform: translateY(-2px);
+}
+.btn-listen svg { width: 18px; height: 18px; }
+
 /* Hero Terminal Preview */
 .hero-terminal {
   margin-top: 60px;
@@ -1790,6 +1803,102 @@ h4 { font-size: 1.1rem; }
 .partial { color: var(--accent-gold); font-weight: 600; }
 
 /* ============================================================
+   Audio Overview — Listen Section
+   ============================================================ */
+.listen-section {
+  position: relative;
+  padding: 56px 0 24px;
+  background: var(--white);
+}
+.listen-card {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 36px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(900px 400px at 100% 0%, rgba(124,58,237,0.35), transparent 60%),
+    radial-gradient(700px 400px at 0% 100%, rgba(0,120,212,0.30), transparent 60%),
+    linear-gradient(135deg, #1e1b4b 0%, #3b1967 55%, #0a1628 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: var(--depth-64);
+  color: #fff;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 28px;
+  align-items: center;
+}
+.listen-icon {
+  width: 112px;
+  height: 112px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #5c2d91 0%, #0078d4 100%);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 18px 40px -16px rgba(124,58,237,0.55);
+  position: relative;
+  flex-shrink: 0;
+}
+.listen-icon svg { width: 56px; height: 56px; color: #fff; }
+.listen-icon::after {
+  content: "NEW";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: var(--white);
+  color: #3b1967;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: var(--depth-8);
+}
+.listen-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7BC0FF;
+}
+.listen-card h2 {
+  margin: 8px 0 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+}
+.listen-card p.listen-blurb {
+  margin-top: 12px;
+  color: rgba(255,255,255,0.78);
+  max-width: 60ch;
+  font-size: 0.98rem;
+}
+.listen-card audio {
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+.listen-meta {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.55);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.listen-meta svg { width: 14px; height: 14px; }
+@media (max-width: 720px) {
+  .listen-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 28px 22px;
+  }
+  .listen-icon { margin: 0 auto; width: 92px; height: 92px; }
+  .listen-card p.listen-blurb { margin-left: auto; margin-right: auto; }
+}
+@media print { .listen-section { display: none !important; } }
+
+/* ============================================================
    Workflow Overview Banner
    ============================================================ */
 .workflow-overview {
@@ -1887,6 +1996,7 @@ h4 { font-size: 1.1rem; }
       </span>
     </div>
     <ul class="nav-links">
+      <li><a href="#listen">Listen</a></li>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#why">Why</a></li>
       <li><a href="#methodology">Methodology</a></li>
@@ -1907,6 +2017,7 @@ h4 { font-size: 1.1rem; }
     </div>
     <div class="nav-mobile-panel" id="nav-mobile-menu">
       <ul class="nav-mobile-links">
+        <li><a href="#listen">Listen</a></li>
         <li><a href="#overview">Overview</a></li>
         <li><a href="#why">Why Code Apps</a></li>
         <li><a href="#methodology">Methodology</a></li>
@@ -1944,6 +2055,10 @@ h4 { font-size: 1.1rem; }
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>
         Read the Guide
       </a>
+      <a href="#listen" class="btn btn-listen">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Prefer to listen?
+      </a>
     </div>
 
     <!-- Terminal Preview -->
@@ -1970,6 +2085,36 @@ h4 { font-size: 1.1rem; }
           <div class="terminal-line"><span class="success">✓</span> <span class="output">Prototype assets seeded</span></div>
           <div class="terminal-line"></div>
           <div class="terminal-line"><span class="highlight">→ Ready to build.</span> Run <span class="cmd">npm run dev:local</span> to start prototyping.<span class="typing-cursor"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     Audio Overview — Listen Section
+     ============================================================ -->
+<section class="listen-section" id="listen">
+  <div class="container">
+    <div class="listen-card fade-in">
+      <div class="listen-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/>
+          <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="listen-eyebrow">Audio Overview &middot; 2&times; Speed Welcome</div>
+        <h2>Prefer to listen? Vibe code Power Apps with AI agents &mdash; the whole story in one sitting.</h2>
+        <p class="listen-blurb">A conversational walkthrough of what Foundations is, why it exists, and how it gets your team from <em>Use this template</em> to production. Pop it on during your commute, then come back for the diagrams and the wizard.</p>
+        <audio controls preload="none">
+          <source src="assets/Vibe_code_Power_Apps_with_AI_agents.m4a" type="audio/mp4" />
+          Your browser doesn't support inline audio.
+          <a href="assets/Vibe_code_Power_Apps_with_AI_agents.m4a">Download the episode</a>.
+        </audio>
+        <div class="listen-meta">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
+          Heads up: give it a few seconds to buffer after pressing play.
         </div>
       </div>
     </div>
