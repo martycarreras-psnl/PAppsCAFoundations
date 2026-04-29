@@ -70,6 +70,10 @@ export function StepRunner() {
   const [showErrors, setShowErrors] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const submittedAnswersRef = useRef<Record<string, unknown> | null>(null);
+  const questionDefaultsKey = useMemo(
+    () => JSON.stringify((questionsQ.data?.questions ?? []).map((q) => [q.id, q.defaultValue ?? ''])),
+    [questionsQ.data?.questions],
+  );
 
   // Initialize answers from defaults whenever the step's questions arrive
   useEffect(() => {
@@ -80,7 +84,7 @@ export function StepRunner() {
     setInitialAnswers(init);
     setShowErrors(false);
     setRunId(null);
-  }, [questionsQ.data?.meta.number]);
+  }, [questionsQ.data?.meta.number, questionDefaultsKey]);
 
   const apply = useMutation({
     mutationFn: (a: Record<string, unknown>) => api.apply(stepNumber, a),
@@ -100,7 +104,7 @@ export function StepRunner() {
       }
       qc.invalidateQueries({ queryKey: ['state'] });
       qc.invalidateQueries({ queryKey: ['steps'] });
-      qc.invalidateQueries({ queryKey: ['questions', stepNumber] });
+      qc.invalidateQueries({ queryKey: ['questions'] });
     }
   }, [stream.status, qc, stepNumber]);
 
