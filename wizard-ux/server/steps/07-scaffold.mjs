@@ -1,6 +1,6 @@
 // Step 7 - Scaffold. Browser-native long-running scaffold with live logs.
 import { existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
