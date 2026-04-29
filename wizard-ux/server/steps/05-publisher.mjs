@@ -23,6 +23,26 @@ function publisherOption(publisher) {
   };
 }
 
+function publisherStateUpdate(state, publisher) {
+  const hasSavedSolution = Boolean(state.SOLUTION_ID || state.SOLUTION_UNIQUE_NAME || state.SOLUTION_DISPLAY_NAME);
+  const publisherChanged = state.PUBLISHER_ID ? state.PUBLISHER_ID !== publisher.id : hasSavedSolution;
+  return {
+    PUBLISHER_ID: publisher.id,
+    PUBLISHER_NAME: publisher.name,
+    PUBLISHER_DISPLAY_NAME: publisher.displayName,
+    PUBLISHER_PREFIX: publisher.prefix,
+    CHOICE_VALUE_PREFIX: publisher.choiceValuePrefix,
+    ...(publisherChanged
+      ? {
+        SOLUTION_ID: '',
+        SOLUTION_UNIQUE_NAME: '',
+        SOLUTION_DISPLAY_NAME: '',
+        COMPLETED_STEP: 5,
+      }
+      : {}),
+  };
+}
+
 export default {
   meta: {
     number: 5,
@@ -126,14 +146,17 @@ export default {
       const pub = publishers.find((p) => p.publisherid === selectedPublisherId);
       if (!pub) throw new Error('Selected publisher was not found. Refresh this step and choose again.');
       log.ok(`Selected ${pub.friendlyname} (prefix ${pub.customizationprefix})`);
+      if (state.PUBLISHER_ID && state.PUBLISHER_ID !== pub.publisherid) {
+        log.info('Publisher changed, so the saved solution selection was cleared. Re-select a solution in Step 6.');
+      }
       return {
-        stateUpdate: {
-          PUBLISHER_ID: pub.publisherid,
-          PUBLISHER_NAME: pub.uniquename,
-          PUBLISHER_DISPLAY_NAME: pub.friendlyname,
-          PUBLISHER_PREFIX: pub.customizationprefix,
-          CHOICE_VALUE_PREFIX: String(pub.customizationoptionvalueprefix),
-        },
+        stateUpdate: publisherStateUpdate(state, {
+          id: pub.publisherid,
+          name: pub.uniquename,
+          displayName: pub.friendlyname,
+          prefix: pub.customizationprefix,
+          choiceValuePrefix: String(pub.customizationoptionvalueprefix),
+        }),
         completedStep: 5,
       };
     }
@@ -152,15 +175,18 @@ export default {
     });
     const choicePrefix = String(result.customizationoptionvalueprefix);
     log.ok(`Publisher created. Choice value prefix: ${choicePrefix}`);
+    if (state.PUBLISHER_ID && state.PUBLISHER_ID !== result.publisherid) {
+      log.info('Publisher changed, so the saved solution selection was cleared. Re-select a solution in Step 6.');
+    }
 
     return {
-      stateUpdate: {
-        PUBLISHER_ID: result.publisherid,
-        PUBLISHER_NAME: uniqueName,
-        PUBLISHER_DISPLAY_NAME: friendly,
-        PUBLISHER_PREFIX: prefix,
-        CHOICE_VALUE_PREFIX: choicePrefix,
-      },
+      stateUpdate: publisherStateUpdate(state, {
+        id: result.publisherid,
+        name: uniqueName,
+        displayName: friendly,
+        prefix,
+        choiceValuePrefix: choicePrefix,
+      }),
       completedStep: 5,
     };
   },
