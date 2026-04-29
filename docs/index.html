@@ -561,15 +561,17 @@ h4 { font-size: 1.1rem; }
 }
 
 .btn-listen {
-  background: rgba(255,255,255,0.10);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--white);
-  border: 1px solid rgba(255,255,255,0.30);
+  background: linear-gradient(135deg, rgba(0,120,212,0.08), rgba(92,45,145,0.08));
+  color: var(--brand-secondary);
+  border: 1px solid rgba(92,45,145,0.30);
+  box-shadow: var(--depth-4);
 }
 .btn-listen:hover {
-  background: rgba(255,255,255,0.20);
+  background: linear-gradient(135deg, rgba(0,120,212,0.14), rgba(92,45,145,0.14));
+  border-color: var(--brand-secondary);
+  color: var(--brand-secondary);
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(92,45,145,0.25);
 }
 .btn-listen svg { width: 18px; height: 18px; }
 
