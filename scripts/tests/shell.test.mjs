@@ -15,7 +15,8 @@ test('Windows cmd shims are routed through cmd.exe', () => {
   });
 
   assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(command.args, ['/d', '/s', '/c', 'call "C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd" "auth" "list"']);
+  assert.deepEqual(command.args, ['/d', '/q', '/c']);
+  assert.equal(command.windowsCommandScript, 'call "C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd" "auth" "list"');
   assert.equal(command.shellShim, true);
 });
 
@@ -47,7 +48,8 @@ test('Windows shell fallback quotes arguments for cmd execution', () => {
     comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, ['/d', '/s', '/c', 'call "C:\\Tools\\pac.cmd" "code" "init" "--displayName" "Windows Hello"']);
+  assert.deepEqual(command.args, ['/d', '/q', '/c']);
+  assert.equal(command.windowsCommandScript, 'call "C:\\Tools\\pac.cmd" "code" "init" "--displayName" "Windows Hello"');
 });
 
 test('Windows command quoting escapes cmd metacharacters', () => {
@@ -66,10 +68,21 @@ test('Windows command quoting keeps environment URLs as one argument', () => {
     comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, [
-    '/d', '/s', '/c',
+  assert.deepEqual(command.args, ['/d', '/q', '/c']);
+  assert.equal(
+    command.windowsCommandScript,
     'call "C:\\Tools\\pac.cmd" "auth" "create" "--environment" "https://carremacodeapps.crm.dynamics.com" "--applicationId" "00000000-0000-0000-0000-000000000000"',
-  ]);
+  );
+});
+
+test('Windows cmd shim execution defers full command to launcher script', () => {
+  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'push', '--displayName', 'Windows Hello'], {
+    isWindows: true,
+    comspec: 'cmd.exe',
+  });
+
+  assert.equal(command.args.includes(command.windowsCommandScript), false);
+  assert.equal(command.windowsCommandScript.includes('"Windows Hello"'), true);
 });
 
 test('command logging quotes arguments with spaces', () => {
