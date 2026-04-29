@@ -21,14 +21,23 @@ if (!existsSync(wizardPackage)) {
   process.exit(1);
 }
 
-if (!existsSync(inquirerPrompts)) {
-  console.log('[WizardUX] Installing CLI wizard dependencies...');
-  const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const install = spawnSync(npmBin, ['install'], { cwd: wizardDir, stdio: 'inherit' });
-  if (install.status !== 0) {
-    process.exit(install.status ?? 1);
+function exitFromChild(result, label) {
+  if (result.error) {
+    console.error(`[WizardUX] Failed to start ${label}: ${result.error.message}`);
+    process.exit(1);
+  }
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
   }
 }
 
+if (!existsSync(inquirerPrompts)) {
+  console.log('[WizardUX] Installing CLI wizard dependencies...');
+  const install = process.platform === 'win32'
+    ? spawnSync(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', 'npm install'], { cwd: wizardDir, stdio: 'inherit' })
+    : spawnSync('npm', ['install'], { cwd: wizardDir, stdio: 'inherit' });
+  exitFromChild(install, 'npm install');
+}
+
 const run = spawnSync(process.execPath, ['index.mjs', '--from', step], { cwd: wizardDir, stdio: 'inherit' });
-process.exit(run.status ?? 1);
+exitFromChild(run, 'CLI wizard');
