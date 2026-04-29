@@ -1968,6 +1968,135 @@ h4 { font-size: 1.1rem; }
 }
 
 /* ============================================================
+   Quick Start — Six Steps in Your IDE
+   ============================================================ */
+.quickstart {
+  padding: calc(var(--section-padding) * 0.7) 0 var(--section-padding);
+  background:
+    radial-gradient(ellipse at top right, rgba(0,120,212,0.05), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(0,130,114,0.04), transparent 60%),
+    var(--neutral-lightest);
+  border-top: 1px solid var(--neutral-light);
+  border-bottom: 1px solid var(--neutral-light);
+}
+.quickstart .section-header { margin-bottom: 48px; }
+.quickstart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  gap: 56px;
+  align-items: start;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.quickstart-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+}
+.quickstart-steps::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-secondary), var(--brand-accent));
+  opacity: 0.25;
+  border-radius: 2px;
+}
+.quickstart-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 18px 22px 18px 18px;
+  background: var(--white);
+  border: 1px solid var(--neutral-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--depth-4);
+  transition: transform var(--motion-duration) var(--motion-ease),
+              box-shadow var(--motion-duration) var(--motion-ease),
+              border-color var(--motion-duration) var(--motion-ease);
+  position: relative;
+}
+.quickstart-step:hover {
+  transform: translateX(4px);
+  box-shadow: var(--depth-16);
+  border-color: rgba(0,120,212,0.30);
+}
+.quickstart-step-num {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 6px 16px -6px rgba(92,45,145,0.50);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.quickstart-step h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.quickstart-step p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--neutral-secondary);
+  line-height: 1.5;
+}
+.quickstart-step code {
+  background: var(--neutral-lighter);
+  color: var(--brand-secondary);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.quickstart-figure {
+  position: sticky;
+  top: 100px;
+  margin: 0;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--white);
+  border: 1px solid var(--neutral-light);
+  box-shadow: var(--depth-64);
+}
+.quickstart-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.quickstart-figure figcaption {
+  padding: 14px 18px;
+  font-size: 0.82rem;
+  color: var(--neutral-secondary);
+  text-align: center;
+  background: var(--neutral-lightest);
+  border-top: 1px solid var(--neutral-light);
+}
+@media (max-width: 960px) {
+  .quickstart-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .quickstart-figure {
+    position: static;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* ============================================================
    Print / PDF Styles
    ============================================================ */
 @media print {
@@ -2026,6 +2155,7 @@ h4 { font-size: 1.1rem; }
     <ul class="nav-links">
       <li><a href="#listen">Listen</a></li>
       <li><a href="#overview">Overview</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
       <li><a href="#why">Why</a></li>
       <li><a href="#methodology">Methodology</a></li>
       <li><a href="#wizard">Wizard</a></li>
@@ -2047,6 +2177,7 @@ h4 { font-size: 1.1rem; }
       <ul class="nav-mobile-links">
         <li><a href="#listen">Listen</a></li>
         <li><a href="#overview">Overview</a></li>
+        <li><a href="#quickstart">Quick Start</a></li>
         <li><a href="#why">Why Code Apps</a></li>
         <li><a href="#methodology">Methodology</a></li>
         <li><a href="#wizard">Wizard</a></li>
@@ -2171,6 +2302,73 @@ h4 { font-size: 1.1rem; }
            loading="lazy" />
     </figure>
     <p class="workflow-overview-caption fade-in">Click <strong>Use this template</strong> on GitHub → run the Wizard → ship your first app. The rest of this page explains <em>how</em>.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     Quick Start — Six Steps in Your IDE
+     ============================================================ -->
+<section class="quickstart" id="quickstart">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">From Zero to Building</span>
+      <h2>Six steps. <span class="gradient-text">Mostly typed in your IDE chat.</span></h2>
+      <p class="subtitle">The 10-step journey above is the <em>concept</em>. Here is what it actually feels like sitting at your keyboard. Most of these are just plain-English asks to your coding agent — Copilot, Claude, Cursor, whichever you use.</p>
+    </div>
+
+    <div class="quickstart-grid">
+      <ol class="quickstart-steps">
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">1</span>
+          <div>
+            <h3>Clone from the template</h3>
+            <p>On GitHub, click <strong>Use this template → Create a new repository</strong>. You now own a complete, batteries-included repo of your own.</p>
+          </div>
+        </li>
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">2</span>
+          <div>
+            <h3>Open it in your IDE</h3>
+            <p>Ask your IDE to clone the repo &mdash; usually just paste the URL into the <em>Clone repository</em> prompt and pick a folder.</p>
+          </div>
+        </li>
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">3</span>
+          <div>
+            <h3>Ask your agent to handle prerequisites</h3>
+            <p>Open the chat and say: <em>"Check for and address all prerequisites for this repo."</em> Node, PAC CLI, npm packages, sign-ins &mdash; the agent walks you through every gap.</p>
+          </div>
+        </li>
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">4</span>
+          <div>
+            <h3>Ask your agent to run the Wizard UX</h3>
+            <p>Just type: <em>"Run the wizard UX."</em> A guided browser experience launches at <code>localhost</code> and walks you through publisher, environment, App Registration, auth, and scaffold.</p>
+          </div>
+        </li>
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">5</span>
+          <div>
+            <h3>Follow the wizard to a live sample app</h3>
+            <p>Nine steps, all visual. At the end, your sample Code App is registered, deployed, and showing up in <strong>make.powerapps.com</strong> ready to play.</p>
+          </div>
+        </li>
+        <li class="quickstart-step fade-in">
+          <span class="quickstart-step-num">6</span>
+          <div>
+            <h3>Switch to Plan mode and start building</h3>
+            <p>Open Agent <strong>Plan mode</strong> in your IDE and describe what you want to build. The agent reads <code>AGENTS.md</code> and the instruction files, plans the work, and gets to it.</p>
+          </div>
+        </li>
+      </ol>
+
+      <figure class="quickstart-figure fade-in">
+        <img src="assets/quickstart-six-steps.png"
+             alt="Six-step quick start: clone from template, open in IDE, address prerequisites, run the Wizard UX, follow the wizard to a live sample app, and start in Agent Plan mode."
+             loading="lazy" />
+        <figcaption>Six steps from <em>Use this template</em> to a live app and an agent ready to build.</figcaption>
+      </figure>
+    </div>
   </div>
 </section>
 
