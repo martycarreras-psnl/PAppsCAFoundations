@@ -3,6 +3,7 @@ import { execSync, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, platform, release } from 'node:os';
+import { pacPath as resolvePacPath, runSafe } from '../../../wizard/lib/shell.mjs';
 
 function safeRun(cmd) {
   try { return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim(); }
@@ -20,13 +21,11 @@ function which(name) {
 function pacVersion() {
   const ext = platform() === 'win32' ? '.exe' : '';
   const dotnetTool = join(homedir(), '.dotnet', 'tools', `pac${ext}`);
-  const pacPath = existsSync(dotnetTool) ? dotnetTool : (which('pac') ? 'pac' : null);
+  const pacPath = existsSync(dotnetTool) ? dotnetTool : resolvePacPath();
   if (!pacPath) return null;
-  try {
-    const out = execFileSync(pacPath, [], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] });
-    const m = out.match(/Version:\s*(\S+)/i);
-    return m ? m[1] : 'unknown';
-  } catch { return null; }
+  const out = runSafe(pacPath, []);
+  const m = out?.match(/Version:\s*(\S+)/i);
+  return m ? m[1] : (out ? 'unknown' : null);
 }
 
 export default async function systemRoutes(app, { rootDir }) {

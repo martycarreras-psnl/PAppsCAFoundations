@@ -1,6 +1,6 @@
 // Step 7 - Scaffold. Browser-native long-running scaffold with live logs.
 import { existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { spawn, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -40,7 +40,7 @@ function runCommand(log, command, opts = {}) {
 function runFile(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${file} ${args.join(' ')}`);
-    const child = spawn(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));

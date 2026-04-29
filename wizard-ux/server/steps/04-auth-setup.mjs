@@ -1,6 +1,6 @@
 // Step 4 - Auth Setup. Browser-native credential persistence and PAC profile setup.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, chmodSync } from 'node:fs';
-import { spawn, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -91,7 +91,7 @@ function installPreCommitHook(log) {
 function runLivePac(log, pac, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${pac} ${args.join(' ')}`);
-    const child = spawn(pac, args, { cwd: ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(pac, args, { cwd: ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let settled = false;
     const timeout = opts.timeoutMs
       ? setTimeout(() => {
