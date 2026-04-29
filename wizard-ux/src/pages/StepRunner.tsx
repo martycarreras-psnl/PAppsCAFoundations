@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -66,8 +66,10 @@ export function StepRunner() {
   const questionsQ = useStepQuestions(stepNumber);
 
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [initialAnswers, setInitialAnswers] = useState<Record<string, unknown>>({});
   const [showErrors, setShowErrors] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
+  const submittedAnswersRef = useRef<Record<string, unknown> | null>(null);
 
   // Initialize answers from defaults whenever the step's questions arrive
   useEffect(() => {
@@ -75,6 +77,7 @@ export function StepRunner() {
     const init: Record<string, unknown> = {};
     for (const q of questionsQ.data.questions) init[q.id] = q.defaultValue ?? '';
     setAnswers(init);
+    setInitialAnswers(init);
     setShowErrors(false);
     setRunId(null);
   }, [questionsQ.data?.meta.number]);
@@ -91,6 +94,10 @@ export function StepRunner() {
   // Refresh state + steps when a run completes successfully
   useEffect(() => {
     if (stream.status === 'done') {
+      if (submittedAnswersRef.current) {
+        setInitialAnswers(submittedAnswersRef.current);
+        submittedAnswersRef.current = null;
+      }
       qc.invalidateQueries({ queryKey: ['state'] });
       qc.invalidateQueries({ queryKey: ['steps'] });
       qc.invalidateQueries({ queryKey: ['questions', stepNumber] });
@@ -99,6 +106,11 @@ export function StepRunner() {
 
   const meta = questionsQ.data?.meta;
   const questions = questionsQ.data?.questions ?? [];
+
+  const hasUnsavedChanges = useMemo(
+    () => JSON.stringify(answers) !== JSON.stringify(initialAnswers),
+    [answers, initialAnswers],
+  );
 
   const validationErrors = useMemo(() => {
     if (!meta?.canRunInBrowser) return [];
@@ -116,6 +128,7 @@ export function StepRunner() {
       setShowErrors(true);
       return;
     }
+    submittedAnswersRef.current = answers;
     apply.mutate(answers);
   }
 
@@ -207,6 +220,15 @@ export function StepRunner() {
                 </MessageBar>
               )}
 
+              {status === 'done' && hasUnsavedChanges && meta?.canRunInBrowser && (
+                <MessageBar intent="warning">
+                  <MessageBarBody>
+                    <MessageBarTitle>Unsaved changes</MessageBarTitle>
+                    Submit this step again before moving forward so your changes are saved.
+                  </MessageBarBody>
+                </MessageBar>
+              )}
+
               {/* Inline live output — only shown when an in-browser run is active or has output */}
               {meta?.canRunInBrowser && (stream.status === 'running' || stream.lines.length > 0) && (
                 <div className={s.inlineLog}>
@@ -243,9 +265,11 @@ export function StepRunner() {
                     if (stepNumber >= total) navigate('/summary');
                     else navigate(`/step/${stepNumber + 1}`);
                   }}
-                  disabled={status !== 'done' && meta?.canRunInBrowser !== false}
+                  disabled={(status !== 'done' || hasUnsavedChanges) && meta?.canRunInBrowser !== false}
                 >
-                  {stepNumber >= (stepsQ.data?.totalSteps ?? 9) ? 'Finish' : 'Next'}
+                  {hasUnsavedChanges && meta?.canRunInBrowser
+                    ? 'Submit changes first'
+                    : (stepNumber >= (stepsQ.data?.totalSteps ?? 9) ? 'Finish' : 'Next')}
                 </Button>
               </div>
             </div>
