@@ -28,6 +28,16 @@ export function formatCommandForLog(file, args = []) {
   return [quoteForLog(file), ...args.map(quoteForLog)].join(' ');
 }
 
+function quoteWindowsShellArg(value) {
+  const arg = String(value ?? '');
+  if (arg.length === 0) return '""';
+  // Quote when the argument contains whitespace or any cmd metacharacter.
+  if (!/[\s"&|<>^()%!]/.test(arg)) return arg;
+  // Inside a "..." string, embedded quotes are doubled; cmd metacharacters
+  // are not interpreted as long as the surrounding quotes are intact.
+  return `"${arg.replace(/"/g, '""')}"`;
+}
+
 export function prepareFileCommand(file, args = [], { isWindows = IS_WIN } = {}) {
   const resolvedFile = resolveWindowsCommandShim(file, { isWindows });
   if (!isWindows || !isWindowsCommandShim(resolvedFile)) {
@@ -35,12 +45,15 @@ export function prepareFileCommand(file, args = [], { isWindows = IS_WIN } = {})
   }
 
   // Windows .cmd / .bat shims (pac.cmd, npm.cmd, npx.cmd, ...) must be run
-  // via cmd.exe. We delegate to Node's built-in `shell: true` execution,
-  // which is the canonical pattern used by npm, yarn, pnpm, and most other
-  // Node-based tooling on Windows. Node performs the necessary argument
-  // quoting and the cmd.exe invocation internally — far more battle-tested
-  // than any custom quoting layer we could maintain here.
-  return { file: resolvedFile, args, shell: true, shellShim: true };
+  // via cmd.exe. Node's `shell: true` mode handles the cmd.exe invocation
+  // for us, but on Windows it joins file + args with spaces and does NOT
+  // quote arguments containing whitespace or metacharacters. We therefore
+  // pre-quote the file and each argument so values like "Hello Windows"
+  // survive the trip through cmd.exe (this mirrors what cross-spawn does
+  // internally for the same reason).
+  const quotedFile = quoteWindowsShellArg(resolvedFile);
+  const quotedArgs = args.map(quoteWindowsShellArg);
+  return { file: quotedFile, args: quotedArgs, shell: true, shellShim: true };
 }
 
 export function firstCommandPath(output = '') {

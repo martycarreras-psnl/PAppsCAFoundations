@@ -40,17 +40,18 @@ test('non-Windows command shims stay direct', () => {
   assert.equal(command.shellShim, false);
 });
 
-test('Windows cmd shim invocation preserves arguments verbatim', () => {
-  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'init', '--displayName', 'Windows Hello'], {
+test('Windows cmd shim pre-quotes arguments containing spaces', () => {
+  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'init', '--displayName', 'Hello Windows'], {
     isWindows: true,
   });
 
+  // File path has no spaces, so it stays unquoted; arg with a space gets wrapped.
   assert.equal(command.file, 'C:\\Tools\\pac.cmd');
-  assert.deepEqual(command.args, ['code', 'init', '--displayName', 'Windows Hello']);
+  assert.deepEqual(command.args, ['code', 'init', '--displayName', '"Hello Windows"']);
   assert.equal(command.shell, true);
 });
 
-test('Windows cmd shim keeps environment URLs as one argument', () => {
+test('Windows cmd shim leaves URL arguments unquoted', () => {
   const command = prepareFileCommand('C:\\Tools\\pac.cmd', [
     'auth', 'create',
     '--environment', 'https://carremacodeapps.crm.dynamics.com',
@@ -66,6 +67,23 @@ test('Windows cmd shim keeps environment URLs as one argument', () => {
     '--applicationId', '00000000-0000-0000-0000-000000000000',
   ]);
   assert.equal(command.shell, true);
+});
+
+test('Windows cmd shim quotes file path containing spaces', () => {
+  const command = prepareFileCommand('C:\\Program Files\\Custom\\pac.cmd', ['org', 'who'], {
+    isWindows: true,
+  });
+
+  assert.equal(command.file, '"C:\\Program Files\\Custom\\pac.cmd"');
+  assert.deepEqual(command.args, ['org', 'who']);
+});
+
+test('Windows cmd shim doubles embedded quotes', () => {
+  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['auth', 'create', '--clientSecret', 'a"b c'], {
+    isWindows: true,
+  });
+
+  assert.deepEqual(command.args, ['auth', 'create', '--clientSecret', '"a""b c"']);
 });
 
 test('command logging quotes arguments with spaces', () => {
