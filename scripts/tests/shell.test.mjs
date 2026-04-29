@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { firstCommandPath, prepareFileCommand } from '../../wizard/lib/shell.mjs';
+import { firstCommandPath, prepareFileCommand, resolveWindowsCommandShim } from '../../wizard/lib/shell.mjs';
 
 test('Windows cmd shims are routed through cmd.exe', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
@@ -9,10 +9,10 @@ test('Windows cmd shims are routed through cmd.exe', () => {
   });
 
   assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(command.args.slice(0, 3), ['/d', '/s', '/c']);
-  assert.match(command.args[3], /^call /);
-  assert.match(command.args[3], /pac\.cmd/);
-  assert.match(command.args[3], /"auth"/);
+  assert.deepEqual(command.args.slice(0, 2), ['/d', '/c']);
+  assert.match(command.args[2], /^""/);
+  assert.match(command.args[2], /pac\.cmd/);
+  assert.match(command.args[2], /"auth"/);
   assert.equal(command.shellShim, true);
 });
 
@@ -44,7 +44,21 @@ test('Windows shell arguments escape cmd metacharacters', () => {
     comspec: 'cmd.exe',
   });
 
-  assert.match(command.args[3], /a\^&b\^%c\^\^d/);
+  assert.match(command.args[2], /a\^&b\^%c\^\^d/);
+});
+
+test('Windows cmd shims prefer sibling exe when present', () => {
+  const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
+    isWindows: true,
+    comspec: 'cmd.exe',
+  });
+  const resolved = resolveWindowsCommandShim('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', {
+    isWindows: true,
+    existsImpl: (path) => path.endsWith('pac.exe'),
+  });
+
+  assert.equal(resolved, 'C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.exe');
+  assert.equal(command.shellShim, true);
 });
 
 test('command lookup output is normalized from Windows CRLF lines', () => {

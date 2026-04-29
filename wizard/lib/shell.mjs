@@ -10,20 +10,28 @@ function isWindowsCommandShim(file) {
   return /\.(cmd|bat)$/i.test(String(file || ''));
 }
 
+export function resolveWindowsCommandShim(file, { isWindows = IS_WIN, existsImpl = existsSync } = {}) {
+  const path = String(file || '').trim();
+  if (!isWindows || !isWindowsCommandShim(path)) return path;
+
+  const exePath = path.replace(/\.(cmd|bat)$/i, '.exe');
+  return existsImpl(exePath) ? exePath : path;
+}
+
 function quoteWindowsShellArg(value) {
   return `"${String(value ?? '').replace(/(["^%&|<>()])/g, '^$1')}"`;
 }
 
 export function prepareFileCommand(file, args = [], { isWindows = IS_WIN, comspec = process.env.ComSpec || process.env.COMSPEC || 'cmd.exe' } = {}) {
-  if (!isWindows || !isWindowsCommandShim(file)) return { file, args, shellShim: false };
+  const resolvedFile = resolveWindowsCommandShim(file, { isWindows });
+  if (!isWindows || !isWindowsCommandShim(resolvedFile)) return { file: resolvedFile, args, shellShim: false };
 
   return {
     file: comspec,
     args: [
       '/d',
-      '/s',
       '/c',
-      `call ${[file, ...args].map(quoteWindowsShellArg).join(' ')}`,
+      `"${[resolvedFile, ...args].map(quoteWindowsShellArg).join(' ')}"`,
     ],
     shellShim: true,
   };
@@ -44,7 +52,8 @@ export function pacPath() {
   // Fall back to PATH (shell-safe: execFileSync with array args)
   try {
     const cmd = IS_WIN ? 'where' : 'which';
-    return firstCommandPath(execFileSync(cmd, ['pac'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }));
+    const path = firstCommandPath(execFileSync(cmd, ['pac'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }));
+    return resolveWindowsCommandShim(path);
   } catch {
     return null;
   }
