@@ -15,7 +15,7 @@ test('Windows cmd shims are routed through cmd.exe', () => {
   });
 
   assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(command.args, ['/d', '/s', '/c', 'pac auth list']);
+  assert.deepEqual(command.args, ['/d', '/s', '/c', '""pac" "auth" "list""']);
   assert.equal(command.shellShim, true);
 });
 
@@ -47,13 +47,13 @@ test('Windows shell fallback quotes arguments for cmd execution', () => {
     comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, ['/d', '/s', '/c', 'pac code init --displayName "Windows Hello"']);
+  assert.deepEqual(command.args, ['/d', '/s', '/c', '""pac" "code" "init" "--displayName" "Windows Hello""']);
 });
 
 test('Windows command quoting escapes cmd metacharacters', () => {
   const commandLine = quoteWindowsCmdCommand('pac', ['auth', 'create', '--clientSecret', 'a&b%c^d']);
 
-  assert.equal(commandLine, 'pac auth create --clientSecret a^&b%%c^^d');
+  assert.equal(commandLine, '""pac" "auth" "create" "--clientSecret" "a^&b%%c^^d""');
 });
 
 test('command logging quotes arguments with spaces', () => {

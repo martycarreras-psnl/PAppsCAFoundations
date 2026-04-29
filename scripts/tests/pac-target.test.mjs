@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   buildPacProfileName,
   extractPowerConfigTargetMetadata,
   isRepoScopedProfileName,
+  repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../../wizard/lib/pac-target.mjs';
@@ -157,6 +158,29 @@ test('power.config metadata extraction uses environmentId from the local app URL
 
   assert.equal(info.environmentId, ENV_ID);
   assert.equal(info.hasTargetMetadata, true);
+});
+
+test('power.config display name repair removes accidental wrapping quotes', (t) => {
+  const rootDir = createTempDir();
+  t.after(() => rmSync(rootDir, { recursive: true, force: true }));
+
+  const powerConfigPath = join(rootDir, 'power.config.json');
+  writeFileSync(powerConfigPath, JSON.stringify({
+    appDisplayName: '"Windows Hello"',
+    metadata: {
+      displayName: '\\"Nested App Name\\"',
+    },
+    appId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  }, null, 2));
+
+  const result = repairPowerConfigDisplayNames(powerConfigPath);
+  const repaired = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
+
+  assert.equal(result.changed, true);
+  assert.deepEqual(result.fields, ['appDisplayName', 'metadata.displayName']);
+  assert.equal(repaired.appDisplayName, 'Windows Hello');
+  assert.equal(repaired.metadata.displayName, 'Nested App Name');
+  assert.equal(repaired.appId, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 });
 
 test('explicit envlocal credential resolution ignores stale 1Password references', (t) => {

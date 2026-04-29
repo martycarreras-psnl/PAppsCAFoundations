@@ -52,6 +52,33 @@ function runFile(log, file, args, opts = {}) {
   });
 }
 
+function runFileCapture(log, file, args, opts = {}) {
+  return new Promise((resolvePromise) => {
+    log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf-8');
+    child.stderr.setEncoding('utf-8');
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+      log.info(String(chunk).trimEnd());
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+      log.warn(String(chunk).trimEnd());
+    });
+    child.on('error', (error) => {
+      stderr += `\n${error.message}`;
+      log.fail(`Failed to start ${file}: ${error.message}`);
+      resolvePromise({ ok: false, stdout, stderr });
+    });
+    child.on('close', (code) => resolvePromise({ ok: code === 0, stdout, stderr }));
+  });
+}
+
+const PAC_HTTP_ERROR_RE = /HTTP error status:\s*[45]\d\d/i;
+
 function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
     rootDir: ROOT_DIR,
@@ -149,14 +176,18 @@ export default {
 
     const pac = SHELL.pacPath();
     if (!pac) throw new Error('PAC CLI was not found. Install it before deploying.');
+    const powerConfigPath = join(projectDir, 'power.config.json');
+    const repair = PAC_TARGET.repairPowerConfigDisplayNames(powerConfigPath);
+    if (repair.changed) log.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
     const credentialValues = resolveCredentialValues(state);
     const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
     log.ok(`Verified user profile ${verification.profileName}`);
 
     const pushArgs = ['code', 'push'];
     if (state.SOLUTION_DISPLAY_NAME) pushArgs.push('-s', state.SOLUTION_DISPLAY_NAME);
-    const pushOk = await runFile(log, pac, pushArgs, { cwd: projectDir });
-    if (!pushOk) throw new Error('pac code push failed. Check the live output above, then retry.');
+    const pushResult = await runFileCapture(log, pac, pushArgs, { cwd: projectDir });
+    const pushOutput = `${pushResult.stdout}\n${pushResult.stderr}`;
+    if (!pushResult.ok || PAC_HTTP_ERROR_RE.test(pushOutput)) throw new Error('pac code push failed. Check the live output above, then retry.');
     log.ok('Code App pushed to Power Platform');
 
     await addAppToSolution(log, pac, projectDir, state.SOLUTION_UNIQUE_NAME || '');

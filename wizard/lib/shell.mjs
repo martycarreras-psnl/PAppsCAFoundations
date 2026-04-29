@@ -36,13 +36,13 @@ function quoteWindowsCmdArgument(value) {
     .replace(/\|/g, '^|')
     .replace(/</g, '^<')
     .replace(/>/g, '^>')
-    .replace(/"/g, '\\"');
+    .replace(/"/g, '""');
 
-  return /\s/.test(escaped) ? `"${escaped}"` : escaped;
+  return `"${escaped}"`;
 }
 
 export function quoteWindowsCmdCommand(file, args = []) {
-  return [quoteWindowsCmdArgument(file), ...args.map(quoteWindowsCmdArgument)].join(' ');
+  return `"${[quoteWindowsCmdArgument(file), ...args.map(quoteWindowsCmdArgument)].join(' ')}"`;
 }
 
 export function formatCommandForLog(file, args = []) {

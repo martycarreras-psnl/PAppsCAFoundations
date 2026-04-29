@@ -33,6 +33,7 @@ import {
   loadPowerConfigInfo,
   parsePacOrgWho,
   quarantinePowerConfig,
+  repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
@@ -204,6 +205,8 @@ export default async function stepScaffold() {
             'pac code init failed.' + (detail ? `\n  PAC error: ${detail}` : ' No additional error details available.')
           );
         }
+        const repair = repairPowerConfigDisplayNames(powerConfigPath);
+        if (repair.changed) ui.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
       }
 
       verifyPacMutationTarget({

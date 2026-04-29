@@ -290,6 +290,8 @@ export default {
         ], { cwd: projectDir });
         if (!initOk) throw new Error('pac code init failed. Check the live output above, then retry this step.');
         if (!existsSync(powerConfigPath)) throw new Error('pac code init completed without creating power.config.json. Check the PAC output above, then retry Step 7 after resolving that PAC error.');
+        const repair = PAC_TARGET.repairPowerConfigDisplayNames(powerConfigPath);
+        if (repair.changed) log.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
       }
       verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: true, requirePowerConfigTarget: true });
       log.ok('power.config.json created and verified');

@@ -9,6 +9,7 @@ import {
   buildPacProfileName,
   getWizardStateSnapshot,
   quarantinePowerConfig,
+  repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
@@ -162,6 +163,7 @@ const CODE_APPS_NOT_ENABLED_RE = /does not allow this operation for this Code ap
 const SPN_PERMISSION_RE = /does not have permission to access.*checkAccess/i;
 const PAC_CRASH_RE = /non-recoverable error|ArgumentOutOfRange|will need to terminate/i;
 const DUPLICATE_APP_RE = /already created an application with this name.*Existing App:\s*'([0-9a-f-]+)'/i;
+const PAC_HTTP_ERROR_RE = /HTTP error status:\s*[45]\d\d/i;
 
 /**
  * Attempt pac code push, detect known errors, and offer guided retry.
@@ -176,10 +178,12 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     verifyPacContext(pac, rootDir, projectDir, credentialValues, profileType, true, true);
+    const repair = repairPowerConfigDisplayNames(join(projectDir, 'power.config.json'));
+    if (repair.changed) ui.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
     const { ok, stdout, stderr } = runSafeCapture(pac, pushArgs, { cwd: projectDir });
     const combined = `${stdout}\n${stderr}`;
     if (stdout) process.stdout.write(stdout);
-    if (ok) return true;
+    if (ok && !PAC_HTTP_ERROR_RE.test(combined)) return true;
 
     // ── Duplicate app name (check BEFORE crash — crash is a side effect) ──
     const dupMatch = DUPLICATE_APP_RE.exec(combined);

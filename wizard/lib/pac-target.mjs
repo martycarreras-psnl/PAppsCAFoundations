@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -280,6 +280,55 @@ export function loadPowerConfigInfo(powerConfigPath) {
   } catch (error) {
     return { ...info, parseError: error.message };
   }
+}
+
+function stripAccidentalWrappingQuotes(value) {
+  let text = String(value || '').trim();
+  for (let index = 0; index < 4; index += 1) {
+    const next = text
+      .replace(/^\\?["']/, '')
+      .replace(/\\?["']$/, '')
+      .trim();
+    if (next === text) break;
+    text = next;
+  }
+  return text;
+}
+
+export function repairPowerConfigDisplayNames(powerConfigPath) {
+  if (!existsSync(powerConfigPath)) return { changed: false, fields: [] };
+
+  let config;
+  try {
+    config = JSON.parse(readFileSync(powerConfigPath, 'utf8'));
+  } catch {
+    return { changed: false, fields: [] };
+  }
+
+  const displayNameKeys = new Set(['appDisplayName', 'applicationDisplayName', 'applicationName', 'displayName']);
+  const fields = [];
+
+  function visit(value, path = []) {
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (displayNameKeys.has(key) && typeof child === 'string') {
+        const repaired = stripAccidentalWrappingQuotes(child);
+        if (repaired && repaired !== child) {
+          value[key] = repaired;
+          fields.push([...path, key].join('.'));
+        }
+      } else if (child && typeof child === 'object') {
+        visit(child, [...path, key]);
+      }
+    }
+  }
+
+  visit(config);
+  if (fields.length > 0) {
+    writeFileSync(powerConfigPath, JSON.stringify(config, null, 2) + '\n');
+  }
+
+  return { changed: fields.length > 0, fields };
 }
 
 export function formatConsistencyError(errors, details) {
