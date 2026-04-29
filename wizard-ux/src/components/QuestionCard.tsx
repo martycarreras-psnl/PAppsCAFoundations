@@ -24,10 +24,15 @@ const useStyles = makeStyles({
   },
 });
 
-function isHidden(q: Question, answers: Record<string, unknown>): boolean {
-  if (!q.hideIf) return false;
-  const conds: QuestionCondition[] = Array.isArray(q.hideIf) ? q.hideIf : [q.hideIf];
-  return conds.every((c) => answers[c.id] === c.equals);
+function matchesCondition(condition: QuestionCondition | QuestionCondition[], answers: Record<string, unknown>): boolean {
+  const conditions: QuestionCondition[] = Array.isArray(condition) ? condition : [condition];
+  return conditions.every((c) => answers[c.id] === c.equals);
+}
+
+export function isQuestionHidden(q: Question, answers: Record<string, unknown>): boolean {
+  if (q.showIf && !matchesCondition(q.showIf, answers)) return true;
+  if (q.hideIf && matchesCondition(q.hideIf, answers)) return true;
+  return false;
 }
 
 function validateUrl(value: string): string | null {
@@ -49,7 +54,7 @@ interface Props {
 
 export function QuestionCard({ question: q, answers, value, onChange, showError }: Props) {
   const s = useStyles();
-  if (isHidden(q, answers)) return null;
+  if (isQuestionHidden(q, answers)) return null;
 
   const error =
     (q.required && (value == null || value === '') && showError) ? 'Required' :

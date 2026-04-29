@@ -10,7 +10,7 @@ import { ArrowLeftRegular, ArrowRightFilled, PlayRegular } from '@fluentui/react
 import { useStepQuestions, useSteps } from '../hooks/useWizardData';
 import { useStepStream } from '../hooks/useStepStream';
 import { StepNav } from '../components/StepNav';
-import { QuestionCard } from '../components/QuestionCard';
+import { isQuestionHidden, QuestionCard } from '../components/QuestionCard';
 import { LiveLog } from '../components/LiveLog';
 import { api } from '../services/api';
 import { Question } from '../types/schema';
@@ -104,6 +104,7 @@ export function StepRunner() {
     if (!meta?.canRunInBrowser) return [];
     const errs: string[] = [];
     for (const q of questions) {
+      if (isQuestionHidden(q, answers)) continue;
       if (q.required && (answers[q.id] == null || answers[q.id] === '')) errs.push(q.label);
     }
     return errs;

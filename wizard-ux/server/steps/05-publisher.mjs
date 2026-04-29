@@ -5,6 +5,23 @@ import { dvGet, dvPost, hasUsableSecret, setSecret } from '../lib/dataverse-brid
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE = await import(pathToFileURL(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs')).href);
+const CREATE_NEW = '__create_new__';
+
+async function listPublishers() {
+  const data = await dvGet(
+    'publishers?$filter=isreadonly eq false' +
+    '&$select=publisherid,uniquename,friendlyname,customizationprefix,customizationoptionvalueprefix' +
+    '&$orderby=friendlyname',
+  );
+  return (data.value || []).filter((p) => p.customizationprefix && !p.uniquename.startsWith('DefaultPublisherFor'));
+}
+
+function publisherOption(publisher) {
+  return {
+    value: publisher.publisherid,
+    label: `${publisher.friendlyname} (${publisher.customizationprefix})`,
+  };
+}
 
 export default {
   meta: {
@@ -18,6 +35,17 @@ export default {
   async questions(state) {
     const questions = [];
     const hasResume = state.PUBLISHER_PREFIX && state.PUBLISHER_ID;
+    const hasSecret = hasUsableSecret();
+    let publishers = [];
+    let publisherLoadHelp = '';
+
+    if (hasSecret) {
+      try {
+        publishers = await listPublishers();
+      } catch (err) {
+        publisherLoadHelp = `Could not load publishers from Dataverse: ${err.message}. You can still create a new publisher.`;
+      }
+    }
 
     if (hasResume) {
       questions.push({
@@ -29,30 +57,31 @@ export default {
       });
     }
 
-    if (!hasUsableSecret()) {
+    if (!hasSecret) {
       questions.push({
         id: 'PP_CLIENT_SECRET',
         type: 'secret',
         label: 'Client secret',
-        help: 'Needed for Dataverse API calls. Not stored — held in memory for this server only.',
+        help: 'Needed once to load publishers from Dataverse. Not stored here — held in memory for this server only.',
         required: true,
         defaultValue: '',
         hideIf: { id: '__resume', equals: true },
       });
     }
 
-    // We can't query publishers ahead of time without the secret. The "list" comes
-    // back as part of the apply step's first phase, surfaced through the run log.
-    // For now, expose two free-form fallback fields the user can fill if API access fails.
+    const preferredPublisher = state.PUBLISHER_ID && publishers.some((publisher) => publisher.publisherid === state.PUBLISHER_ID)
+      ? state.PUBLISHER_ID
+      : publishers[0]?.publisherid || CREATE_NEW;
+
     questions.push({
-      id: 'PUBLISHER_CHOICE',
+      id: 'PUBLISHER_SELECTION',
       type: 'select',
-      label: 'Action',
-      help: 'Pick "Auto" to query existing publishers and prompt you to choose. Pick "Create new" to skip discovery.',
-      defaultValue: 'auto',
+      label: 'Publisher',
+      help: publisherLoadHelp || 'Choose an existing publisher from this Dev environment, or choose Create new publisher.',
+      defaultValue: preferredPublisher,
       options: [
-        { value: 'auto', label: 'Auto — query existing publishers' },
-        { value: 'create', label: 'Create a brand-new publisher' },
+        ...publishers.map(publisherOption),
+        { value: CREATE_NEW, label: '+ Create new publisher' },
       ],
       hideIf: { id: '__resume', equals: true },
     });
@@ -63,7 +92,7 @@ export default {
       label: 'New publisher prefix',
       help: '2–8 lowercase letters. Becomes the namespace for every table/column. Pick carefully — cannot change after data exists.',
       defaultValue: state.PUBLISHER_PREFIX || '',
-      hideIf: [{ id: '__resume', equals: true }, { id: 'PUBLISHER_CHOICE', equals: 'auto' }],
+      showIf: { id: 'PUBLISHER_SELECTION', equals: CREATE_NEW },
     });
 
     questions.push({
@@ -72,7 +101,7 @@ export default {
       label: 'New publisher display name',
       help: 'Human-readable. e.g. "Contoso Engineering".',
       defaultValue: state.PUBLISHER_DISPLAY_NAME || `${state.APP_NAME || 'My Org'} Publishing`,
-      hideIf: [{ id: '__resume', equals: true }, { id: 'PUBLISHER_CHOICE', equals: 'auto' }],
+      showIf: { id: 'PUBLISHER_SELECTION', equals: CREATE_NEW },
     });
 
     return questions;
@@ -90,31 +119,13 @@ export default {
       throw new Error('Client secret is required to query Dataverse. Provide it or run from CLI.');
     }
 
-    if (answers.PUBLISHER_CHOICE === 'auto') {
-      log.info('Querying existing publishers from your Dev environment…');
-      let publishers = [];
-      try {
-        const data = await dvGet(
-          'publishers?$filter=isreadonly eq false' +
-          '&$select=publisherid,uniquename,friendlyname,customizationprefix,customizationoptionvalueprefix' +
-          '&$orderby=friendlyname',
-        );
-        publishers = (data.value || []).filter((p) => p.customizationprefix && !p.uniquename.startsWith('DefaultPublisherFor'));
-      } catch (err) {
-        throw new Error(`Could not query publishers — ${err.message}. Try "Create new" instead.`);
-      }
-
-      // Auto-pick if exactly one prefix matches saved state, otherwise return a follow-up question
-      if (publishers.length === 0) {
-        throw new Error('No publishers found in this environment. Re-run with "Create new".');
-      }
-      // If user has saved PUBLISHER_PREFIX, try to find that one first
-      const preferred = state.PUBLISHER_PREFIX
-        ? publishers.find((p) => p.customizationprefix === state.PUBLISHER_PREFIX)
-        : null;
-      const pub = preferred || publishers[0];
+    const selectedPublisherId = String(answers.PUBLISHER_SELECTION || '').trim();
+    if (selectedPublisherId && selectedPublisherId !== CREATE_NEW) {
+      log.info('Loading selected publisher from your Dev environment...');
+      const publishers = await listPublishers();
+      const pub = publishers.find((p) => p.publisherid === selectedPublisherId);
+      if (!pub) throw new Error('Selected publisher was not found. Refresh this step and choose again.');
       log.ok(`Selected ${pub.friendlyname} (prefix ${pub.customizationprefix})`);
-      log.info(publishers.length > 1 ? `(${publishers.length} publishers in env — picked best match. Use CLI to choose differently.)` : '');
       return {
         stateUpdate: {
           PUBLISHER_ID: pub.publisherid,
@@ -127,7 +138,6 @@ export default {
       };
     }
 
-    // Create new
     const prefix = (answers.PUBLISHER_PREFIX || '').trim();
     const friendly = (answers.PUBLISHER_DISPLAY_NAME || '').trim();
     if (!VALIDATE.isValidPrefix(prefix)) throw new Error('Prefix must be 2–8 lowercase letters only.');

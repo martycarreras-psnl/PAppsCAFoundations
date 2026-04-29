@@ -17,6 +17,7 @@ export interface Question {
   options?: Array<{ value: string; label: string }>;
   validatePattern?: 'dataverseUrl';
   hideIf?: QuestionCondition | QuestionCondition[];
+  showIf?: QuestionCondition | QuestionCondition[];
 }
 
 export interface StepMeta {

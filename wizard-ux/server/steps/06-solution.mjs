@@ -1,5 +1,26 @@
 // Step 6 — Solution. Pick existing or create new in the publisher.
 import { dvGet, dvPost, hasUsableSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
+const CREATE_NEW = '__create_new__';
+
+async function listSolutions(publisherId) {
+  let filter = 'ismanaged eq false and isvisible eq true';
+  if (publisherId) filter += ` and _publisherid_value eq '${publisherId}'`;
+  const data = await dvGet(
+    `solutions?$filter=${encodeURIComponent(filter)}` +
+    '&$select=solutionid,uniquename,friendlyname,version,_publisherid_value' +
+    '&$orderby=friendlyname',
+  );
+  return (data.value || []).filter((s) =>
+    s.uniquename !== 'Default' && !s.uniquename.startsWith('msdyn') && !s.uniquename.startsWith('Mscrm'),
+  );
+}
+
+function solutionOption(solution) {
+  return {
+    value: solution.solutionid,
+    label: `${solution.friendlyname} (${solution.uniquename})`,
+  };
+}
 
 export default {
   meta: {
@@ -13,6 +34,17 @@ export default {
   async questions(state) {
     const questions = [];
     const hasResume = state.SOLUTION_UNIQUE_NAME;
+    const publisherId = state.PUBLISHER_ID;
+    let solutions = [];
+    let solutionLoadHelp = '';
+
+    if (hasUsableSecret()) {
+      try {
+        solutions = await listSolutions(publisherId);
+      } catch (err) {
+        solutionLoadHelp = `Could not load solutions from Dataverse: ${err.message}. You can still create a new solution.`;
+      }
+    }
 
     if (hasResume) {
       questions.push({
@@ -23,14 +55,19 @@ export default {
       });
     }
 
+    const preferredSolution = state.SOLUTION_ID && solutions.some((solution) => solution.solutionid === state.SOLUTION_ID)
+      ? state.SOLUTION_ID
+      : solutions[0]?.solutionid || CREATE_NEW;
+
     questions.push({
-      id: 'SOLUTION_CHOICE',
+      id: 'SOLUTION_SELECTION',
       type: 'select',
-      label: 'Action',
-      defaultValue: 'auto',
+      label: 'Solution',
+      help: solutionLoadHelp || 'Choose an existing unmanaged solution for the selected publisher, or choose Create new solution.',
+      defaultValue: preferredSolution,
       options: [
-        { value: 'auto', label: 'Auto — pick the best matching solution' },
-        { value: 'create', label: 'Create a new solution' },
+        ...solutions.map(solutionOption),
+        { value: CREATE_NEW, label: '+ Create new solution' },
       ],
       hideIf: { id: '__resume', equals: true },
     });
@@ -40,7 +77,7 @@ export default {
       type: 'text',
       label: 'New solution display name',
       defaultValue: state.SOLUTION_DISPLAY_NAME || state.APP_NAME || '',
-      hideIf: [{ id: '__resume', equals: true }, { id: 'SOLUTION_CHOICE', equals: 'auto' }],
+      showIf: { id: 'SOLUTION_SELECTION', equals: CREATE_NEW },
     });
 
     return questions;
@@ -55,21 +92,13 @@ export default {
     if (!hasUsableSecret()) throw new Error('Client secret unavailable — run step 5 first or use CLI.');
 
     const publisherId = state.PUBLISHER_ID;
+    const selectedSolutionId = String(answers.SOLUTION_SELECTION || '').trim();
 
-    if (answers.SOLUTION_CHOICE === 'auto') {
-      log.info('Querying existing solutions…');
-      let filter = 'ismanaged eq false and isvisible eq true';
-      if (publisherId) filter += ` and _publisherid_value eq '${publisherId}'`;
-      const data = await dvGet(
-        `solutions?$filter=${encodeURIComponent(filter)}` +
-        '&$select=solutionid,uniquename,friendlyname,version,_publisherid_value' +
-        '&$orderby=friendlyname',
-      );
-      const solutions = (data.value || []).filter((s) =>
-        s.uniquename !== 'Default' && !s.uniquename.startsWith('msdyn') && !s.uniquename.startsWith('Mscrm'),
-      );
-      if (solutions.length === 0) throw new Error('No matching solutions in env. Re-run with "Create new".');
-      const sol = solutions[0];
+    if (selectedSolutionId && selectedSolutionId !== CREATE_NEW) {
+      log.info('Loading selected solution...');
+      const solutions = await listSolutions(publisherId);
+      const sol = solutions.find((solution) => solution.solutionid === selectedSolutionId);
+      if (!sol) throw new Error('Selected solution was not found. Refresh this step and choose again.');
       log.ok(`Selected ${sol.friendlyname} (${sol.uniquename})`);
       clearSecret();
       return {
