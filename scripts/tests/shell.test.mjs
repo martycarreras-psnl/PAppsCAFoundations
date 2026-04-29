@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareFileCommand } from '../../wizard/lib/shell.mjs';
+import { firstCommandPath, prepareFileCommand } from '../../wizard/lib/shell.mjs';
 
 test('Windows cmd shims are routed through cmd.exe', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
@@ -45,4 +45,11 @@ test('Windows shell arguments escape cmd metacharacters', () => {
   });
 
   assert.match(command.args[3], /a\^&b\^%c\^\^d/);
+});
+
+test('command lookup output is normalized from Windows CRLF lines', () => {
+  const path = firstCommandPath('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd\r\nC:\\Other\\pac.cmd\r\n');
+
+  assert.equal(path, 'C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd');
+  assert.equal(path.includes('\r'), false);
 });

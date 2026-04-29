@@ -29,6 +29,13 @@ export function prepareFileCommand(file, args = [], { isWindows = IS_WIN, comspe
   };
 }
 
+export function firstCommandPath(output = '') {
+  return String(output || '')
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find(Boolean) || '';
+}
+
 /** Resolve the PAC CLI path, preferring the dotnet-tools install. */
 export function pacPath() {
   const ext = IS_WIN ? '.exe' : '';
@@ -37,7 +44,7 @@ export function pacPath() {
   // Fall back to PATH (shell-safe: execFileSync with array args)
   try {
     const cmd = IS_WIN ? 'where' : 'which';
-    return execFileSync(cmd, ['pac'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim().split('\n')[0];
+    return firstCommandPath(execFileSync(cmd, ['pac'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }));
   } catch {
     return null;
   }

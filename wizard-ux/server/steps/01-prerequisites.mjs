@@ -1,12 +1,7 @@
 // Step 1 — Prerequisites. Read-only checks, no questions.
-import { dirname, resolve, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
 import { execFileSync, execSync } from 'node:child_process';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const WIZARD_LIB = resolve(__dirname, '..', '..', '..', 'wizard', 'lib');
+import { pacPath, runSafe } from '../../../wizard/lib/shell.mjs';
 
 function hasCommand(name) {
   try {
@@ -19,16 +14,6 @@ function hasCommand(name) {
 function tryRun(cmd) {
   try { return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim(); }
   catch { return null; }
-}
-
-function pacPath() {
-  const ext = platform() === 'win32' ? '.exe' : '';
-  const dotnetTool = join(homedir(), '.dotnet', 'tools', `pac${ext}`);
-  if (existsSync(dotnetTool)) return dotnetTool;
-  try {
-    const cmd = platform() === 'win32' ? 'where' : 'which';
-    return execFileSync(cmd, ['pac'], { encoding: 'utf-8' }).trim().split('\n')[0];
-  } catch { return null; }
 }
 
 export default {
@@ -82,7 +67,7 @@ export default {
     // PAC CLI
     const pac = pacPath();
     if (pac) {
-      const header = tryRun(`"${pac}"`) || '';
+      const header = runSafe(pac, []) || '';
       const m = header.match(/Version:\s*(\S+)/i);
       const pacVer = m ? m[1] : 'unknown';
       const bad = pacVer.includes('2.3.2');
