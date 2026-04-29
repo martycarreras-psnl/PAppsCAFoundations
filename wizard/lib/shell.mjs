@@ -22,16 +22,24 @@ function quoteWindowsShellArg(value) {
   return `"${String(value ?? '').replace(/(["^%&|<>()])/g, '^$1')}"`;
 }
 
+function commandNameFromWindowsShim(file) {
+  return String(file || '')
+    .split(/[\\/]/)
+    .pop()
+    ?.replace(/\.(cmd|bat)$/i, '') || String(file || '');
+}
+
 export function prepareFileCommand(file, args = [], { isWindows = IS_WIN, comspec = process.env.ComSpec || process.env.COMSPEC || 'cmd.exe' } = {}) {
   const resolvedFile = resolveWindowsCommandShim(file, { isWindows });
   if (!isWindows || !isWindowsCommandShim(resolvedFile)) return { file: resolvedFile, args, shellShim: false };
+  const commandName = commandNameFromWindowsShim(resolvedFile);
 
   return {
     file: comspec,
     args: [
       '/d',
       '/c',
-      `"${[resolvedFile, ...args].map(quoteWindowsShellArg).join(' ')}"`,
+      [commandName, ...args].map(quoteWindowsShellArg).join(' '),
     ],
     shellShim: true,
   };

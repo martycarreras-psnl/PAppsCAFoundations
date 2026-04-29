@@ -10,8 +10,9 @@ test('Windows cmd shims are routed through cmd.exe', () => {
 
   assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
   assert.deepEqual(command.args.slice(0, 2), ['/d', '/c']);
-  assert.match(command.args[2], /^""/);
-  assert.match(command.args[2], /pac\.cmd/);
+  assert.match(command.args[2], /^"pac"/);
+  assert.doesNotMatch(command.args[2], /PowerAppsCLI/);
+  assert.doesNotMatch(command.args[2], /pac\.cmd/);
   assert.match(command.args[2], /"auth"/);
   assert.equal(command.shellShim, true);
 });
