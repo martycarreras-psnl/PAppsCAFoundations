@@ -41,9 +41,14 @@ test('scaffold helpers seed prototype-first assets into a temp project', async (
   assert.equal(existsSync(join(projectDir, 'src', 'hooks', 'usePrototypeData.ts')), true);
   assert.equal(existsSync(join(projectDir, 'src', 'services', 'providerFactory.ts')), true);
   assert.equal(existsSync(join(projectDir, 'dataverse', 'prototype-feedback.md')), true);
+  assert.equal(existsSync(join(projectDir, '.gitattributes')), true);
 
   const packageJson = JSON.parse(readProjectFile(projectDir, 'package.json'));
   assert.equal(packageJson.scripts['prototype:seed'], 'node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json');
+  assert.equal(packageJson.devDependencies['@testing-library/jest-dom'], undefined);
+
+  const tsconfig = JSON.parse(readProjectFile(projectDir, 'tsconfig.json'));
+  assert.deepEqual(tsconfig.compilerOptions.types, ['vitest/globals']);
 
   const app = readProjectFile(projectDir, 'src/App.tsx');
   assert.match(app, /Prototype Mode/);
@@ -54,6 +59,12 @@ test('scaffold helpers seed prototype-first assets into a temp project', async (
 
   const contracts = readProjectFile(projectDir, 'src/services/data-contracts.ts');
   assert.match(contracts, /export interface AppDataProvider/);
+
+  const setup = readProjectFile(projectDir, 'tests/setup/setup.ts');
+  assert.doesNotMatch(setup, /jest-dom/);
+
+  const smokeTest = readProjectFile(projectDir, 'src/App.test.tsx');
+  assert.doesNotMatch(smokeTest, /toBeInTheDocument/);
 });
 
 test('dependency normalization overrides incompatible starter package pins', (t) => {
@@ -72,6 +83,7 @@ test('dependency normalization overrides incompatible starter package pins', (t)
       '@types/react': '^19.1.16',
       '@types/react-dom': '^19.0.0',
       typescript: '^5.9.0',
+      '@testing-library/jest-dom': '^6.6.0',
     },
   }, null, 2));
 
@@ -83,6 +95,7 @@ test('dependency normalization overrides incompatible starter package pins', (t)
   assert.equal(packageJson.devDependencies['@types/react'], '^18.3.12');
   assert.equal(packageJson.devDependencies['@types/react-dom'], '^18.3.1');
   assert.equal(packageJson.devDependencies.typescript, '5.7.3');
+  assert.equal(packageJson.devDependencies['@testing-library/jest-dom'], undefined);
   assert.equal(packageJson.dependencies['@types/react'], undefined);
   assert.equal(packageJson.devDependencies.react, undefined);
 });

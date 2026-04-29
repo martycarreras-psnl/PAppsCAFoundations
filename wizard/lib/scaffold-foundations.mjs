@@ -26,7 +26,6 @@ export const REQUIRED_DEV_PACKAGES = {
   '@vitejs/plugin-react': '^4.3.0',
   vitest: '^2.1.0',
   '@testing-library/react': '^16.1.0',
-  '@testing-library/jest-dom': '^6.6.0',
   jsdom: '^25.0.0',
   '@playwright/test': '^1.49.0',
   eslint: '^9.16.0',
@@ -35,6 +34,10 @@ export const REQUIRED_DEV_PACKAGES = {
   'eslint-plugin-react-hooks': '^5.1.0',
   prettier: '^3.4.0',
 };
+
+const REMOVED_DEV_PACKAGES = [
+  '@testing-library/jest-dom',
+];
 
 export function packageSpecs(packages) {
   return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
@@ -59,6 +62,10 @@ export function normalizePackageJsonDependencies(dir, logger = noopLogger) {
   }
   for (const name of Object.keys(REQUIRED_DEV_PACKAGES)) {
     delete pkg.dependencies[name];
+  }
+  for (const name of REMOVED_DEV_PACKAGES) {
+    delete pkg.dependencies[name];
+    delete pkg.devDependencies[name];
   }
 
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
@@ -144,7 +151,7 @@ export function writeConfig(dir, logger = noopLogger) {
       rootDir: '.',
       outDir: './dist',
       paths: { '@/*': ['./src/*'] },
-      types: ['vitest/globals', '@testing-library/jest-dom'],
+      types: ['vitest/globals'],
     },
     include: ['src/**/*', 'tests/**/*', '.power/**/*'],
     exclude: ['node_modules', 'dist'],
@@ -470,6 +477,23 @@ solution/*.zip
 `);
   logger.ok('.gitignore');
 
+  writeFileSync(join(dir, '.gitattributes'), `* text=auto
+
+# Keep source and config files consistent across Windows, macOS, and Linux.
+*.css text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.jsx text eol=lf
+*.md text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+`);
+  logger.ok('.gitattributes');
+
   // ── Smoke test infrastructure — ready to run from day one ──
   writeSmokeTestFiles(dir, appName, logger);
 }
@@ -477,10 +501,9 @@ solution/*.zip
 export function writeSmokeTestFiles(dir, appName, logger = noopLogger) {
   logger.line('Writing smoke test files...');
 
-  // tests/setup/setup.ts — Vitest setup with jest-dom matchers
+  // tests/setup/setup.ts — Vitest setup hook for project-wide test config.
   mkdirSync(join(dir, 'tests', 'setup'), { recursive: true });
-  writeFileSync(join(dir, 'tests', 'setup', 'setup.ts'), `import '@testing-library/jest-dom/vitest';
-`);
+  writeFileSync(join(dir, 'tests', 'setup', 'setup.ts'), '');
   logger.ok('tests/setup/setup.ts');
 
   // tests/setup/test-utils.tsx — custom render wrapping all providers
@@ -540,12 +563,12 @@ describe('App — smoke tests', () => {
 
   it('displays the app title', () => {
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
   });
 
   it('shows prototype or connected mode badge', () => {
     render(<App />);
-    expect(screen.getByText(/Prototype Mode|Connected Mode/)).toBeInTheDocument();
+    expect(screen.getByText(/Prototype Mode|Connected Mode/)).toBeTruthy();
   });
 });
 `);

@@ -305,22 +305,22 @@ export default {
 
     if (existsSync(join(projectDir, '.git'))) {
       log.ok('Git repo already initialized');
-    } else if (await runCommand(log, 'git init -b main', { cwd: projectDir })) {
+    } else if (await runFile(log, 'git', ['init', '-b', 'main'], { cwd: projectDir })) {
       log.ok('Git repo initialized');
     } else {
       log.warn('git init failed');
     }
 
-    const existingOrigin = SHELL.run('git remote get-url origin', { cwd: projectDir }) || '';
+    const existingOrigin = SHELL.runSafe('git', ['remote', 'get-url', 'origin'], { cwd: projectDir }) || '';
     const remoteUrl = String(answers.GIT_REMOTE || '').trim();
     let finalRemoteUrl = existingOrigin;
     if (existingOrigin && /PAppsCAFoundations/i.test(existingOrigin)) {
-      SHELL.run('git remote remove origin', { cwd: projectDir });
+      SHELL.runSafe('git', ['remote', 'remove', 'origin'], { cwd: projectDir });
       finalRemoteUrl = '';
     }
     if (remoteUrl && remoteUrl !== finalRemoteUrl) {
-      SHELL.run('git remote remove origin', { cwd: projectDir });
-      SHELL.run(`git remote add origin "${remoteUrl}"`, { cwd: projectDir });
+      SHELL.runSafe('git', ['remote', 'remove', 'origin'], { cwd: projectDir });
+      SHELL.runSafe('git', ['remote', 'add', 'origin', remoteUrl], { cwd: projectDir });
       finalRemoteUrl = remoteUrl;
       log.ok(`Remote origin set to ${remoteUrl}`);
     } else if (finalRemoteUrl) {
@@ -330,15 +330,15 @@ export default {
     writeProjectReadme(projectDir, state);
     log.ok('Project README generated');
 
-    await runCommand(log, 'git add -A', { cwd: projectDir });
-    if (await runCommand(log, 'git commit -m "Initial scaffold from PAppsCAFoundations wizard" --quiet', { cwd: projectDir })) {
+    await runFile(log, 'git', ['add', '-A'], { cwd: projectDir });
+    if (await runFile(log, 'git', ['commit', '-m', 'Initial scaffold from PAppsCAFoundations wizard', '--quiet'], { cwd: projectDir })) {
       log.ok('Initial commit created');
     } else {
       log.warn('Initial commit skipped or failed. Git user.name/user.email may not be configured, or there may be no changes.');
     }
 
     if (finalRemoteUrl && answers.PUSH_INITIAL_COMMIT === true) {
-      if (await runCommand(log, 'git push -u origin main', { cwd: projectDir })) log.ok('Pushed to origin/main');
+      if (await runFile(log, 'git', ['push', '-u', 'origin', 'main'], { cwd: projectDir })) log.ok('Pushed to origin/main');
       else log.warn('Push failed. You can push later with git push -u origin main.');
     }
 

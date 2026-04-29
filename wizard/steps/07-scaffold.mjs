@@ -269,7 +269,7 @@ export default async function stepScaffold() {
     ui.ok('Git repo already initialized');
   } else {
     ui.line('Initializing Git repo...');
-    if (runLive('git init -b main', { cwd: projectDir })) {
+    if (runSafeLive('git', ['init', '-b', 'main'], { cwd: projectDir })) {
       ui.ok('Git repo initialized (branch: main)');
     } else {
       ui.warn('git init failed');
@@ -277,7 +277,7 @@ export default async function stepScaffold() {
   }
 
   // ── Remote URL — detect existing origin (template repos) or prompt ──
-  const existingOrigin = run('git remote get-url origin', { cwd: projectDir });
+  const existingOrigin = runSafe('git', ['remote', 'get-url', 'origin'], { cwd: projectDir });
   const templateRepoPattern = /PAppsCAFoundations/i;
   let finalRemoteUrl = '';
 
@@ -291,7 +291,7 @@ export default async function stepScaffold() {
     if (existingOrigin && templateRepoPattern.test(existingOrigin)) {
       ui.warn('Current origin points to the PAppsCAFoundations template repo.');
       ui.line('You need to set origin to your own repository.');
-      run('git remote remove origin', { cwd: projectDir });
+      runSafe('git', ['remote', 'remove', 'origin'], { cwd: projectDir });
     }
 
     ui.line('');
@@ -302,8 +302,8 @@ export default async function stepScaffold() {
     ui.line('');
     const remoteUrl = await input({ message: 'Remote URL (Enter to skip)', default: '' });
     if (remoteUrl) {
-      run('git remote remove origin', { cwd: projectDir });  // remove any stale origin
-      run(`git remote add origin "${remoteUrl}"`, { cwd: projectDir });
+      runSafe('git', ['remote', 'remove', 'origin'], { cwd: projectDir });  // remove any stale origin
+      runSafe('git', ['remote', 'add', 'origin', remoteUrl], { cwd: projectDir });
       ui.ok(`Remote 'origin' set to ${remoteUrl}`);
       stateSet('GIT_REMOTE', remoteUrl);
       finalRemoteUrl = remoteUrl;
@@ -493,8 +493,8 @@ This project includes a \`.foundations-version.json\` file copied from the templ
 
   ui.line('');
   ui.line('Making initial commit...');
-  run('git add -A', { cwd: projectDir });
-  if (run('git commit -m "Initial scaffold from PAppsCAFoundations wizard" --quiet', { cwd: projectDir }) !== null) {
+  runSafe('git', ['add', '-A'], { cwd: projectDir });
+  if (runSafeCapture('git', ['commit', '-m', 'Initial scaffold from PAppsCAFoundations wizard', '--quiet'], { cwd: projectDir }).ok) {
     ui.ok('Initial commit created');
   } else {
     ui.warn('Commit failed (git user.name/user.email may not be configured)');
@@ -503,7 +503,7 @@ This project includes a \`.foundations-version.json\` file copied from the templ
   if (finalRemoteUrl) {
     const push = await confirm({ message: 'Push to remote now?', default: true });
     if (push) {
-      if (runLive('git push -u origin main', { cwd: projectDir })) {
+      if (runSafeLive('git', ['push', '-u', 'origin', 'main'], { cwd: projectDir })) {
         ui.ok('Pushed to origin/main');
       } else {
         ui.warn('Push failed. You can push later: git push -u origin main');
