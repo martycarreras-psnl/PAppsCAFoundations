@@ -179,7 +179,16 @@ export function StepRunner() {
                 </div>
               </div>
 
-              {questionsQ.isLoading && <Spinner size="small" />}
+              {questionsQ.isLoading && (
+                stepNumber === 8 ? (
+                  <MessageBar intent="info">
+                    <MessageBarBody>
+                      <MessageBarTitle>Loading connector details</MessageBarTitle>
+                      This step can take a little longer while WizardUX checks existing connection references and environment connections.
+                    </MessageBarBody>
+                  </MessageBar>
+                ) : <Spinner size="small" />
+              )}
 
               {/* Optional/skip note */}
               {meta?.optional && (
