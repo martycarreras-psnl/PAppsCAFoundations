@@ -1,6 +1,51 @@
 // Routes for /api/state
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { readState, writeState, resetStateFile, getCompletedStep } from '../lib/state-bridge.mjs';
 import { TOTAL_STEPS } from '../steps/index.mjs';
+
+function pickTargetEnvUrl(state) {
+  const target = String(state.WIZARD_TARGET_ENV || 'dev').toLowerCase();
+  const map = {
+    dev: state.PP_ENV_DEV,
+    test: state.PP_ENV_TEST,
+    prod: state.PP_ENV_PROD,
+  };
+  const raw = String(map[target] || state.PP_ENV_DEV || '').trim();
+  if (!raw) return { target, environmentUrl: '' };
+  return { target, environmentUrl: raw.replace(/\/$/, '') };
+}
+
+function readPowerAppInfo(rootDir, state) {
+  const projectDir = resolve(rootDir, String(state.PROJECT_DIR || '.'));
+  const powerConfigPath = join(projectDir, 'power.config.json');
+  if (!existsSync(powerConfigPath)) return null;
+
+  try {
+    const parsed = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
+    const appId = String(parsed?.appId || '').trim();
+    if (!appId) return null;
+
+    const { target, environmentUrl } = pickTargetEnvUrl(state);
+    if (!environmentUrl) {
+      return {
+        appId,
+        targetEnv: target,
+        environmentUrl: '',
+        launchUrl: '',
+      };
+    }
+
+    return {
+      appId,
+      targetEnv: target,
+      environmentUrl,
+      launchUrl: `${environmentUrl}/main.aspx?appid=${encodeURIComponent(appId)}`,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default async function stateRoutes(app, opts) {
   const { rootDir } = opts;
@@ -8,11 +53,13 @@ export default async function stateRoutes(app, opts) {
   app.get('/', async () => {
     const state = readState(rootDir);
     const completed = getCompletedStep(state);
+    const powerApp = readPowerAppInfo(rootDir, state);
     return {
       state,
       completed,
       next: Math.min(completed + 1, TOTAL_STEPS),
       totalSteps: TOTAL_STEPS,
+      powerApp,
     };
   });
 

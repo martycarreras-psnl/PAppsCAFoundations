@@ -47,6 +47,12 @@ export interface StateSnapshot {
   completed: number;
   next: number;
   totalSteps: number;
+  powerApp?: {
+    appId: string;
+    targetEnv: string;
+    environmentUrl: string;
+    launchUrl: string;
+  } | null;
 }
 
 export interface SystemInfo {

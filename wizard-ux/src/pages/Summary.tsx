@@ -153,6 +153,52 @@ const useStyles = makeStyles({
     height: '44px',
     fontWeight: 600,
   },
+  launchCard: {
+    padding: '22px 24px',
+    borderRadius: '14px',
+    background: 'linear-gradient(145deg, rgba(16,124,16,0.12), rgba(0,120,212,0.1))',
+    borderTopWidth: '1px', borderRightWidth: '1px', borderBottomWidth: '1px', borderLeftWidth: '1px',
+    borderTopStyle: 'solid', borderRightStyle: 'solid', borderBottomStyle: 'solid', borderLeftStyle: 'solid',
+    borderTopColor: tokens.colorNeutralStroke2, borderRightColor: tokens.colorNeutralStroke2,
+    borderBottomColor: tokens.colorNeutralStroke2, borderLeftColor: tokens.colorNeutralStroke2,
+    boxShadow: tokens.shadow8,
+    display: 'grid',
+    gap: '14px',
+  },
+  launchTitle: {
+    margin: 0,
+    color: tokens.colorNeutralForeground1,
+    letterSpacing: '-0.01em',
+  },
+  launchUrl: {
+    display: 'block',
+    padding: '12px 14px',
+    borderRadius: '10px',
+    textDecorationLine: 'none',
+    fontFamily: tokens.fontFamilyMonospace,
+    background: tokens.colorNeutralBackground1,
+    borderTopWidth: '1px', borderRightWidth: '1px', borderBottomWidth: '1px', borderLeftWidth: '1px',
+    borderTopStyle: 'solid', borderRightStyle: 'solid', borderBottomStyle: 'solid', borderLeftStyle: 'solid',
+    borderTopColor: tokens.colorNeutralStroke2, borderRightColor: tokens.colorNeutralStroke2,
+    borderBottomColor: tokens.colorNeutralStroke2, borderLeftColor: tokens.colorNeutralStroke2,
+    color: tokens.colorBrandForeground1,
+    overflowWrap: 'anywhere',
+    ':hover': { textDecorationLine: 'underline' },
+  },
+  launchActions: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  launchBtn: {
+    background: gradients.accent,
+    color: '#ffffff',
+    borderTopWidth: 0, borderRightWidth: 0, borderBottomWidth: 0, borderLeftWidth: 0,
+    boxShadow: tokens.shadow8,
+    minWidth: '220px',
+    height: '44px',
+    fontWeight: 700,
+  },
 });
 
 function Field({ label, value }: { label: string; value?: string }) {
@@ -179,6 +225,8 @@ export function Summary() {
   const next = stateQ.data?.next ?? 1;
   const percent = Math.round((completed / Math.max(1, total)) * 100);
   const isDone = completed >= total;
+  const launchUrl = stateQ.data?.powerApp?.launchUrl || '';
+  const launchTarget = stateQ.data?.powerApp?.targetEnv || st.WIZARD_TARGET_ENV || 'dev';
 
   return (
     <div className={s.root}>
@@ -210,7 +258,63 @@ export function Summary() {
               </Button>
             </Link>
           )}
+          {isDone && launchUrl && (
+            <Button
+              className={s.ctaPrimary}
+              size="large"
+              as="a"
+              href={launchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              iconPosition="after"
+              icon={<ArrowRightFilled />}
+            >
+              Open Power App
+            </Button>
+          )}
         </div>
+
+        {isDone && (
+          <section>
+            <span className={s.sectionLabel}>Launch</span>
+            <Title3 as="h2" className={s.sectionTitle}>You did it. Your app is ready to launch.</Title3>
+            <div className={s.launchCard} style={{ marginTop: '16px' }}>
+              {launchUrl ? (
+                <>
+                  <Subtitle2 className={s.launchTitle}>Power Apps URL ({String(launchTarget).toUpperCase()})</Subtitle2>
+                  <a
+                    className={s.launchUrl}
+                    href={launchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {launchUrl}
+                  </a>
+                  <div className={s.launchActions}>
+                    <Button
+                      className={s.launchBtn}
+                      as="a"
+                      href={launchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      iconPosition="after"
+                      icon={<ArrowRightFilled />}
+                    >
+                      Launch App Now
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Subtitle2 className={s.launchTitle}>Power Apps URL not available yet</Subtitle2>
+                  <Caption1>
+                    Complete Step 9 with "Push to Power Platform" enabled to generate and surface your launch URL here.
+                  </Caption1>
+                </>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Project values grid */}
         <section>
