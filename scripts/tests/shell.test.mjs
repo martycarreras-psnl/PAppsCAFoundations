@@ -4,85 +4,68 @@ import {
   firstCommandPath,
   formatCommandForLog,
   prepareFileCommand,
-  quoteWindowsCmdCommand,
   resolveWindowsCommandShim,
 } from '../../wizard/lib/shell.mjs';
 
-test('Windows cmd shims are routed through cmd.exe', () => {
+test('Windows cmd shims are executed via Node shell:true', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
     isWindows: true,
-    comspec: 'C:\\Windows\\System32\\cmd.exe',
   });
 
-  assert.equal(command.file, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(command.args, ['/d', '/q', '/c']);
-  assert.equal(command.windowsCommandScript, 'call "C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd" "auth" "list"');
+  assert.equal(command.file, 'C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd');
+  assert.deepEqual(command.args, ['auth', 'list']);
+  assert.equal(command.shell, true);
   assert.equal(command.shellShim, true);
 });
 
 test('Windows exe commands stay direct', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\.dotnet\\tools\\pac.exe', ['org', 'who'], {
     isWindows: true,
-    comspec: 'cmd.exe',
   });
 
   assert.equal(command.file, 'C:\\Users\\dev\\.dotnet\\tools\\pac.exe');
   assert.deepEqual(command.args, ['org', 'who']);
+  assert.equal(command.shell, false);
   assert.equal(command.shellShim, false);
 });
 
 test('non-Windows command shims stay direct', () => {
   const command = prepareFileCommand('/tmp/pac.cmd', ['auth', 'list'], {
     isWindows: false,
-    comspec: 'cmd.exe',
   });
 
   assert.equal(command.file, '/tmp/pac.cmd');
   assert.deepEqual(command.args, ['auth', 'list']);
+  assert.equal(command.shell, false);
   assert.equal(command.shellShim, false);
 });
 
-test('Windows shell fallback quotes arguments for cmd execution', () => {
+test('Windows cmd shim invocation preserves arguments verbatim', () => {
   const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'init', '--displayName', 'Windows Hello'], {
     isWindows: true,
-    comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, ['/d', '/q', '/c']);
-  assert.equal(command.windowsCommandScript, 'call "C:\\Tools\\pac.cmd" "code" "init" "--displayName" "Windows Hello"');
+  assert.equal(command.file, 'C:\\Tools\\pac.cmd');
+  assert.deepEqual(command.args, ['code', 'init', '--displayName', 'Windows Hello']);
+  assert.equal(command.shell, true);
 });
 
-test('Windows command quoting escapes cmd metacharacters', () => {
-  const commandLine = quoteWindowsCmdCommand('pac', ['auth', 'create', '--clientSecret', 'a&b%c^d']);
-
-  assert.equal(commandLine, 'call "pac" "auth" "create" "--clientSecret" "a^&b%%c^^d"');
-});
-
-test('Windows command quoting keeps environment URLs as one argument', () => {
+test('Windows cmd shim keeps environment URLs as one argument', () => {
   const command = prepareFileCommand('C:\\Tools\\pac.cmd', [
     'auth', 'create',
     '--environment', 'https://carremacodeapps.crm.dynamics.com',
     '--applicationId', '00000000-0000-0000-0000-000000000000',
   ], {
     isWindows: true,
-    comspec: 'cmd.exe',
   });
 
-  assert.deepEqual(command.args, ['/d', '/q', '/c']);
-  assert.equal(
-    command.windowsCommandScript,
-    'call "C:\\Tools\\pac.cmd" "auth" "create" "--environment" "https://carremacodeapps.crm.dynamics.com" "--applicationId" "00000000-0000-0000-0000-000000000000"',
-  );
-});
-
-test('Windows cmd shim execution defers full command to launcher script', () => {
-  const command = prepareFileCommand('C:\\Tools\\pac.cmd', ['code', 'push', '--displayName', 'Windows Hello'], {
-    isWindows: true,
-    comspec: 'cmd.exe',
-  });
-
-  assert.equal(command.args.includes(command.windowsCommandScript), false);
-  assert.equal(command.windowsCommandScript.includes('"Windows Hello"'), true);
+  assert.equal(command.file, 'C:\\Tools\\pac.cmd');
+  assert.deepEqual(command.args, [
+    'auth', 'create',
+    '--environment', 'https://carremacodeapps.crm.dynamics.com',
+    '--applicationId', '00000000-0000-0000-0000-000000000000',
+  ]);
+  assert.equal(command.shell, true);
 });
 
 test('command logging quotes arguments with spaces', () => {
@@ -94,7 +77,6 @@ test('command logging quotes arguments with spaces', () => {
 test('Windows cmd shims prefer sibling exe when present', () => {
   const command = prepareFileCommand('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', ['auth', 'list'], {
     isWindows: true,
-    comspec: 'cmd.exe',
   });
   const resolved = resolveWindowsCommandShim('C:\\Users\\dev\\AppData\\Local\\Microsoft\\PowerAppsCLI\\pac.cmd', {
     isWindows: true,
