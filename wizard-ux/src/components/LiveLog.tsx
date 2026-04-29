@@ -81,7 +81,7 @@ export function LiveLog({ lines, status, onClear }: Props) {
       </div>
       <pre ref={ref} className={s.output} aria-live="polite">
         {lines.length === 0 ? (
-          <span className={s.info}>No output yet. Submit the form to begin.</span>
+          <span className={s.info}>No output yet. Save the form to begin.</span>
         ) : lines.map((l, i) => (
           <span key={i} className={l.stream === 'stderr' ? s.err : undefined}>{l.text}</span>
         ))}

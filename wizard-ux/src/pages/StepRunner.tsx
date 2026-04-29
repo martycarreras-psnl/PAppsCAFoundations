@@ -228,7 +228,7 @@ export function StepRunner() {
                 <MessageBar intent="warning">
                   <MessageBarBody>
                     <MessageBarTitle>Unsaved changes</MessageBarTitle>
-                    Submit this step again before moving forward so your changes are saved.
+                    Save this step again before moving forward so your changes are persisted.
                   </MessageBarBody>
                 </MessageBar>
               )}
@@ -257,7 +257,7 @@ export function StepRunner() {
                     onClick={submit}
                     disabled={apply.isPending || stream.status === 'running'}
                   >
-                    {meta?.readOnly ? 'Run checks' : (stream.status === 'running' ? 'Running…' : 'Submit')}
+                    {meta?.readOnly ? 'Run checks' : (stream.status === 'running' ? 'Saving…' : 'Save')}
                   </Button>
                 )}
                 <Button
@@ -272,7 +272,7 @@ export function StepRunner() {
                   disabled={(status !== 'done' || hasUnsavedChanges) && meta?.canRunInBrowser !== false}
                 >
                   {hasUnsavedChanges && meta?.canRunInBrowser
-                    ? 'Submit changes first'
+                    ? 'Save changes first'
                     : (stepNumber >= (stepsQ.data?.totalSteps ?? 9) ? 'Finish' : 'Next')}
                 </Button>
               </div>
