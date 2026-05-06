@@ -239,10 +239,11 @@ export default {
         id: 'PP_CLIENT_SECRET',
         type: 'secret',
         label: 'Client secret',
-        help: 'Needed once to create connection references in the selected solution. Not stored here - held in memory for this server only.',
+        help: 'Needed once to create connection references in the selected solution. Not stored here — held in memory for this server only. If you entered this in Step 3, it may have been cleared by a server restart.',
         required: true,
         defaultValue: '',
         showIf: { id: 'DEFER_CONNECTORS', equals: false },
+        savedHint: state.PP_CLIENT_SECRET ? 'Saved in Step 3 — re-enter if server was restarted' : undefined,
       });
     }
 
