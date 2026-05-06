@@ -3,8 +3,8 @@ import {
   Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Body1, Checkbox,
   Popover, PopoverTrigger, PopoverSurface, Button,
 } from '@fluentui/react-components';
-import { QuestionCircleRegular } from '@fluentui/react-icons';
-import { ChangeEvent } from 'react';
+import { QuestionCircleRegular, LockClosedRegular, EditRegular } from '@fluentui/react-icons';
+import { ChangeEvent, useState } from 'react';
 
 const useStyles = makeStyles({
   card: {
@@ -45,6 +45,28 @@ const useStyles = makeStyles({
     gap: '4px',
   },
   checkboxList: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  savedSecret: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    background: tokens.colorNeutralBackground3,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    color: tokens.colorNeutralForeground2,
+    fontSize: tokens.fontSizeBase200,
+  },
+  savedSecretIcon: {
+    color: tokens.colorPaletteGreenForeground1,
+    fontSize: '16px',
+    flexShrink: 0,
+  },
+  savedSecretEdit: {
+    marginLeft: 'auto',
+    minWidth: 'auto',
+    padding: '2px 8px',
+    height: 'auto',
+  },
 });
 
 function matchesCondition(condition: QuestionCondition | QuestionCondition[], answers: Record<string, unknown>): boolean {
@@ -64,8 +86,10 @@ export function isQuestionHidden(q: Question, answers: Record<string, unknown>):
 
 function validateUrl(value: string): string | null {
   if (!value) return null;
+  // Accept with or without https:// — the server normalizes on save
+  const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`;
   try {
-    const u = new URL(value);
+    const u = new URL(candidate);
     if (!u.protocol.startsWith('https')) return 'Must be an https:// URL';
     return null;
   } catch { return 'Not a valid URL'; }
@@ -90,6 +114,8 @@ function questionError(q: Question, value: unknown, showError?: boolean): string
 function QuestionContent({ question: q, value, onChange, showError }: Omit<Props, 'answers'>) {
   const s = useStyles();
   const error = questionError(q, value, showError);
+  const [editingSecret, setEditingSecret] = useState(false);
+  const showSavedIndicator = q.type === 'secret' && q.savedHint && !value && !editingSecret;
 
   const labelEl = (
     <span className={s.labelRow}>
@@ -127,12 +153,29 @@ function QuestionContent({ question: q, value, onChange, showError }: Omit<Props
             aria-required={q.required || undefined}
           />
         ) : q.type === 'secret' ? (
-          <Input
-            type="password"
-            value={(value as string) ?? ''}
-            onChange={(_e, d) => onChange(q.id, d.value)}
-            aria-required={q.required || undefined}
-          />
+          showSavedIndicator ? (
+            <div className={s.savedSecret}>
+              <LockClosedRegular className={s.savedSecretIcon} />
+              <span>{q.savedHint}</span>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<EditRegular />}
+                className={s.savedSecretEdit}
+                onClick={() => setEditingSecret(true)}
+              >
+                Change
+              </Button>
+            </div>
+          ) : (
+            <Input
+              type="password"
+              value={(value as string) ?? ''}
+              onChange={(_e, d) => onChange(q.id, d.value)}
+              placeholder={q.savedHint ? 'Enter new value to replace' : undefined}
+              aria-required={q.required || undefined}
+            />
+          )
         ) : q.type === 'confirm' ? (
           <Switch checked={!!value} onChange={(_e, d) => onChange(q.id, d.checked)} />
         ) : q.type === 'select' ? (

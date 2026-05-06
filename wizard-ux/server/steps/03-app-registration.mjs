@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { setSecret } from '../lib/dataverse-bridge.mjs';
+import { setSecret, hasUsableSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, '..', '..', '..');
@@ -114,8 +114,9 @@ export default {
         id: 'PP_TENANT_ID',
         type: 'text',
         label: 'Tenant ID (Directory ID)',
-        help: 'Leave blank only if the 1Password item already has a tenant-id field.',
+        help: 'Leave blank if your 1Password item already has a tenant-id field.',
         defaultValue: state.PP_TENANT_ID || '',
+        hideIf: { id: 'USE_1PASSWORD', equals: true },
         why: [
           'Azure Portal steps:',
           '1. Open https://portal.azure.com',
@@ -130,15 +131,20 @@ export default {
         id: 'PP_APP_ID',
         type: 'text',
         label: 'Client ID (Application ID)',
-        help: 'Leave blank only if the 1Password item already has an app-id field.',
+        help: 'Leave blank if your 1Password item already has an app-id field.',
         defaultValue: state.PP_APP_ID || '',
+        hideIf: { id: 'USE_1PASSWORD', equals: true },
       },
       {
         id: 'PP_CLIENT_SECRET',
         type: 'secret',
         label: 'Client secret value',
-        help: 'Create this under Certificates & secrets. Leave blank only if 1Password already has client-secret.',
+        help: hasUsableSecret()
+          ? 'A secret is already held in memory from a previous run. Leave blank to keep it.'
+          : 'Create this under Certificates & secrets.',
         defaultValue: '',
+        savedHint: hasUsableSecret() ? 'Secret saved from previous run' : undefined,
+        hideIf: { id: 'USE_1PASSWORD', equals: true },
         why: [
           'Client secret steps:',
           '1. In the App Registration, open Certificates & secrets',

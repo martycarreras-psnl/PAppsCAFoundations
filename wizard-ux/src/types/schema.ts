@@ -21,6 +21,7 @@ export interface Question {
   why?: string;
   required?: boolean;
   defaultValue?: unknown;
+  savedHint?: string;
   options?: Array<{ value: string; label: string }>;
   group?: QuestionGroup;
   validatePattern?: 'dataverseUrl';
