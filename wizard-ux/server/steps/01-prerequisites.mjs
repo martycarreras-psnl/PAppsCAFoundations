@@ -20,7 +20,7 @@ export default {
   meta: {
     number: 1,
     title: 'Prerequisites',
-    description: 'Verify Node, Git, .NET SDK, PAC CLI, and 1Password CLI are present.',
+    description: 'Verify Node, Git, .NET SDK, PAC CLI, Python 3, and optional tools are present.',
     canRunInBrowser: true,
     readOnly: true,
   },
@@ -89,8 +89,42 @@ export default {
       log.info('1Password CLI not found (optional)');
     }
 
+    // Python 3 (required for Dataverse-skills plugin)
+    let pythonCmd = null;
+    if (hasCommand('python3')) pythonCmd = 'python3';
+    else if (hasCommand('python')) pythonCmd = 'python';
+
+    if (pythonCmd) {
+      const pyVer = tryRun(`${pythonCmd} --version`)?.replace('Python ', '') || '';
+      const pyMajor = parseInt(pyVer, 10);
+      if (pyMajor >= 3) {
+        checks.push({ name: 'Python', ok: true, value: pyVer, hint: null });
+        log.ok(`Python ${pyVer}`);
+      } else {
+        checks.push({ name: 'Python', ok: false, value: pyVer, hint: 'Python 3+ required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
+        log.warn(`Python ${pyVer} — Python 3+ required for Dataverse-skills plugin`);
+        pythonCmd = null;
+      }
+    } else {
+      checks.push({ name: 'Python', ok: false, value: null, hint: 'Required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
+      log.warn('Python 3 — not found (required for Dataverse-skills plugin)');
+    }
+
+    // PowerPlatform-Dataverse-Client SDK (requires Python)
+    if (pythonCmd) {
+      const hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
+      if (hasSdk) {
+        checks.push({ name: 'Dataverse SDK', ok: true, value: 'installed', hint: null });
+        log.ok('PowerPlatform-Dataverse-Client SDK installed');
+      } else {
+        const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
+        checks.push({ name: 'Dataverse SDK', ok: false, value: null, hint: `Not installed — run: ${pip} install PowerPlatform-Dataverse-Client pandas`, optional: true });
+        log.info(`PowerPlatform-Dataverse-Client SDK — not installed (run: ${pip} install PowerPlatform-Dataverse-Client pandas)`);
+      }
+    }
+
     return {
-      stateUpdate: { HAS_OP: hasOp },
+      stateUpdate: { HAS_OP: hasOp, PYTHON_CMD: pythonCmd },
       result: { allOk, checks },
       // Mark step complete only if no required tool is missing
       completedStep: allOk ? 1 : null,
