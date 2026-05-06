@@ -1,7 +1,9 @@
 import { Question, QuestionCondition, QuestionGroup } from '../types/schema';
 import {
   Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Body1, Checkbox,
+  Popover, PopoverTrigger, PopoverSurface, Button,
 } from '@fluentui/react-components';
+import { QuestionCircleRegular } from '@fluentui/react-icons';
 import { ChangeEvent } from 'react';
 
 const useStyles = makeStyles({
@@ -23,12 +25,24 @@ const useStyles = makeStyles({
   },
   firstGroupItem: { paddingTop: '8px' },
   why: {
-    background: tokens.colorNeutralBackground3,
-    borderRadius: '6px',
-    padding: '8px 12px',
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
     whiteSpace: 'pre-wrap',
+    lineHeight: 1.5,
+    maxWidth: '360px',
+    padding: '4px 0',
+  },
+  whyTrigger: {
+    minWidth: 'auto',
+    padding: '2px',
+    height: 'auto',
+    color: tokens.colorNeutralForeground3,
+    ':hover': { color: tokens.colorBrandForeground1 },
+  },
+  labelRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
   },
   checkboxList: { display: 'flex', flexDirection: 'column', gap: '6px' },
 });
@@ -78,8 +92,24 @@ function QuestionContent({ question: q, value, onChange, showError }: Omit<Props
   const error = questionError(q, value, showError);
 
   const labelEl = (
-    <span>
+    <span className={s.labelRow}>
       {q.label}{q.required ? <span className={s.required} aria-hidden>*</span> : null}
+      {q.why && (
+        <Popover withArrow>
+          <PopoverTrigger disableButtonEnhancement>
+            <Button
+              appearance="transparent"
+              icon={<QuestionCircleRegular />}
+              size="small"
+              className={s.whyTrigger}
+              aria-label={`More info about ${q.label}`}
+            />
+          </PopoverTrigger>
+          <PopoverSurface>
+            <div className={s.why}>{q.why}</div>
+          </PopoverSurface>
+        </Popover>
+      )}
     </span>
   );
 
@@ -145,7 +175,6 @@ function QuestionContent({ question: q, value, onChange, showError }: Omit<Props
       </Field>
 
       {q.help && <Body2 className={s.help}>{q.help}</Body2>}
-      {q.why && <div className={s.why}>{q.why}</div>}
     </>
   );
 }

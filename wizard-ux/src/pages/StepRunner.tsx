@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  makeStyles, tokens, Title2, Body1, Button, Spinner, Badge,
-  MessageBar, MessageBarBody, MessageBarTitle, Caption1,
+  makeStyles, tokens, Title2, Body1, Button, Spinner,
+  MessageBar, MessageBarBody, Caption1,
 } from '@fluentui/react-components';
-import { ArrowLeftRegular, ArrowRightFilled, PlayRegular } from '@fluentui/react-icons';
+import {
+  ArrowLeftRegular, ArrowRightFilled, PlayRegular,
+  CheckmarkCircleFilled, WindowConsoleRegular,
+} from '@fluentui/react-icons';
 
 import { useStepQuestions, useSteps } from '../hooks/useWizardData';
 import { useStepStream } from '../hooks/useStepStream';
@@ -14,6 +17,7 @@ import { isQuestionHidden, QuestionCard, QuestionGroupCard } from '../components
 import { LiveLog } from '../components/LiveLog';
 import { api } from '../services/api';
 import { Question, QuestionGroup } from '../types/schema';
+import { gradients } from '../theme/tokens';
 
 type QuestionBlock =
   | { kind: 'question'; question: Question }
@@ -33,12 +37,31 @@ const useStyles = makeStyles({
     width: '100%',
   },
   header: {
-    display: 'flex', alignItems: 'flex-start', gap: '16px',
-    paddingBottom: '8px',
+    display: 'flex', alignItems: 'center', gap: '12px',
+    paddingBottom: '12px',
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     marginBottom: '8px',
   },
-  headerText: { flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' },
+  stepBadge: {
+    width: '36px', height: '36px',
+    borderRadius: '10px',
+    display: 'grid', placeItems: 'center',
+    fontWeight: 700, fontSize: '15px',
+    flexShrink: 0,
+  },
+  stepBadgePending: {
+    background: tokens.colorNeutralBackground3,
+    color: tokens.colorNeutralForeground2,
+  },
+  stepBadgeDone: {
+    background: tokens.colorPaletteGreenBackground2,
+    color: tokens.colorPaletteGreenForeground1,
+  },
+  stepBadgeBrand: {
+    background: gradients.accent,
+    color: '#ffffff',
+  },
+  headerText: { flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 },
   questions: { display: 'flex', flexDirection: 'column', gap: '12px' },
   actions: {
     display: 'flex', gap: '8px', alignItems: 'center',
@@ -56,6 +79,45 @@ const useStyles = makeStyles({
     maxHeight: '320px',
     display: 'flex',
     flexDirection: 'column',
+  },
+  successBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '16px 20px',
+    borderRadius: '10px',
+    background: 'linear-gradient(135deg, rgba(16,124,16,0.10), rgba(0,120,212,0.08))',
+    border: `1px solid ${tokens.colorPaletteGreenBorder1}`,
+  },
+  successIcon: {
+    fontSize: '24px',
+    color: tokens.colorPaletteGreenForeground1,
+    flexShrink: 0,
+  },
+  successText: { flex: 1 },
+  ctaPrimary: {
+    background: gradients.accent,
+    color: '#ffffff',
+    border: 'none',
+    boxShadow: tokens.shadow4,
+    minWidth: '160px',
+    height: '40px',
+    fontWeight: 600,
+  },
+  terminalNote: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '14px 16px',
+    borderRadius: '10px',
+    background: tokens.colorNeutralBackground3,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    color: tokens.colorNeutralForeground2,
+  },
+  terminalIcon: {
+    fontSize: '20px',
+    color: tokens.colorBrandForeground1,
+    flexShrink: 0,
   },
 });
 
@@ -112,6 +174,19 @@ export function StepRunner() {
     }
   }, [stream.status, qc, stepNumber]);
 
+  // Auto-advance to next step after success
+  const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (stream.status === 'done') {
+      const total = stepsQ.data?.totalSteps ?? 9;
+      autoAdvanceRef.current = setTimeout(() => {
+        if (stepNumber >= total) navigate('/summary');
+        else navigate(`/step/${stepNumber + 1}`);
+      }, 1500);
+    }
+    return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
+  }, [stream.status, stepNumber, stepsQ.data?.totalSteps, navigate]);
+
   const meta = questionsQ.data?.meta;
   const questions = questionsQ.data?.questions ?? [];
   const questionBlocks = useMemo(() => {
@@ -159,6 +234,34 @@ export function StepRunner() {
   const status: 'done' | 'current' | 'pending' =
     stepsQ.data?.steps.find((x) => x.number === stepNumber)?.status ?? 'pending';
 
+  const isRunning = apply.isPending || stream.status === 'running';
+  const isComplete = stream.status === 'done';
+  const total = stepsQ.data?.totalSteps ?? 9;
+  const isLastStep = stepNumber >= total;
+  const canRun = meta?.canRunInBrowser;
+
+  // Single smart CTA label
+  const ctaLabel = (() => {
+    if (isRunning) return meta?.readOnly ? 'Checking…' : 'Running…';
+    if (isComplete) return isLastStep ? 'Finish' : 'Continuing…';
+    if (status === 'done' && hasUnsavedChanges) return 'Save & re-run';
+    if (meta?.readOnly) return 'Run checks';
+    if (status === 'done') return 'Re-run';
+    if (questions.length === 0) return 'Run';
+    return 'Save & run';
+  })();
+
+  function handlePrimaryCta() {
+    if (isComplete) {
+      // Clicking the button while auto-advance countdown is active → advance immediately
+      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+      if (isLastStep) navigate('/summary');
+      else navigate(`/step/${stepNumber + 1}`);
+      return;
+    }
+    submit();
+  }
+
   return (
     <div className={s.root}>
       {stepsQ.data && <StepNav steps={stepsQ.data.steps} current={stepNumber} />}
@@ -166,55 +269,52 @@ export function StepRunner() {
       <div className={s.main}>
         <div className={s.pane}>
           <div className={s.formWrap}>
+              {/* ─── Compact header ──────────────────────────── */}
               <div className={s.header}>
-                <div className={s.headerText}>
-                  <Caption1 style={{ color: tokens.colorBrandForeground1 }}>STEP {stepNumber} OF {stepsQ.data?.totalSteps ?? 9}</Caption1>
-                  <Title2>{meta?.title || 'Loading…'}</Title2>
-                  <Body1 style={{ color: tokens.colorNeutralForeground2 }}>{meta?.description}</Body1>
+                <div className={[
+                  s.stepBadge,
+                  status === 'done' ? s.stepBadgeDone
+                    : (status === 'current' ? s.stepBadgeBrand : s.stepBadgePending),
+                ].join(' ')}>
+                  {status === 'done' ? <CheckmarkCircleFilled /> : stepNumber}
                 </div>
-                <div>
-                  {status === 'done' && <Badge appearance="filled" color="success">Complete</Badge>}
-                  {status === 'current' && <Badge appearance="filled" color="brand">Current</Badge>}
-                  {status === 'pending' && <Badge appearance="outline">Pending</Badge>}
+                <div className={s.headerText}>
+                  <Title2 style={{ margin: 0 }}>{meta?.title || 'Loading…'}</Title2>
+                  <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                    Step {stepNumber} of {total}{meta?.optional ? ' · optional' : ''}
+                  </Caption1>
                 </div>
               </div>
+
+              {/* Description — one line, not a paragraph */}
+              {meta?.description && (
+                <Body1 style={{ color: tokens.colorNeutralForeground2 }}>{meta.description}</Body1>
+              )}
 
               {questionsQ.isLoading && (
                 stepNumber === 8 ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Spinner size="small" />
-                    <MessageBar intent="info" style={{ flex: 1 }}>
-                      <MessageBarBody>
-                        <MessageBarTitle>Loading connector details</MessageBarTitle>
-                        This step can take a little longer while WizardUX checks existing connection references and environment connections.
-                      </MessageBarBody>
-                    </MessageBar>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                      Loading connector details — this can take a moment…
+                    </Caption1>
                   </div>
                 ) : <Spinner size="small" />
               )}
 
-              {/* Optional/skip note */}
-              {meta?.optional && (
-                <MessageBar intent="info">
-                  <MessageBarBody>
-                    <MessageBarTitle>Optional step</MessageBarTitle>
-                    Skip this if you do not need it now — it can be re-run later from the side nav.
-                  </MessageBarBody>
-                </MessageBar>
-              )}
-
-              {/* Read-only steps (e.g. prereqs) — single Run button */}
-              {meta?.canRunInBrowser && meta.readOnly && (
-                <MessageBar intent="info">
-                  <MessageBarBody>
-                    <MessageBarTitle>Diagnostic step</MessageBarTitle>
-                    Click Run checks to verify your machine.
-                  </MessageBarBody>
-                </MessageBar>
+              {/* Non-browser step: show terminal instructions instead of a form */}
+              {meta && !canRun && (
+                <div className={s.terminalNote}>
+                  <WindowConsoleRegular className={s.terminalIcon} />
+                  <Body1>
+                    This step requires an interactive terminal session. Use the embedded terminal
+                    or run the command in your own shell, then come back and advance.
+                  </Body1>
+                </div>
               )}
 
               {/* Question form */}
-              {meta?.canRunInBrowser && questions.length > 0 && (
+              {canRun && questions.length > 0 && (
                 <div className={s.questions}>
                   {questionBlocks.map((block) => {
                     const onChange = (id: string, v: unknown) => setAnswers((a) => ({ ...a, [id]: v }));
@@ -244,84 +344,86 @@ export function StepRunner() {
                 </div>
               )}
 
+              {/* Error states — compact */}
               {apply.isError && (
                 <MessageBar intent="error">
-                  <MessageBarBody>
-                    <MessageBarTitle>Failed to start</MessageBarTitle>
-                    {(apply.error as Error).message}
-                  </MessageBarBody>
+                  <MessageBarBody>{(apply.error as Error).message}</MessageBarBody>
                 </MessageBar>
               )}
 
               {stream.status === 'error' && (
                 <MessageBar intent="error">
-                  <MessageBarBody>
-                    <MessageBarTitle>Step failed</MessageBarTitle>
-                    {stream.error || 'See the live output for details.'}
-                  </MessageBarBody>
+                  <MessageBarBody>{stream.error || 'Step failed — see output above.'}</MessageBarBody>
                 </MessageBar>
               )}
 
-              {stream.status === 'done' && (
-                <MessageBar intent="success">
-                  <MessageBarBody>
-                    <MessageBarTitle>Step complete</MessageBarTitle>
-                    {stepNumber < (stepsQ.data?.totalSteps ?? 9) ? 'Move on to the next step.' : 'All done!'}
-                  </MessageBarBody>
-                </MessageBar>
+              {/* Success banner with auto-advance */}
+              {isComplete && (
+                <div className={s.successBanner}>
+                  <CheckmarkCircleFilled className={s.successIcon} />
+                  <div className={s.successText}>
+                    <Body1 style={{ fontWeight: 600 }}>
+                      {isLastStep ? 'All steps complete!' : 'Step complete'}
+                    </Body1>
+                    <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                      {isLastStep ? 'Heading to summary…' : `Moving to step ${stepNumber + 1}…`}
+                    </Caption1>
+                  </div>
+                  <Button
+                    className={s.ctaPrimary}
+                    iconPosition="after"
+                    icon={<ArrowRightFilled />}
+                    onClick={() => {
+                      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+                      if (isLastStep) navigate('/summary');
+                      else navigate(`/step/${stepNumber + 1}`);
+                    }}
+                  >
+                    {isLastStep ? 'View summary' : 'Continue now'}
+                  </Button>
+                </div>
               )}
 
-              {status === 'done' && hasUnsavedChanges && meta?.canRunInBrowser && (
-                <MessageBar intent="warning">
-                  <MessageBarBody>
-                    <MessageBarTitle>Unsaved changes</MessageBarTitle>
-                    Save this step again before moving forward so your changes are persisted.
-                  </MessageBarBody>
-                </MessageBar>
-              )}
-
-              {/* Inline live output — only shown when an in-browser run is active or has output */}
-              {meta?.canRunInBrowser && (stream.status === 'running' || stream.lines.length > 0) && (
+              {/* Inline live output — only shown when a run is active or has output */}
+              {canRun && (stream.status === 'running' || stream.lines.length > 0) && (
                 <div className={s.inlineLog}>
                   <LiveLog lines={stream.lines} status={stream.status} />
                 </div>
               )}
 
+              {/* ─── Action bar ──────────────────────────── */}
               <div className={s.actions}>
                 <Button
-                  appearance="secondary"
+                  appearance="subtle"
                   icon={<ArrowLeftRegular />}
-                  onClick={() => navigate(`/step/${Math.max(1, stepNumber - 1)}`)}
-                  disabled={stepNumber <= 1}
+                  onClick={() => navigate(stepNumber <= 1 ? '/' : `/step/${stepNumber - 1}`)}
                 >
-                  Back
+                  {stepNumber <= 1 ? 'Home' : 'Back'}
                 </Button>
                 <div className={s.spacer} />
-                {meta?.canRunInBrowser && (
+                {canRun ? (
                   <Button
                     appearance="primary"
-                    icon={apply.isPending || stream.status === 'running' ? <Spinner size="tiny" /> : <PlayRegular />}
-                    onClick={submit}
-                    disabled={apply.isPending || stream.status === 'running'}
+                    icon={isRunning ? <Spinner size="tiny" /> : (isComplete ? <ArrowRightFilled /> : <PlayRegular />)}
+                    iconPosition={isComplete ? 'after' : 'before'}
+                    onClick={handlePrimaryCta}
+                    disabled={isRunning}
                   >
-                    {meta?.readOnly ? 'Run checks' : (stream.status === 'running' ? 'Saving…' : 'Save')}
+                    {ctaLabel}
+                  </Button>
+                ) : (
+                  <Button
+                    appearance="primary"
+                    iconPosition="after"
+                    icon={<ArrowRightFilled />}
+                    onClick={() => {
+                      if (isLastStep) navigate('/summary');
+                      else navigate(`/step/${stepNumber + 1}`);
+                    }}
+                  >
+                    {isLastStep ? 'Finish' : 'Next'}
                   </Button>
                 )}
-                <Button
-                  appearance="primary"
-                  iconPosition="after"
-                  icon={<ArrowRightFilled />}
-                  onClick={() => {
-                    const total = stepsQ.data?.totalSteps ?? 9;
-                    if (stepNumber >= total) navigate('/summary');
-                    else navigate(`/step/${stepNumber + 1}`);
-                  }}
-                  disabled={(status !== 'done' || hasUnsavedChanges) && meta?.canRunInBrowser !== false}
-                >
-                  {hasUnsavedChanges && meta?.canRunInBrowser
-                    ? 'Save changes first'
-                    : (stepNumber >= (stepsQ.data?.totalSteps ?? 9) ? 'Finish' : 'Next')}
-                </Button>
               </div>
             </div>
         </div>

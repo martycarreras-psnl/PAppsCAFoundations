@@ -1,21 +1,21 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { makeStyles, tokens, Caption1, Body1Strong, Body2 } from '@fluentui/react-components';
-import { CheckmarkCircleFilled, CircleRegular, ArrowRightFilled, LockClosedRegular } from '@fluentui/react-icons';
+import { makeStyles, tokens, Caption1, Body2 } from '@fluentui/react-components';
+import { CheckmarkCircleFilled, CircleRegular, ArrowRightFilled, WindowConsoleRegular } from '@fluentui/react-icons';
 import { StepInfo } from '../types/schema';
 
 const useStyles = makeStyles({
   root: {
-    width: '260px',
+    width: '220px',
     height: '100%',
     overflowY: 'auto',
-    padding: '16px',
+    padding: '12px',
     borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground2,
   },
-  heading: { color: tokens.colorNeutralForeground3, paddingLeft: '8px', marginBottom: '8px' },
+  heading: { color: tokens.colorNeutralForeground3, paddingLeft: '8px', marginBottom: '6px' },
   item: {
-    display: 'flex', alignItems: 'flex-start', gap: '10px',
-    padding: '10px 8px',
+    display: 'flex', alignItems: 'center', gap: '10px',
+    padding: '8px 10px',
     borderRadius: '8px',
     cursor: 'pointer',
     border: '1px solid transparent',
@@ -28,15 +28,22 @@ const useStyles = makeStyles({
   },
   iconCol: {
     flex: '0 0 18px',
-    paddingTop: '2px',
     fontSize: '18px',
     display: 'grid', placeItems: 'center',
   },
-  text: { display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 },
   done: { color: tokens.colorPaletteGreenForeground1 },
   current: { color: tokens.colorBrandForeground1 },
   pending: { color: tokens.colorNeutralForeground3 },
-  description: { color: tokens.colorNeutralForeground3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' },
+  terminal: { color: tokens.colorNeutralForeground3 },
+  title: {
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase300,
+  },
 });
 
 interface Props {
@@ -56,9 +63,12 @@ export function StepNav({ steps, current }: Props) {
         const active = step.number === current && loc.pathname.includes('/step/');
         const Icon = step.status === 'done' ? CheckmarkCircleFilled
           : step.status === 'current' ? ArrowRightFilled
-          : !step.canRunInBrowser ? LockClosedRegular
+          : !step.canRunInBrowser ? WindowConsoleRegular
           : CircleRegular;
-        const iconClass = step.status === 'done' ? s.done : step.status === 'current' ? s.current : s.pending;
+        const iconClass = step.status === 'done' ? s.done
+          : step.status === 'current' ? s.current
+          : !step.canRunInBrowser ? s.terminal
+          : s.pending;
 
         return (
           <div
@@ -71,10 +81,7 @@ export function StepNav({ steps, current }: Props) {
             aria-current={active ? 'step' : undefined}
           >
             <div className={`${s.iconCol} ${iconClass}`}><Icon /></div>
-            <div className={s.text}>
-              <Body1Strong>{step.number}. {step.title}</Body1Strong>
-              <Body2 className={s.description}>{step.description}</Body2>
-            </div>
+            <Body2 className={s.title}>{step.number}. {step.title}</Body2>
           </div>
         );
       })}
