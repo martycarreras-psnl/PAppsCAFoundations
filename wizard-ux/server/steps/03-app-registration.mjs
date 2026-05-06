@@ -154,16 +154,9 @@ export default {
         ].join('\n'),
       },
       {
-        id: 'SAVE_TO_1PASSWORD',
-        type: 'confirm',
-        label: 'Save or sync these values to 1Password',
-        defaultValue: true,
-        hideIf: { id: 'USE_1PASSWORD', equals: false },
-      },
-      {
         id: 'APPLICATION_USER_DONE',
         type: 'confirm',
-        label: 'Application User is registered in the Dev environment',
+        label: 'Please confirm that the Application User is registered in the Dev environment',
         defaultValue: false,
         why: [
           'Power Platform Admin Center steps:',
@@ -215,7 +208,7 @@ export default {
     setSecret(clientSecret);
     log.ok('Credential values captured');
 
-    if (use1Password && answers.SAVE_TO_1PASSWORD === true) {
+    if (use1Password) {
       const values = { tenantId, clientId, clientSecret, devUrl, testUrl, prodUrl };
       if (had.tenantId && had.clientId && had.clientSecret) sync1PasswordEnvFields(log, vault, itemName, values);
       else save1PasswordItem(log, vault, itemName, values, had);

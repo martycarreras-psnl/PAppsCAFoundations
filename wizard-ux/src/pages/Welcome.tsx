@@ -7,9 +7,10 @@ import {
 } from '@fluentui/react-components';
 import {
   ArrowRightFilled, ArrowResetRegular, RocketRegular, BookGlobeRegular,
+  CheckmarkCircleFilled, CircleRegular, ArrowRightRegular,
 } from '@fluentui/react-icons';
 import { HeroBackground } from '../components/HeroBackground';
-import { useSystem, useWizardState } from '../hooks/useWizardData';
+import { useSteps, useSystem, useWizardState } from '../hooks/useWizardData';
 import { api } from '../services/api';
 import { gradients } from '../theme/tokens';
 
@@ -131,6 +132,46 @@ const useStyles = makeStyles({
     display: 'flex', flexWrap: 'wrap', gap: '8px',
     justifyContent: 'center',
   },
+
+  // ─── STEP LIST ───────────────────────────────────────────────
+  stepSection: {
+    display: 'grid',
+    gap: '2px',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  stepRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    background: tokens.colorNeutralBackground1,
+    cursor: 'pointer',
+    transition: 'background-color 120ms',
+    ':hover': { backgroundColor: tokens.colorNeutralBackground1Hover },
+  },
+  stepIcon: { fontSize: '16px', flexShrink: 0 },
+  stepDone: { color: tokens.colorPaletteGreenForeground1 },
+  stepCurrent: { color: tokens.colorBrandForeground1 },
+  stepPending: { color: tokens.colorNeutralForeground4 },
+  stepLabel: {
+    flex: 1,
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+  },
+  stepLabelDim: {
+    flex: 1,
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightRegular,
+    color: tokens.colorNeutralForeground3,
+  },
+  stepBadge: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+
   footer: {
     textAlign: 'center',
     color: tokens.colorNeutralForeground3,
@@ -142,6 +183,7 @@ export function Welcome() {
   const s = useStyles();
   const navigate = useNavigate();
   const stateQ = useWizardState();
+  const stepsQ = useSteps();
   const sysQ = useSystem();
   const qc = useQueryClient();
 
@@ -257,6 +299,39 @@ export function Welcome() {
             <Badge appearance="filled" color={sysQ.data.op ? 'success' : 'informative'}>
               {sysQ.data.op ? `1Password ${sysQ.data.op}` : '1Password (optional)'}
             </Badge>
+          </div>
+        )}
+
+        {/* ─── STEP LIST ────────────────────────────────── */}
+        {stepsQ.data && (
+          <div className={s.stepSection}>
+            {stepsQ.data.steps.map((step) => {
+              const isDone = step.status === 'done';
+              const isCurrent = step.status === 'current';
+              return (
+                <div
+                  key={step.number}
+                  className={s.stepRow}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/step/${step.number}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/step/${step.number}`); }}
+                >
+                  {isDone ? (
+                    <CheckmarkCircleFilled className={`${s.stepIcon} ${s.stepDone}`} />
+                  ) : isCurrent ? (
+                    <ArrowRightRegular className={`${s.stepIcon} ${s.stepCurrent}`} />
+                  ) : (
+                    <CircleRegular className={`${s.stepIcon} ${s.stepPending}`} />
+                  )}
+                  <span className={isDone || isCurrent ? s.stepLabel : s.stepLabelDim}>
+                    {step.number}. {step.title}
+                  </span>
+                  {isDone && <span className={s.stepBadge}>Done</span>}
+                  {isCurrent && <Badge appearance="filled" color="brand" size="small">Up next</Badge>}
+                </div>
+              );
+            })}
           </div>
         )}
 
