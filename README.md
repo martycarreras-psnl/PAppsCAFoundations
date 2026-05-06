@@ -1,309 +1,92 @@
 # Power Apps Code Apps — Foundations
 
-A **GitHub template repository** with opinionated, comprehensive coding-agent instruction files for building Power Apps Code Apps. Native guidance ships for **GitHub Copilot**, **Claude Code**, **Cursor**, and **Codex** — each agent reads the same rules in its own format. Each new project starts from this template — you get the full instruction set, setup wizard, and scaffolding tools from your first commit.
+A GitHub template with everything your coding agent needs to build Power Apps Code Apps. Clone it, open your IDE, and start talking to your agent.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Power Apps Code Apps Foundations — From Template to Production: a 10-step developer journey covering Use the Template, Run the Wizard, Sample App Live, Plan Mode in VS Code, Agent Mode Builds the POC, Connect Connectors, Bind to Dataverse, Test, Share & Collaborate, and Promote with Pipelines.](docs/assets/code-apps-foundations-overview.png)
+![Power Apps Code Apps Foundations — From Template to Production](docs/assets/code-apps-foundations-overview.png)
 
-> **The whole journey, one picture.** Click _Use this template_ on GitHub → run the Wizard → ship your first app. The rest of this README explains _how_ — and the [visual guide](docs/guide.html) walks you through it section by section.
+## Get Started — Six Steps
 
-## Prerequisites
+| | Step | What you do |
+|---|---|---|
+| **1** | **Clone from the template** | On GitHub, click **Use this template → Create a new repository**. You now own a complete, batteries-included repo of your own. |
+| **2** | **Open it in your IDE** | Paste the repo URL into your IDE's *Clone repository* prompt — VS Code, Cursor, or any editor with coding-agent support. |
+| **3** | **Ask your agent to handle prerequisites** | Open the chat and say: *"Check for and address all prerequisites for this repo."* Node, .NET, PAC CLI, Python, npm packages, sign-ins — the agent walks you through every gap. |
+| **4** | **Ask your agent to run the Wizard UX** | Just type: *"Run the wizard UX."* A guided browser experience launches at `localhost` and walks you through publisher, environment, App Registration, auth, and scaffold. |
+| **5** | **Follow the wizard to a live sample app** | Ten guided steps, all visual. At the end, your sample Code App is registered, deployed, and showing up in **make.powerapps.com** ready to play. |
+| **6** | **Switch to Plan mode and start building** | Open Agent **Plan mode** in your IDE and describe what you want to build. The agent reads `AGENTS.md` and the instruction files, plans the work, and gets to it. |
 
-| Requirement | Minimum | Notes |
-|-------------|---------|-------|
-| **Editor** | Latest | VS Code (recommended), Cursor, or any editor with coding-agent support |
-| **Coding Agent** | — | GitHub Copilot, Claude Code, Cursor, Codex, or another LLM-backed agent (see note below) |
-| **Node.js** | 20+ | Required for wizard and all scripts |
-| **Git** | 2.30+ | For template cloning and version control |
-| **.NET SDK** | 8.0+ | Required for PAC CLI installation |
-| **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
-| **Python** | 3.9+ | Required for the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin |
-| **Power Platform** | Access to at least one environment with Dataverse enabled | See licensing note below |
-| **1Password CLI** | Optional | Recommended for secret management (`op`) |
-
-> **Tip:** Once your editor and coding agent are set up, you can ask the agent to install the remaining prerequisites (Node.js, Git, .NET SDK, PAC CLI) for you — it can run the install commands directly in the integrated terminal.
-
-### Coding agent options
-
-This repo ships native guidance for multiple coding agents. Pick whichever your team prefers:
-
-- **GitHub Copilot** — built into VS Code; uses OpenAI or Azure OpenAI models
-- **Claude Code** — Anthropic's Claude models, available via direct API or Azure AI Foundry
-- **Cursor** — built-in agent with its own model access
-- **Codex** — OpenAI's coding agent, available via ChatGPT subscription or API
-- **Other LLMs** — any agent backed by Azure OpenAI, Azure AI Foundry, or a direct paid API works; the repo's `AGENTS.md` provides the root guidance contract that any tool can read
-
-### Power Apps Code Apps licensing
-
-Code Apps are a **premium Power Apps feature**. Publishing (`pac code push`) requires one of:
-
-- **Power Apps Premium** per-user license for each user running the app, OR
-- **Power Apps Developer Plan** (free, individual use only) for personal learning, OR
-- **Microsoft 365 Developer Program** sandbox tenant (free, renewable) for learning and demos
-
-If you are trying this template **for the first time or for personal learning**, sign up for the free [Microsoft 365 Developer Program](https://developer.microsoft.com/microsoft-365/dev-program) and create a developer tenant. It gives you a Power Platform environment with Dataverse and permissions to create App Registrations — which your corporate tenant likely will not let you do.
-
-Code Apps also require the **Power Platform environment to have Dataverse provisioned** (most environments do by default, but "Teams environments" do not). If `pac org who` works but `pac code init` fails with a Dataverse-related error, provision Dataverse on the environment from the Power Platform Admin Center.
-
-### Windows, macOS, Linux
-
-The wizard and all scripts run natively on all three platforms. Two notes for Windows:
-
-- Use the **`.mjs`** entry points directly: `node scripts/setup-auth.mjs`, `node scripts/sync-foundations.mjs`, etc. The matching `.sh` files are thin Bash wrappers for macOS and Linux only — they do not run in `cmd.exe` or PowerShell without WSL or Git Bash.
-- Run the wizard the same way on every platform: `cd wizard && node index.mjs`.
-
-> **Windows + OneDrive tip:** Clone your project **outside** any OneDrive-synced folder (e.g. `C:\dev\my-app` rather than `C:\Users\<you>\OneDrive\...\my-app`). OneDrive path lengths plus `node_modules` depth regularly exceed Windows' 260-character path limit, which causes cryptic `npm install` and `tsc` failures. If you must use OneDrive, enable "Long paths" in Windows and Git (`git config --global core.longpaths true`).
-
-## New here? Start with these
-
-- [AGENTS.md](AGENTS.md) — Top-level agent directive. Read this if you are (or are using) a coding agent.
-- [docs/glossary.md](docs/glossary.md) — One-page reference for Power Platform terminology. Skim before diving in.
-- [.github/instructions/README.md](.github/instructions/README.md) — Map of the canonical instruction set. **You probably do not need to read the individual files** — your coding agent reads them for you.
-- [docs/agent-support.md](docs/agent-support.md) — Which files each coding agent reads (Copilot, Claude Code, Cursor, Codex) and how to verify.
-
-## Quick Start
-
-Use this README when you want the shortest text path through the repo.
-Use [docs/guide.html](docs/guide.html) when you want the same flow as a visual walkthrough.
-Use [docs/prototype-golden-path.md](docs/prototype-golden-path.md) when you want the full prototype-first sequence from planning through real providers.
-
-### Step 1: Get the code
-
-**Option A — Use this template (recommended)**
-
-1. Click the green **"Use this template"** button at the top of this repo → **"Create a new repository"**
-2. Name your new repo (e.g. `my-expense-tracker`), set visibility, and click **Create**
-3. Clone **your new repo**:
-
-```bash
-git clone https://github.com/your-org/my-expense-tracker.git
-cd my-expense-tracker
-```
-
-**Option B — degit (no GitHub account required)**
-
-```bash
-npx degit your-org/PAppsCAFoundations my-code-app
-cd my-code-app
-```
-
-> **Do NOT `git clone` this template repo directly** — that leaves `origin` pointing back to PAppsCAFoundations instead of your own repo.
-
-### Step 2: Run the wizard
-
-You now have **two ways to run the setup wizard** — pick whichever feels right. They share the same `.wizard-state.json`, so you can switch between them at any time without losing progress.
-
-**Option A — Terminal wizard** (the original)
-
-```bash
-cd wizard
-npm install
-node index.mjs
-```
-
-**Option B — Browser wizard** (✨ new)
-
-```bash
-npm run wizard:ux
-```
-
-Opens a beautiful local web app at `http://127.0.0.1:5174` — same Fluent UI v9 design language you'll use to build your Code Apps. Step navigator with status pills, jump-to-step, resume detection, light/dark/system themes, and a live log panel that streams output. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff to your terminal. The server binds to localhost only and shuts down after 10 minutes of inactivity.
-
-> See [wizard-ux/README.md](wizard-ux/README.md) for the full architecture and security notes.
-
-![Browser wizard — nine self-contained, re-runnable steps from zero to deployed Code App](docs/assets/wizard-steps.png)
-
-#### Smart paste handling — it just works
-
-Both wizards (terminal and browser) tolerate real-world copy-paste behavior so you never need to hand-edit a value:
-
-- **Environment URLs** — paste straight from the Power Platform Admin Center. The wizard accepts `org-name.crm.dynamics.com` and prepends `https://` for you. It also strips trailing slashes and any leftover path segments.
-- **Connection IDs** — paste the entire Maker Portal connection-details URL (e.g. `https://make.powerapps.com/environments/<env>/connections/shared_office365users/<GUID>/details`) and the wizard pulls the GUID out for you. A bare GUID still works.
-- **Any connector by URL** — after the curated checklist of common connectors (Office 365, SharePoint, Dataverse, SQL, Teams, Blob, Outlook), the wizard asks *"Add another connector by URL or apiId"* in a loop. Paste a Maker Portal connection URL and the wizard extracts **both** the connector apiId (`shared_xxx`) **and** the connection GUID in one shot — no separate Connection-ID prompt for that connector. Custom connectors and not-yet-on-the-shortlist connectors (Approvals, Outlook Tasks, your own custom APIs) all flow through the same path.
+> **That's it.** Everything after this is reference material. Your coding agent reads the instruction files for you — you don't need to read them yourself.
 
 ---
 
-That's it. Either path walks you through everything — tool checks, naming, Power Platform portal steps, authentication, scaffolding, and your first deploy. Both work on **Windows, macOS, and Linux**.
+## What You'll Need
 
-You can quit anytime with Ctrl+C — the wizard saves your progress and picks up where you left off. To start over: `node wizard/index.mjs --reset`.
+- An **editor** with a coding agent — VS Code + GitHub Copilot (recommended), Cursor, Claude Code, or Codex
+- A **Power Platform environment** with Dataverse enabled — get one free via the [Power Apps Developer Plan](https://learn.microsoft.com/en-us/power-platform/developer/plan) or the [Microsoft 365 Developer Program](https://developer.microsoft.com/microsoft-365/dev-program)
+- **Node.js 20+**, **Git**, **.NET SDK 8+** — your agent can install these for you in Step 3
 
-If you prefer a visual walkthrough of the same sequence, open [docs/guide.html](docs/guide.html).
+> **Windows, macOS, and Linux** all work. On Windows, clone outside OneDrive-synced folders to avoid path-length issues.
 
-## Methodology
+---
 
-Foundations now assumes a deliberate sequence for non-trivial apps: plan first, prototype second, connect later.
+## Methodology — Plan First, Prototype Second, Connect Later
 
-1. Plan the business workflow
-2. Prototype the UX against mock providers
-3. Let prototype feedback change the planning payload
-4. Freeze the Dataverse plan
-5. Bind real connectors and implement real providers
+Foundations encodes a deliberate sequence for non-trivial apps:
 
-This means the wizard does **not** expect connection IDs during the first scaffold run. Connector binding is a later, explicit move into connected mode.
+1. **Describe your app** in plain English — the agent decomposes the business problem
+2. **Prototype the UX** against mock data — validate with stakeholders before freezing schema
+3. **Provision Dataverse schema** — the [Dataverse-skills plugin](https://github.com/microsoft/Dataverse-skills) handles tables, columns, and relationships
+4. **Bind real connectors** — `pac code add-data-source` generates your TypeScript SDK
+5. **Build, test, deploy** — `pac code push` to dev, promote through Power Platform Pipelines
 
-When you are ready for real data, run:
+The wizard doesn't ask for connection IDs on the first run. That comes later, when your prototype is stable.
 
-```bash
-node wizard/index.mjs --from 8
-```
+---
 
-That later flow creates connection references in the solution, attempts to discover existing environment connections with `pac connection list`, and lets the developer select the right connection when matches exist.
+## Dataverse-skills Plugin
 
-## Execution Roadmap
+Foundations delegates Dataverse environment operations to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin — schema provisioning, data seeding, solution lifecycle, and admin tasks are handled by the plugin's battle-tested, MCP-native skills. Foundations owns the planning workflow, Code App scaffold, connector adapters, and form field patterns.
 
-Foundations is now evolving against an explicit 9-step robustness roadmap:
+The wizard (Step 10) detects your coding agent and shows the correct install command. Or install manually:
 
-1. Execution contracts across the lifecycle
-2. Schema-plan artifact workflow
-3. Reusable Dataverse helper scripts
-4. Stricter three-layer architecture rules
-5. Testing as a deployment gate
-6. Built-in smoke tests that pass from the first scaffold
-7. Discovery helpers for human-in-the-loop tasks
-8. Separate npm CLI migration evaluation
-9. Foundations version traceability for downstream repos
+- **GitHub Copilot:** `/plugin install dataverse@awesome-copilot`
+- **Claude Code:** `/plugin install dataverse@claude-plugins-official`
 
-The implementation is designed so each change is traceable to those steps and can be validated through scaffold, build, test, and sync workflows.
+Prerequisites: Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`
 
-## Narrative-First Planning Layer
+---
 
-Foundations now includes a narrative-first planning layer for future app development work. This layer is designed for the stage where a user can describe the business problem in their own words, but the solution still needs to be decomposed, challenged, and refined before technical implementation begins.
+## Staying Updated
 
-The planning flow is:
-
-1. **Decompose the business problem** — interpret the user's narrative, identify actors, workflows, outcomes, records, constraints, and key unknowns
-2. **Refine the solution scope** — challenge for approvals, automation, Teams and Microsoft 365 touchpoints, reporting, governance, and enterprise completeness
-3. **Convert to technical planning inputs** — derive candidate entities, relationships, ownership patterns, lifecycle states, and handoff inputs for Dataverse planning
-4. **Validate the model through a UX prototype** — generate domain contracts and mock providers, build the UX in prototype mode, and feed the findings back into the planning payload before schema provisioning
-
-The new instruction files are:
-
-- `00a-business-problem-decomposition.instructions.md`
-- `00b-scope-refinement-and-solution-shaping.instructions.md`
-- `00c-solution-concept-to-dataverse-plan.instructions.md`
-- `00d-prototype-validation.instructions.md`
-
-These files are intentionally not questionnaire-first. They teach coding agents how to work from a user's freeform narrative, ask targeted follow-up questions, and refine scope before the app moves into prototype validation, connectors, schema execution, and connected UI implementation.
-
-For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
-
-### What the wizard does
-
-1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, Python 3, 1Password CLI
-2. **Collects project identity** — publisher prefix, solution name, app name
-3. **Guides you through the remaining portal-only steps** — App Registration, Application User setup, feature toggles, and other values the wizard cannot create for you
-4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
-5. **Walks through App Registration** — Azure Portal steps with copy-paste-ready values
-6. **Sets up authentication** — 1Password or .env.local, creates PAC auth profiles, verifies connection
-7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload. Includes a `vitest.config.ts`, test setup, and smoke tests that the wizard runs automatically to verify the scaffold is healthy before proceeding.
-8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable. Starts with the seven most common connectors as a checklist, then loops on *"Add another connector by URL or apiId"* so you can drop in Approvals, Outlook Tasks, custom connectors, or anything else by pasting its Maker Portal URL.
-9. **Builds, verifies, and optionally deploys** — after prototype validation and connector binding are complete
-10. **Dataverse-skills plugin** — detects your coding agent, shows the correct install command, and checks Python SDK prerequisites
-
-Connector setup is intentionally deferred. The expected next move after scaffold is `npm run dev:local`, not collecting connection IDs.
-
-### Already set up? Manual path
-
-If you've already completed the Power Platform portal and Admin Center steps and have credentials:
+Projects created from this template can pull improvements without affecting project-specific code:
 
 ```bash
-# macOS / Linux
-cp .env.template .env.local
-
-# Windows PowerShell
-Copy-Item .env.template .env.local
-
-# Windows cmd
-copy .env.template .env.local
+npm run sync:foundations
 ```
 
-Then on any platform:
+Syncs instruction files, wizard, scripts, and docs. Never touches `src/`, `package.json`, or your solution artifacts.
 
-```bash
-# Edit .env.local and fill in credentials
-node scripts/setup-auth.mjs   # Create PAC auth profiles
-pac org who                   # Verify (no browser popup)
-```
+---
 
-See `00-environment-setup.instructions.md` for details.
+## Learn More
 
-## Visual Guide
+| Resource | Description |
+|----------|-------------|
+| [Visual Guide](docs/guide.html) | Interactive walkthrough with step breakdowns and portal links |
+| [Landing Page](docs/index.html) | High-level overview of the methodology and tech stack |
+| [Prototype Golden Path](docs/prototype-golden-path.md) | Full delivery sequence from planning to real providers |
+| [Agent Support](docs/agent-support.md) | Which files each coding agent reads and how to verify |
+| [Glossary](docs/glossary.md) | Power Platform terminology reference |
+| [Troubleshooting](TROUBLESHOOTING.md) | Common issues with PAC CLI, auth, connections, and deployment |
 
-Once you have the code on your machine, open [docs/guide.html](docs/guide.html) in your browser for an interactive visual walkthrough — tech stack overview, naming conventions, Power Apps Maker Portal links, and a detailed breakdown of each wizard step all in one page.
+---
 
-There is also [docs/index.html](docs/index.html) — a marketing-style landing page that gives a high-level overview of the methodology, tech stack, and value proposition.
+<details>
+<summary><strong>For coding agents — How this repo works</strong></summary>
 
-The short version is: plan first, prototype second, connect later.
-
-If you started in the guide and want the concise repo overview, come back here to [README.md](README.md).
-
-## What's Inside
-
-```
-PAppsCAFoundations/
-├── .github/
-│   └── instructions/                              # Canonical coding-agent instructions
-│       ├── 00-before-you-start.instructions.md    # Publisher, environments, solution setup
-│       ├── 00-environment-setup.instructions.md   # App Registration, 1Password, headless auth
-│       ├── 00a-business-problem-decomposition.instructions.md   # Decompose freeform business narratives
-│       ├── 00b-scope-refinement-and-solution-shaping.instructions.md # Refine scope, automation, Teams, reporting, governance
-│       ├── 00c-solution-concept-to-dataverse-plan.instructions.md    # Convert refined scope into Dataverse planning inputs
-│       ├── 00d-prototype-validation.instructions.md            # Validate UX with mock data before schema hardens
-│       ├── 01-scaffold.instructions.md            # Solution-first rules, project structure, tech stack
-│       ├── 02-connectors.instructions.md          # Data sources, Dataverse, SQL, O365, Custom APIs
-│       ├── 03-components.instructions.md          # React + Fluent UI v9 patterns, state management
-│       ├── 04-deployment.instructions.md          # CI/CD, pac code push, ALM, solution management
-│       ├── 05-testing.instructions.md             # Vitest, Playwright, MSW connector mocking
-│       ├── 06-security.instructions.md            # Auth, secrets, DLP, input validation
-│       ├── 07-dataverse-schema.instructions.md    # Tables, columns, option sets, relationships
-│       └── 08-copilot-studio.instructions.md      # Copilot Studio agent integration
-├── docs/
-│   ├── index.html                          # Marketing landing page (Fluent UI design)
-│   ├── guide.html                          # Interactive visual setup guide (sidebar walkthrough)
-│   └── prototype-golden-path.md            # End-to-end delivery sequence from planning to real providers
-├── scripts/
-│   ├── decrypt-secret.mjs                  # Decrypt AES-256-GCM encrypted secrets from .env.local
-│   ├── detect-agent.mjs                    # Cross-platform coding-agent detection via env vars
-│   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
-│   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
-│   ├── export-solution.mjs                 # Export unmanaged, refresh solution-source, optionally pack managed
-│   ├── generate-dataverse-plan.mjs         # Expand planning payloads into execution plans
-│   ├── op-pac.mjs                          # Cross-platform 1Password wrapper for pac commands
-│   ├── op-pac.sh                           # Legacy Bash wrapper for pac commands
-│   ├── pac-safe.mjs                        # Safe pac CLI wrapper with version and profile guards
-│   ├── patch-datasources-info.mjs          # Patch datasources-info.json after data source changes
-│   ├── pre-commit-hook.sh                  # Git pre-commit hook to block accidental secret leaks
-│   ├── register-dataverse-data-sources.mjs # Cross-platform Dataverse table registration via PAC
-│   ├── register-dataverse-data-sources.sh  # Register planned tables with pac and regenerate SDK
-│   ├── schema-plan.example.json            # Starter Dataverse planning artifact
-│   ├── seed-prototype-assets.mjs           # Generate domain contracts, mock providers, and feedback artifacts
-│   ├── setup-auth.mjs                      # Cross-platform auth setup (1Password or .env.local)
-│   ├── setup-auth.sh                       # Legacy Bash auth setup
-│   ├── setup-wizard.sh                     # Bash wrapper that delegates to the Node wizard
-│   ├── sync-foundations.mjs                # Cross-platform template sync entry point
-│   ├── sync-foundations.sh                 # Pull latest updates from the template repo
-│   ├── validate-schema-plan.mjs            # Validate planning payloads before provisioning
-│   └── tests/                              # Unit tests for scripts (connection discovery, scaffold, etc.)
-├── wizard/                                 # Cross-platform Node.js setup wizard (terminal)
-│   ├── index.mjs                           # Entry point + step orchestrator
-│   ├── lib/                                # Shared helpers (state, UI, shell, validation)
-│   ├── steps/                              # 10 step modules (01-prerequisites … 10-dataverse-plugin)
-├── wizard-ux/                              # ✨ Parallel browser-based setup experience
-│   ├── server/                             # Fastify API on 127.0.0.1:5174 (state, system, steps, SSE stream)
-│   ├── src/                                # Vite + React 19 + Fluent UI v9 + TanStack Query
-│   └── README.md                           # Architecture, security, and roadmap notes
-├── solution/                               # Power Platform solution artifacts
-├── .env                                    # 1Password secret references (safe to commit)
-├── .env.template                           # Template for teams not using 1Password
-├── .foundations-version.json               # Bundle/version metadata for downstream syncs
-├── .gitignore
-└── README.md
-```
-
-## How It Works
-
-This repo ships native guidance for four coding agents. Each reads the same architectural rules in its own format:
+### Agent entry points
 
 | Agent | Root Entry Point | Scoped Rules |
 |-------|-----------------|---------------|
@@ -311,31 +94,13 @@ This repo ships native guidance for four coding agents. Each reads the same arch
 | **Claude Code** | `CLAUDE.md` → imports `AGENTS.md` | `.claude/rules/*.md` |
 | **Cursor** | `AGENTS.md` | `.cursor/rules/*.mdc` |
 | **Codex** | `AGENTS.md` | Nested `AGENTS.md` in subdirectories |
-| **Cline / Aider** | `AGENTS.md` | (fallback — scoped rules not provided) |
 
-The `.github/instructions/` files are the canonical source. Claude, Cursor, and Codex projections are generated from them. See [docs/agent-support.md](docs/agent-support.md) for the full matrix and verification steps.
+The `.github/instructions/` files are the canonical source. Claude, Cursor, and Codex projections are generated from them via `npm run guidance:generate`. See [docs/agent-support.md](docs/agent-support.md) for details.
 
-### How agent guidance stays in sync
+### Dataverse-skills plugin scope split
 
-Every coding agent needs its instructions in a different format, but the underlying rules must be identical. Foundations solves this with a **single canonical source → multiple generated projections** model:
-
-1. **Canonical source** — `.github/instructions/*.instructions.md` (Copilot-native format with `applyTo` and `description` frontmatter). Plus the hand-authored root `AGENTS.md`.
-2. **Generated projections** — A manifest (`agent-guidance.config.json`) maps each canonical file to its Claude, Cursor, and Codex equivalents. A generator script reads the manifest and validates (or regenerates) the projected files:
-   - Claude Code: `CLAUDE.md` + `.claude/rules/*.md` (uses `paths` frontmatter)
-   - Cursor: `.cursor/rules/*.mdc` (uses `globs` and `description` frontmatter)
-   - Codex: nested `AGENTS.md` files in subdirectories (concise summaries + links)
-3. **Drift prevention** — `npm run guidance:check` fails if any projected file is missing or unmarked, so CI and contributors catch drift before it ships. `npm run guidance:generate` regenerates all projections.
-
-**The rule:** edit the canonical `.github/instructions/` files, then run `npm run guidance:generate`. Never edit `.claude/rules/`, `.cursor/rules/`, or nested `AGENTS.md` files directly — they carry a "do not edit" marker and will be overwritten.
-
-## Dataverse-skills Plugin — Strategic Alignment
-
-Foundations delegates all agent-side Dataverse environment operations to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin. This is an intentional architectural decision: the plugin provides battle-tested, MCP-first capabilities for schema provisioning, data operations, solution lifecycle, and environment administration that would be wasteful to reimplement.
-
-**Scope split:**
-
-| What | Owner |
-|------|-------|
+| Responsibility | Owner |
+|---|---|
 | Schema provisioning (tables, columns, relationships, option sets) | **Dataverse-skills plugin** (`dv-metadata`) |
 | Data operations (CRUD, bulk import, sample data) | **Dataverse-skills plugin** (`dv-data`, `dv-query`) |
 | Solution lifecycle (export, import, deploy) | **Dataverse-skills plugin** (`dv-solution`) |
@@ -346,89 +111,53 @@ Foundations delegates all agent-side Dataverse environment operations to the [mi
 | `pac code add-data-source` registration & TypeScript SDK generation | **This repo** |
 | Deployment settings & CI/CD | **This repo** |
 
-The planning workflow in this repo feeds *into* the plugin: after `generate-dataverse-plan.mjs` produces a structured provisioning plan, the agent uses `dv-metadata` to provision schema, then returns to `pac code add-data-source` to generate the TypeScript service layer.
+### What's inside
 
-**Install:** The wizard detects your coding agent and shows the correct command:
-- GitHub Copilot: `/plugin install dataverse@awesome-copilot`
-- Claude Code: `/plugin install dataverse@claude-plugins-official`
-
-**Prerequisites:** Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`
-
-If the plugin is not installed, the instruction files still contain enough guidance for agents to provision schema directly. The plugin is strongly recommended but not a hard requirement.
-
-## Dataverse Helper Flow
-
-Foundations now includes a reusable Dataverse execution layer that sits after prototype validation and before connector generation:
-
-Before this technical flow begins for a non-trivial app, use the narrative-first planning instructions to refine the business scope, derive the conceptual model, and validate that model through a mock-backed UX prototype. The Dataverse helper flow assumes those planning decisions have already been pressure-tested.
-
-```bash
-node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json
 ```
+PAppsCAFoundations/
+├── .github/instructions/       # Canonical coding-agent instructions (14 files)
+├── .claude/rules/              # Claude Code projections (auto-generated)
+├── .cursor/rules/              # Cursor projections (auto-generated)
+├── docs/                       # Visual guide, landing page, glossary, golden path
+├── scripts/                    # Dataverse helpers, auth, sync, agent detection
+├── wizard/                     # Terminal wizard (10 steps)
+├── wizard-ux/                  # Browser wizard (Fluent UI v9)
+├── AGENTS.md                   # Root agent directive
+├── CLAUDE.md                   # Claude Code entry point
+└── README.md                   # You are here
+```
+
+### Dataverse helper flow
 
 ```bash
 node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
 node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
+# → Agent uses dv-metadata to provision schema
 node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
 ```
 
-This gives downstream repos a standard way to validate the planning payload, materialize normalized execution plans, and register the final Dataverse tables with `pac code add-data-source`, which refreshes the generated connector output as each table is added.
+</details>
 
-If you want the full recommended sequence from planning payload to mock UX to real providers, follow [docs/prototype-golden-path.md](docs/prototype-golden-path.md).
+<details>
+<summary><strong>Licensing — Power Apps Code Apps</strong></summary>
 
-For later connector binding, prefer rerunning the wizard from the dedicated connector step:
+Code Apps are a **premium Power Apps feature**. Publishing (`pac code push`) requires one of:
 
-```bash
-node wizard/index.mjs --from 8
-```
+- **Power Apps Premium** per-user license, OR
+- **Power Apps Developer Plan** (free, individual use only), OR
+- **Microsoft 365 Developer Program** sandbox tenant (free, renewable)
 
-That path is designed for the point where the planning payload is stable enough that connection references and connection IDs are no longer guesses.
+If you're trying this for the first time, the [M365 Developer Program](https://developer.microsoft.com/microsoft-365/dev-program) gives you a sandbox tenant with Dataverse and App Registration permissions — which your corporate tenant may not allow.
 
-The `.mjs` entry points are the cross-platform defaults for macOS, Linux, and Windows. The `.sh` variants remain available as thin wrappers to those Node entry points so downstream repos do not drift into alternate behavior.
-
-The same rule now applies to auth helpers: prefer `node scripts/setup-auth.mjs` and `node scripts/op-pac.mjs` as the canonical cross-platform entry points.
-
-For solution ALM, prefer `node scripts/export-solution.mjs --name YourSolutionName --target dev` as the canonical export path. PAC profile selection is now repo-scoped and target-verified inside the helper instead of relying on generic profile names. It exports `solution/solution-unmanaged.zip`, rebuilds `solution-source/` for Git, and packs `solution/solution-managed.zip` for downstream import. Commit `solution-source/`; the zip files are gitignored build artifacts.
-
-## Staying Updated
-
-Projects created from this template can pull improvements (new instruction files, wizard fixes, security updates) without affecting project-specific code:
-
-```bash
-npm run sync:foundations            # Preview changes + apply
-npm run sync:foundations -- --dry-run   # Preview only, no changes
-```
-
-> **No `package.json` yet?** If you haven't run the scaffold step (Step 7 of the wizard), there won't be a root `package.json` and `npm run` commands will fail. Use the scripts directly instead:
->
-> ```bash
-> bash scripts/sync-foundations.sh          # macOS / Linux
-> node scripts/sync-foundations.mjs         # Any platform
-> ```
-
-**What gets synced:** `.github/instructions/`, `wizard/`, `wizard-ux/`, `scripts/`, `docs/`, `.env.template`, `.foundations-version.json`, `AGENTS.md`. The `wizard:ux` npm script is also auto-merged into your `package.json` so existing repos can run `npm run wizard:ux` immediately after syncing.
-
-**What is never touched:** `src/`, `package.json`, `power.config.json`, `.env.local`, `solution/`, `README.md`, `.gitignore`
-
-Each scaffolded project also gets a `.foundations-version.json` file so downstream repos can see which bundle version they currently have before syncing.
-
-The script fetches the latest template via `degit`, shows a diff of what changed, and asks for confirmation before applying. Changes are committed as a single `chore: sync foundations` commit.
+</details>
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on submitting issues, pull requests, and code standards.
-
-## Troubleshooting
-
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions to common issues with PAC CLI, authentication, 1Password, connections, and deployment.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for vulnerability reporting policy and security practices.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)
 
 ---
 
