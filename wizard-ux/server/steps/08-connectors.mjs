@@ -234,18 +234,8 @@ export default {
       defaultValue: state.CONNECTOR_BINDING_DEFERRED !== false,
     });
 
-    if (!hasSecret) {
-      questions.push({
-        id: 'PP_CLIENT_SECRET',
-        type: 'secret',
-        label: 'Client secret',
-        help: 'Needed once to create connection references in the selected solution. Not stored here — held in memory for this server only. If you entered this in Step 3, it may have been cleared by a server restart.',
-        required: true,
-        defaultValue: '',
-        showIf: { id: 'DEFER_CONNECTORS', equals: false },
-        savedHint: state.PP_CLIENT_SECRET ? 'Saved in Step 3 — re-enter if server was restarted' : undefined,
-      });
-    }
+    // Secret is never asked here — it's recovered from .env.local or 1Password.
+    // If recovery fails, apply() will direct the user back to Step 3.
 
     questions.push({
       id: 'REGISTER_DATA_SOURCES',
@@ -339,10 +329,8 @@ export default {
       };
     }
 
-    if (answers.PP_CLIENT_SECRET) {
-      setSecret(answers.PP_CLIENT_SECRET);
-    } else if (!hasUsableSecret()) {
-      throw new Error('Client secret is required to create connection references. Provide it or defer connector binding.');
+    if (!hasUsableSecret()) {
+      throw new Error('Client secret could not be recovered from .env.local or 1Password. Go back to Step 3 (App Registration) and re-enter your credentials.');
     }
 
     const connectorMap = new Map(COMMON_CONNECTORS.map((connector) => [connector.apiId, { ...connector }]));

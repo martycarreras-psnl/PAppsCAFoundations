@@ -1,6 +1,7 @@
 // Step 3 - App Registration. Browser-native collection with optional 1Password sync.
 import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { dirname, resolve, join } from 'node:path';
 import { platform } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { setSecret, hasUsableSecret } from '../lib/dataverse-bridge.mjs';
@@ -206,6 +207,24 @@ export default {
     if (answers.APPLICATION_USER_DONE !== true) throw new Error('Register the App Registration as an Application User in Dev before continuing.');
 
     setSecret(clientSecret);
+
+    // Persist encrypted secret to .env.local so it survives server restarts
+    try {
+      const CRYPTO = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
+      const envLocalPath = join(ROOT_DIR, '.env.local');
+      let envContent = existsSync(envLocalPath) ? readFileSync(envLocalPath, 'utf-8') : '';
+      const encrypted = CRYPTO.encrypt(clientSecret);
+      if (envContent.match(/^PP_CLIENT_SECRET=.*$/m)) {
+        envContent = envContent.replace(/^PP_CLIENT_SECRET=.*$/m, `PP_CLIENT_SECRET=${encrypted}`);
+      } else {
+        envContent += `${envContent.endsWith('\n') || !envContent ? '' : '\n'}PP_CLIENT_SECRET=${encrypted}\n`;
+      }
+      writeFileSync(envLocalPath, envContent, 'utf-8');
+      log.ok('Secret encrypted and saved to .env.local');
+    } catch (err) {
+      log.warn(`Could not persist secret to .env.local: ${err.message}`);
+    }
+
     log.ok('Credential values captured');
 
     if (use1Password) {
