@@ -96,7 +96,7 @@ export default async function stepPrerequisites() {
     ui.info('1Password CLI (op) — not found (optional)');
   }
 
-  // ── Python 3 (required for Dataverse-skills plugin) ──
+  // ── Python 3 (used by Dataverse-skills plugin) ──
   const pythonCmd = hasCommand('python3') ? 'python3' : hasCommand('python') ? 'python' : null;
   if (pythonCmd) {
     const pyVer = run(`${pythonCmd} --version`)?.replace('Python ', '') || '';
@@ -113,16 +113,8 @@ export default async function stepPrerequisites() {
     ui.line('  Install: https://www.python.org/downloads/');
   }
 
-  // ── pip / PowerPlatform-Dataverse-Client (optional check) ──
-  if (pythonCmd) {
-    const hasSdk = run(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
-    if (hasSdk) {
-      ui.ok('PowerPlatform-Dataverse-Client SDK — installed');
-    } else {
-      ui.info('PowerPlatform-Dataverse-Client SDK — not installed');
-      ui.line(`  Install: ${pythonCmd === 'python3' ? 'pip3' : 'pip'} install PowerPlatform-Dataverse-Client pandas`);
-    }
-  }
+  // Note: The Dataverse-skills plugin manages its own Python SDK installation
+  // via the dv-connect skill. No separate pip install needed here.
 
   stateSet('HAS_OP', hasOp);
 

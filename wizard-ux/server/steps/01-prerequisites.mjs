@@ -89,7 +89,7 @@ export default {
       log.info('1Password CLI not found (optional)');
     }
 
-    // Python 3 (required for Dataverse-skills plugin)
+    // Python 3 (used by Dataverse-skills plugin)
     let pythonCmd = null;
     if (hasCommand('python3')) pythonCmd = 'python3';
     else if (hasCommand('python')) pythonCmd = 'python';
@@ -114,28 +114,8 @@ export default {
       log.info('  → Then re-run this step to verify');
     }
 
-    // PowerPlatform-Dataverse-Client SDK (requires Python)
-    if (pythonCmd) {
-      let hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
-      if (!hasSdk) {
-        const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
-        log.info(`Installing PowerPlatform-Dataverse-Client and pandas via ${pip}…`);
-        const installResult = tryRun(`${pip} install PowerPlatform-Dataverse-Client pandas 2>&1`);
-        if (installResult) log.info(installResult.split('\n').pop() || '');
-        hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
-      }
-      if (hasSdk) {
-        checks.push({ name: 'Dataverse SDK', ok: true, value: 'installed', hint: null });
-        log.ok('PowerPlatform-Dataverse-Client SDK installed');
-      } else {
-        const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
-        checks.push({ name: 'Dataverse SDK', ok: false, value: null, hint: `Auto-install failed — run manually: ${pip} install PowerPlatform-Dataverse-Client pandas`, optional: true });
-        log.warn('PowerPlatform-Dataverse-Client SDK — auto-install failed');
-        log.info(`  → Run manually: ${pip} install PowerPlatform-Dataverse-Client pandas`);
-        log.info('  → Required by the Dataverse-skills plugin:');
-        log.info('    https://github.com/microsoft/Dataverse-skills');
-      }
-    }
+    // Note: The Dataverse-skills plugin manages its own Python SDK installation
+    // via the dv-connect skill. No separate pip install needed here.
 
     return {
       stateUpdate: { HAS_OP: hasOp, PYTHON_CMD: pythonCmd },
