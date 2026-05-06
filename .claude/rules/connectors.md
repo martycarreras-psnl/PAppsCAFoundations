@@ -14,5 +14,7 @@ Key rules:
 - Use the provider pattern: domain contract → mock provider → real provider (adapter over generated service)
 - Connection IDs are environment-specific — use deployment settings files for promotion
 - For local dev, use mock providers or `VITE_USE_MOCK=true`
+- Use `useOptimisticSave<T>` for all Dataverse mutations — Dataverse read replicas lag behind writes; naive invalidate-and-refetch shows stale data
+- Merge user input over cache on success instead of invalidating queries
 
 Full details: `.github/instructions/02-connectors.instructions.md`

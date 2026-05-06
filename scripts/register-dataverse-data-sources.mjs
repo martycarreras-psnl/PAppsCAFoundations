@@ -64,6 +64,7 @@ console.log(`Using PAC CLI: ${pacBin}`);
 console.log(`Registration plan: ${planPath}`);
 
 const failures = [];
+const registeredTables = [];
 
 for (const table of dataverseTables) {
   selectAndVerifyPacProfile({
@@ -93,6 +94,7 @@ for (const table of dataverseTables) {
   console.log(`>>> Registering Dataverse table: ${table}`);
   try {
     execFileSync(pacBin, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { stdio: 'inherit' });
+    registeredTables.push(table);
   } catch (err) {
     console.error(`FAILED to register table: ${table} — ${err.message}`);
     failures.push(table);
@@ -104,4 +106,58 @@ if (failures.length > 0) {
   process.exit(1);
 } else {
   console.log('Dataverse data sources registered successfully. Generated connector output was refreshed during registration.');
+}
+
+// ── Update field-metadata-cache.ts with registry entries for newly registered tables ──
+
+const fieldMetadataCachePath = path.resolve('src/services/field-metadata-cache.ts');
+
+if (registeredTables.length > 0 && fs.existsSync(fieldMetadataCachePath)) {
+  let cacheSource = fs.readFileSync(fieldMetadataCachePath, 'utf8');
+  let modified = false;
+
+  for (const table of registeredTables) {
+    // Derive the service class name from the entity set name.
+    // The PAC CLI capitalizes the first letter: msfttrp_trips → Msfttrp_tripsService
+    const serviceName = `${table.charAt(0).toUpperCase()}${table.slice(1)}Service`;
+    const importLine = `import { ${serviceName} } from '@/generated/services/${serviceName}';`;
+    const registryEntry = `  ${table}: ${serviceName} as unknown as MetadataServiceEntry,`;
+
+    // Add import if not already present
+    if (!cacheSource.includes(importLine)) {
+      // Insert after the last existing import or after the data-contracts import
+      const lastImportIndex = cacheSource.lastIndexOf('\nimport ');
+      if (lastImportIndex >= 0) {
+        const endOfLine = cacheSource.indexOf('\n', lastImportIndex + 1);
+        cacheSource = cacheSource.slice(0, endOfLine + 1) + importLine + '\n' + cacheSource.slice(endOfLine + 1);
+      } else {
+        cacheSource = importLine + '\n' + cacheSource;
+      }
+      modified = true;
+    }
+
+    // Add registry entry if not already present
+    if (!cacheSource.includes(`${table}:`)) {
+      const registryMarker = 'export const metadataServiceRegistry: Record<string, MetadataServiceEntry> = {';
+      const markerIndex = cacheSource.indexOf(registryMarker);
+      if (markerIndex >= 0) {
+        const insertPos = markerIndex + registryMarker.length;
+        cacheSource = cacheSource.slice(0, insertPos) + '\n' + registryEntry + cacheSource.slice(insertPos);
+        modified = true;
+      }
+    }
+  }
+
+  if (modified) {
+    fs.writeFileSync(fieldMetadataCachePath, cacheSource);
+    console.log(`Updated field-metadata-cache.ts with registry entries for: ${registeredTables.join(', ')}`);
+  }
+} else if (registeredTables.length > 0) {
+  // File doesn't exist — emit actionable TODOs
+  console.warn('\n⚠ src/services/field-metadata-cache.ts not found. Add the following manually:');
+  for (const table of registeredTables) {
+    const serviceName = `${table.charAt(0).toUpperCase()}${table.slice(1)}Service`;
+    console.warn(`    import { ${serviceName} } from '@/generated/services/${serviceName}';`);
+    console.warn(`    ${table}: ${serviceName} as unknown as MetadataServiceEntry,`);
+  }
 }

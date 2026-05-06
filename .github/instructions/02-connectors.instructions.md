@@ -330,3 +330,76 @@ useEffect(() => {
   }
 }, [currentPage, hasNextPage]);
 ```
+
+## Optimistic Cache Updates for Dataverse Mutations
+
+Dataverse read replicas lag behind writes by up to several seconds. A naive invalidate-and-refetch pattern after a mutation will show stale data — the user saves, the list re-fetches, but the re-fetch returns the pre-mutation snapshot.
+
+Use this pattern for every mutation:
+
+1. `onMutate`: cancel in-flight list queries so stale data doesn't overwrite the optimistic update.
+2. `onSuccess`: for updates, merge the user's input over the existing cache entry (the input is the source of truth, not the re-fetch). For creates, use the server result (which has the new `id`). Upsert into the list cache.
+
+### Generic `useOptimisticSave<T>` hook
+
+The `seed-prototype-assets.mjs` scaffold generates this hook in `src/hooks/usePrototypeData.ts`. For manually created hooks, follow the same shape:
+
+```ts
+function useOptimisticSave<T extends { id: string }>({
+  listKey, itemKey, saveFn,
+}: {
+  listKey: readonly string[];
+  itemKey: (id: string) => readonly string[];
+  saveFn: (input: Partial<T>) => Promise<T>;
+}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveFn,
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: listKey });
+      if (input.id) await queryClient.cancelQueries({ queryKey: itemKey(input.id) });
+    },
+    onSuccess: (serverRecord, input) => {
+      const merged = input.id
+        ? { ...(queryClient.getQueryData<T>(itemKey(input.id)) ?? serverRecord), ...input } as T
+        : serverRecord;
+      queryClient.setQueryData(itemKey(merged.id), merged);
+      queryClient.setQueryData<T[]>(listKey, (old) => {
+        if (!old) return [merged];
+        const idx = old.findIndex((item) => item.id === merged.id);
+        return idx >= 0
+          ? old.map((item) => (item.id === merged.id ? merged : item))
+          : [merged, ...old];
+      });
+    },
+  });
+}
+```
+
+New entity hooks become one-liners:
+
+```ts
+export function useSaveTrip() {
+  return useOptimisticSave<Trip>({
+    listKey: prototypeQueryKeys.trips,
+    itemKey: prototypeQueryKeys.tripById,
+    saveFn: (input) => appDataProvider.trips.save(input),
+  });
+}
+```
+
+### Why not `invalidateQueries`?
+
+`queryClient.invalidateQueries()` triggers a background re-fetch. If the Dataverse read replica hasn't caught up, the re-fetch returns stale data and overwrites the optimistic update. The merge-on-success pattern avoids this entirely — the cache is updated from the mutation input, and a background re-fetch only happens when `staleTime` expires (by which point the replica has caught up).
+
+### When to fall back to `invalidateQueries`
+
+Use `invalidateQueries` only for operations where the server produces significant derived data (e.g., a server-side calculation or a cascade update) that the client can't predict. In those cases, add a short delay before invalidating:
+
+```ts
+onSuccess: () => {
+  setTimeout(() => {
+    queryClient.invalidateQueries({ queryKey: listKey });
+  }, 2000); // Give the read replica time to catch up
+},
+```

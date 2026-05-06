@@ -27,6 +27,10 @@ export interface DataverseFieldMetadata {
   displayName?: string;
   requiredLevel: DataverseFieldRequiredLevel;
   isRequired: boolean; // true when requiredLevel is 'application' or 'system'
+  maxLength?: number;   // String/Memo columns
+  minValue?: number;    // Money/Decimal/Integer columns
+  maxValue?: number;    // Money/Decimal/Integer columns
+  precision?: number;   // Money/Decimal columns
 }
 
 export interface FieldMetadataRepository {
@@ -204,6 +208,47 @@ Call sites stay tiny and never mention the prefix:
 ```tsx
 const { Field } = buildHelpers('prefix_vendors')
 <Field field="vendorName" label="Vendor Name" value={name} onChange={setName} />
+```
+
+---
+
+## Field Constraint Enforcement
+
+Form field helpers must apply Dataverse column constraints as HTML attributes when the metadata is available:
+
+- **Text inputs and textareas:** set `maxLength={metadata.maxLength}` when present
+- **Number inputs:** set `min={metadata.minValue}`, `max={metadata.maxValue}`, and `step` derived from `metadata.precision` (e.g. precision 2 → step `"0.01"`)
+
+These properties are available on `AttributeMetadata` records returned by `getMetadata()` but are **not typed** in the Power Apps SDK's TypeScript declarations. Access them via untyped cast in `field-metadata-cache.ts`:
+
+```ts
+maxLength: typeof attr.MaxLength === 'number' ? attr.MaxLength : undefined,
+minValue: typeof attr.MinValue === 'number' ? attr.MinValue : undefined,
+maxValue: typeof attr.MaxValue === 'number' ? attr.MaxValue : undefined,
+precision: typeof attr.Precision === 'number' ? attr.Precision : undefined,
+```
+
+Example form helper applying constraints:
+
+```tsx
+function Field({ field, label, value, onChange, explicitFieldLogicalName }: {
+  field: string; label: string; value: string; onChange: (v: string) => void; explicitFieldLogicalName?: string;
+}) {
+  const logical = explicitFieldLogicalName ?? toDataverseFieldName(field)
+  const { data: metadata } = useDataverseFieldMetadata(table, logical ?? '')
+  const required = metadata?.isRequired ?? false
+  return (
+    <div className="grid gap-1.5">
+      <DataverseFieldLabel tableLogicalName={table} fieldLogicalName={logical} fallback={label} />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-required={required || undefined}
+        maxLength={metadata?.maxLength}
+      />
+    </div>
+  )
+}
 ```
 
 ---
