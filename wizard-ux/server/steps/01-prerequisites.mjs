@@ -103,11 +103,15 @@ export default {
       } else {
         checks.push({ name: 'Python', ok: false, value: pyVer, hint: 'Python 3+ required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
         log.warn(`Python ${pyVer} — Python 3+ required for Dataverse-skills plugin`);
+        log.info('  → Install Python 3: https://www.python.org/downloads/');
+        log.info('  → Then re-run this step to verify');
         pythonCmd = null;
       }
     } else {
       checks.push({ name: 'Python', ok: false, value: null, hint: 'Required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
       log.warn('Python 3 — not found (required for Dataverse-skills plugin)');
+      log.info('  → Install Python 3: https://www.python.org/downloads/');
+      log.info('  → Then re-run this step to verify');
     }
 
     // PowerPlatform-Dataverse-Client SDK (requires Python)
@@ -119,7 +123,11 @@ export default {
       } else {
         const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
         checks.push({ name: 'Dataverse SDK', ok: false, value: null, hint: `Not installed — run: ${pip} install PowerPlatform-Dataverse-Client pandas`, optional: true });
-        log.info(`PowerPlatform-Dataverse-Client SDK — not installed (run: ${pip} install PowerPlatform-Dataverse-Client pandas)`);
+        log.warn(`PowerPlatform-Dataverse-Client SDK — not installed`);
+        log.info(`  → Install: ${pip} install PowerPlatform-Dataverse-Client pandas`);
+        log.info('  → Required by the Dataverse-skills plugin:');
+        log.info('    https://github.com/microsoft/Dataverse-skills');
+        log.info('  → After installing, re-run this step to verify');
       }
     }
 

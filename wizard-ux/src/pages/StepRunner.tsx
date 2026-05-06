@@ -208,10 +208,14 @@ export function StepRunner() {
     }
   }, [stream.status, qc, stepNumber]);
 
-  // Auto-advance to next step after success
+  // Auto-advance to next step after success — skip when there are warnings
+  const hasWarnings = useMemo(
+    () => stream.lines.some((l) => l.stream === 'stderr'),
+    [stream.lines],
+  );
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (stream.status === 'done') {
+    if (stream.status === 'done' && !hasWarnings) {
       const total = stepsQ.data?.totalSteps ?? 9;
       autoAdvanceRef.current = setTimeout(() => {
         if (stepNumber >= total) navigate('/summary');
@@ -277,6 +281,7 @@ export function StepRunner() {
   // Single smart CTA label
   const ctaLabel = (() => {
     if (isRunning) return meta?.readOnly ? 'Checking…' : 'Running…';
+    if (isComplete && hasWarnings) return isLastStep ? 'Finish' : 'Continue';
     if (isComplete) return isLastStep ? 'Finish' : 'Continuing…';
     if (status === 'done' && hasUnsavedChanges) return 'Save & re-run';
     if (meta?.readOnly) return 'Run checks';
@@ -431,10 +436,14 @@ export function StepRunner() {
                   <CheckmarkCircleFilled className={s.successIcon} />
                   <div className={s.successText}>
                     <Body1 style={{ fontWeight: 600 }}>
-                      {isLastStep ? 'All steps complete!' : 'Step complete'}
+                      {isLastStep ? 'All steps complete!'
+                        : hasWarnings ? 'Step complete — review items above'
+                        : 'Step complete'}
                     </Body1>
                     <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                      {isLastStep ? 'Heading to summary…' : `Moving to step ${stepNumber + 1}…`}
+                      {isLastStep ? 'Heading to summary…'
+                        : hasWarnings ? 'Some items need attention. Continue when ready.'
+                        : `Moving to step ${stepNumber + 1}…`}
                     </Caption1>
                   </div>
                   <Button
