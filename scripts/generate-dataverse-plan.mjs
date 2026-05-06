@@ -128,14 +128,72 @@ function main() {
     ],
   };
 
+  // Plugin-compatible provisioning summary for dv-metadata consumption
+  const pluginPlanPath = resolvePlannedPath(
+    provisioningEntries,
+    /plugin|dv-metadata/i,
+    'dataverse/provision-plugin.plan.json',
+  );
+  const pluginPlan = {
+    generatedAt: new Date().toISOString(),
+    sourcePlan: relativePath(resolvedPath),
+    description:
+      'Structured provisioning plan for the Dataverse-skills plugin (dv-metadata). ' +
+      'Feed this to the agent: "Provision the schema described in dataverse/provision-plugin.plan.json".',
+    sequence: [
+      { phase: 1, action: 'Create global option sets', items: collectGlobalOptionSets(tables) },
+      {
+        phase: 2,
+        action: 'Create tables with primary name columns',
+        items: tables.map((t) => ({
+          schemaName: t.schemaName,
+          displayName: t.displayName,
+          logicalName: t.logicalSingularName,
+          ownership: t.ownership || 'UserOwned',
+          primaryName: t.primaryName,
+        })),
+      },
+      {
+        phase: 3,
+        action: 'Add columns to tables',
+        items: tables.flatMap((t) =>
+          t.columns.map((c) => ({
+            table: t.logicalSingularName,
+            column: c.schemaName || c.logicalName,
+            type: c.type,
+            globalOptionSetName: c.globalOptionSetName || undefined,
+          })),
+        ),
+      },
+      {
+        phase: 4,
+        action: 'Create relationships',
+        items: relationships.map((r) => ({
+          type: r.type,
+          from: r.fromTable,
+          to: r.toTable,
+          schemaName: r.schemaName,
+        })),
+      },
+      { phase: 5, action: 'PublishAllXml' },
+      {
+        phase: 6,
+        action: 'Register data sources (pac code add-data-source)',
+        tables: dataverseTables,
+      },
+    ],
+  };
+
   writeJson(tablesPlanPath, tablesPlan);
   writeJson(relationshipsPlanPath, relationshipsPlan);
   writeJson(registrationPlanPath, registrationPlan);
+  writeJson(pluginPlanPath, pluginPlan);
 
   console.log(`Dataverse plans generated from ${relativePath(resolvedPath)}`);
   console.log(`- ${relativePath(tablesPlanPath)}`);
   console.log(`- ${relativePath(relationshipsPlanPath)}`);
   console.log(`- ${relativePath(registrationPlanPath)}`);
+  console.log(`- ${relativePath(pluginPlanPath)} (for Dataverse-skills plugin)`);
 }
 
 main();

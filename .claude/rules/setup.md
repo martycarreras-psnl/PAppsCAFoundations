@@ -10,5 +10,6 @@ Complete these manual steps in the Power Platform Admin Center and Maker Portal 
 5. **Create connections** in each environment for every connector the app uses. Record Connection IDs.
 6. **Register the App Registration** as an Application User in each environment.
 7. **Verify** with `pac auth select`, `pac org who`, `pac solution list`.
+8. **Install the Dataverse-skills plugin** — `/plugin install dataverse@claude-plugins-official`. Requires Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`. Verify with "Connect to Dataverse".
 
 See the canonical file at `.github/instructions/00-before-you-start.instructions.md` for the full checklist and Project Values table.

@@ -70,6 +70,42 @@ These are enforced by the detailed instruction files but must be respected even 
 6. **No secrets in source.** No tokens, client secrets, or connection strings in committed files. See [.github/instructions/06-security.instructions.md](.github/instructions/06-security.instructions.md).
 7. **Plan before schema.** For non-trivial apps, complete the narrative planning and prototype validation phases before provisioning Dataverse tables or binding real connectors.
 
+## Dataverse-skills Plugin Integration
+
+For Dataverse schema provisioning, data operations, solution lifecycle, and environment administration, this template defers to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin. That plugin teaches coding agents to use the Dataverse MCP server, Python SDK, and PAC CLI through specialist skills (`dv-metadata`, `dv-data`, `dv-query`, `dv-solution`, `dv-admin`, `dv-security`).
+
+### Scope split
+
+| Responsibility | Owner |
+|---|---|
+| Schema provisioning (tables, columns, relationships, option sets) | **Dataverse-skills plugin** (`dv-metadata`) |
+| Data operations (CRUD, bulk import, sample data) | **Dataverse-skills plugin** (`dv-data`, `dv-query`) |
+| Solution lifecycle (export, import, deploy) | **Dataverse-skills plugin** (`dv-solution`) |
+| Environment admin (bulk delete, settings, security roles) | **Dataverse-skills plugin** (`dv-admin`, `dv-security`) |
+| Business planning workflow (00a → 00b → 00c → 00d) | **This repo** |
+| Planning artifact validation & generation | **This repo** (`validate-schema-plan.mjs`, `generate-dataverse-plan.mjs`) |
+| Code App scaffold (`pac code init`, Vite, Fluent UI) | **This repo** |
+| Connector adapter pattern & `pac code add-data-source` | **This repo** |
+| Form field metadata pattern (`DataverseFieldLabel`) | **This repo** |
+| Deployment settings & CI/CD | **This repo** |
+
+### When the plugin is installed
+
+If the Dataverse-skills plugin is installed, prefer it for all Dataverse environment operations. The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
+
+### When the plugin is NOT installed
+
+The instruction files in this repo (`07-dataverse-schema.instructions.md`) still contain enough guidance for agents to provision schema via the Web API directly. The plugin is strongly recommended but not a hard requirement.
+
+### Install commands
+
+- **GitHub Copilot**: `/plugin install dataverse@awesome-copilot`
+- **Claude Code**: `/plugin install dataverse@claude-plugins-official`
+
+### Additional prerequisites
+
+The plugin requires **Python 3** and the **PowerPlatform-Dataverse-Client** SDK (`pip install PowerPlatform-Dataverse-Client pandas`). The setup wizard checks for these.
+
 ## When In Doubt
 
 If the user's request is ambiguous about whether they want a Code App or a generic web app, **ask**. Do not silently produce a generic app. The entire value of this template is its Code-App specificity.

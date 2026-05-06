@@ -18,6 +18,7 @@ A **GitHub template repository** with opinionated, comprehensive coding-agent in
 | **Git** | 2.30+ | For template cloning and version control |
 | **.NET SDK** | 8.0+ | Required for PAC CLI installation |
 | **PAC CLI** | 2.2.x | `dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1` |
+| **Python** | 3.9+ | Required for the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin |
 | **Power Platform** | Access to at least one environment with Dataverse enabled | See licensing note below |
 | **1Password CLI** | Optional | Recommended for secret management (`op`) |
 
@@ -189,7 +190,7 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 
 ### What the wizard does
 
-1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, 1Password CLI
+1. **Checks your machine** — Node.js, Git, .NET, PAC CLI, Python 3, 1Password CLI
 2. **Collects project identity** — publisher prefix, solution name, app name
 3. **Guides you through the remaining portal-only steps** — App Registration, Application User setup, feature toggles, and other values the wizard cannot create for you
 4. **Collects environment URLs** — Dev (required), Test, Prod (optional)
@@ -198,6 +199,7 @@ For the recommended end-to-end workflow, see [docs/prototype-golden-path.md](doc
 7. **Scaffolds your Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, configured per team standards, plus prototype assets seeded from the planning payload. Includes a `vitest.config.ts`, test setup, and smoke tests that the wizard runs automatically to verify the scaffold is healthy before proceeding.
 8. **Binds connectors and data sources later** — discovers existing environment connections where possible, creates connection references, and moves the app into connected mode only when the prototype is stable. Starts with the seven most common connectors as a checklist, then loops on *"Add another connector by URL or apiId"* so you can drop in Approvals, Outlook Tasks, custom connectors, or anything else by pasting its Maker Portal URL.
 9. **Builds, verifies, and optionally deploys** — after prototype validation and connector binding are complete
+10. **Dataverse-skills plugin** — detects your coding agent, shows the correct install command, and checks Python SDK prerequisites
 
 Connector setup is intentionally deferred. The expected next move after scaffold is `npm run dev:local`, not collecting connection IDs.
 
@@ -262,6 +264,7 @@ PAppsCAFoundations/
 │   └── prototype-golden-path.md            # End-to-end delivery sequence from planning to real providers
 ├── scripts/
 │   ├── decrypt-secret.mjs                  # Decrypt AES-256-GCM encrypted secrets from .env.local
+│   ├── detect-agent.mjs                    # Cross-platform coding-agent detection via env vars
 │   ├── discover-copilot-connection.mjs     # Cross-platform Copilot Studio connection discovery
 │   ├── discover-copilot-connection.sh      # Resolve Copilot Studio connection IDs safely
 │   ├── export-solution.mjs                 # Export unmanaged, refresh solution-source, optionally pack managed
@@ -285,7 +288,7 @@ PAppsCAFoundations/
 ├── wizard/                                 # Cross-platform Node.js setup wizard (terminal)
 │   ├── index.mjs                           # Entry point + step orchestrator
 │   ├── lib/                                # Shared helpers (state, UI, shell, validation)
-│   └── steps/                              # 9 step modules (01-prerequisites … 08-connectors + deploy)
+│   ├── steps/                              # 10 step modules (01-prerequisites … 10-dataverse-plugin)
 ├── wizard-ux/                              # ✨ Parallel browser-based setup experience
 │   ├── server/                             # Fastify API on 127.0.0.1:5174 (state, system, steps, SSE stream)
 │   ├── src/                                # Vite + React 19 + Fluent UI v9 + TanStack Query
@@ -324,6 +327,34 @@ Every coding agent needs its instructions in a different format, but the underly
 3. **Drift prevention** — `npm run guidance:check` fails if any projected file is missing or unmarked, so CI and contributors catch drift before it ships. `npm run guidance:generate` regenerates all projections.
 
 **The rule:** edit the canonical `.github/instructions/` files, then run `npm run guidance:generate`. Never edit `.claude/rules/`, `.cursor/rules/`, or nested `AGENTS.md` files directly — they carry a "do not edit" marker and will be overwritten.
+
+## Dataverse-skills Plugin — Strategic Alignment
+
+Foundations delegates all agent-side Dataverse environment operations to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin. This is an intentional architectural decision: the plugin provides battle-tested, MCP-first capabilities for schema provisioning, data operations, solution lifecycle, and environment administration that would be wasteful to reimplement.
+
+**Scope split:**
+
+| What | Owner |
+|------|-------|
+| Schema provisioning (tables, columns, relationships, option sets) | **Dataverse-skills plugin** (`dv-metadata`) |
+| Data operations (CRUD, bulk import, sample data) | **Dataverse-skills plugin** (`dv-data`, `dv-query`) |
+| Solution lifecycle (export, import, deploy) | **Dataverse-skills plugin** (`dv-solution`) |
+| Environment admin (bulk delete, settings, security roles) | **Dataverse-skills plugin** (`dv-admin`, `dv-security`) |
+| Business planning workflow (00a → 00b → 00c → 00d) | **This repo** |
+| Planning artifact validation & generation | **This repo** |
+| Code App scaffold, connector adapters, form field pattern | **This repo** |
+| `pac code add-data-source` registration & TypeScript SDK generation | **This repo** |
+| Deployment settings & CI/CD | **This repo** |
+
+The planning workflow in this repo feeds *into* the plugin: after `generate-dataverse-plan.mjs` produces a structured provisioning plan, the agent uses `dv-metadata` to provision schema, then returns to `pac code add-data-source` to generate the TypeScript service layer.
+
+**Install:** The wizard detects your coding agent and shows the correct command:
+- GitHub Copilot: `/plugin install dataverse@awesome-copilot`
+- Claude Code: `/plugin install dataverse@claude-plugins-official`
+
+**Prerequisites:** Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`
+
+If the plugin is not installed, the instruction files still contain enough guidance for agents to provision schema directly. The plugin is strongly recommended but not a hard requirement.
 
 ## Dataverse Helper Flow
 

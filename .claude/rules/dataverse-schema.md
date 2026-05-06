@@ -17,4 +17,17 @@ Key rules:
 - Schema mistakes are the most expensive to fix after data exists — plan first
 - If the planning artifact is not yet stable, return to upstream planning instructions
 
+## Preferred provisioning mechanism
+
+If the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin is installed, use it for all schema provisioning:
+- `dv-metadata` for tables, columns, relationships, option sets (Python SDK, idempotent, handles propagation delays)
+- `dv-solution` for solution lifecycle (export, import, promote)
+- `dv-security` for role assignment
+- `dv-data` for seeding data, bulk import
+
+The planning workflow in this repo feeds INTO the plugin's execution. After `dv-metadata` provisions schema, return to `pac code add-data-source` registration to generate TypeScript services.
+
+Install: `/plugin install dataverse@claude-plugins-official`
+Prerequisites: Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`
+
 Full details: `.github/instructions/07-dataverse-schema.instructions.md`

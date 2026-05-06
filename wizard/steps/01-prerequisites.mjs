@@ -96,6 +96,34 @@ export default async function stepPrerequisites() {
     ui.info('1Password CLI (op) — not found (optional)');
   }
 
+  // ── Python 3 (required for Dataverse-skills plugin) ──
+  const pythonCmd = hasCommand('python3') ? 'python3' : hasCommand('python') ? 'python' : null;
+  if (pythonCmd) {
+    const pyVer = run(`${pythonCmd} --version`)?.replace('Python ', '') || '';
+    const pyMajor = parseInt(pyVer, 10);
+    if (pyMajor >= 3) {
+      ui.ok(`Python ${pyVer}`);
+      stateSet('PYTHON_CMD', pythonCmd);
+    } else {
+      ui.warn(`Python ${pyVer} — Python 3+ required for Dataverse-skills plugin`);
+      ui.line('  Install: https://www.python.org/downloads/');
+    }
+  } else {
+    ui.warn('Python 3 — not found (required for Dataverse-skills plugin)');
+    ui.line('  Install: https://www.python.org/downloads/');
+  }
+
+  // ── pip / PowerPlatform-Dataverse-Client (optional check) ──
+  if (pythonCmd) {
+    const hasSdk = run(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
+    if (hasSdk) {
+      ui.ok('PowerPlatform-Dataverse-Client SDK — installed');
+    } else {
+      ui.info('PowerPlatform-Dataverse-Client SDK — not installed');
+      ui.line(`  Install: ${pythonCmd === 'python3' ? 'pip3' : 'pip'} install PowerPlatform-Dataverse-Client pandas`);
+    }
+  }
+
   stateSet('HAS_OP', hasOp);
 
   ui.line('');

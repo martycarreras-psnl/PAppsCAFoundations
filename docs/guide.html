@@ -652,6 +652,9 @@
       <button class="nav-item" data-target="ref-dataverse" onclick="navTo(this)">
         <span class="nav-icon">🗄️</span> Dataverse Schema
       </button>
+      <button class="nav-item" data-target="ref-dataverse-plugin" onclick="navTo(this)">
+        <span class="nav-icon">🔌</span> Dataverse-skills Plugin
+      </button>
       <button class="nav-item" data-target="ref-copilot-studio" onclick="navTo(this)">
         <span class="nav-icon">🤖</span> Copilot Studio
       </button>
@@ -1774,7 +1777,56 @@ if (name.length > 200) return 'Max 200 characters';
 ❌  IdeaStatus                (no prefix — collides)
 ❌  mybrn_IdeaStatus          (camelCase — use all lowercase)</pre>
 
-      <p>See <code>.github/instructions/07-dataverse-schema.instructions.md</code> for idempotent setup scripts, column creation patterns, and relationship modeling.</p>
+      <p>See <code>.github/instructions/07-dataverse-schema.instructions.md</code> for column creation patterns, relationship modeling, and the complete provisioning sequence.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">🔌</span>
+        <div><strong>Dataverse-skills plugin recommended.</strong> Foundations delegates schema provisioning to the <a href="https://github.com/microsoft/Dataverse-skills" target="_blank" rel="noopener">microsoft/Dataverse-skills</a> plugin. The plugin handles idempotent table/column creation, metadata propagation delays, and error recovery through the Python SDK and MCP server. See the section below.</div>
+      </div>
+    </section>
+
+    <!-- Reference: Dataverse-skills Plugin -->
+    <section class="section" id="ref-dataverse-plugin">
+      <h2 class="section-title">🔌 Dataverse-skills Plugin</h2>
+      <p class="section-subtitle">Strategic alignment with <a href="https://github.com/microsoft/Dataverse-skills" target="_blank" rel="noopener">microsoft/Dataverse-skills</a> — the best-practice mechanism for agent-driven Dataverse operations.</p>
+
+      <h4>Why a plugin instead of built-in scripts?</h4>
+      <p style="margin-bottom:16px;">Foundations is a Code App template — it owns the planning workflow, scaffold, connector adapters, and form field patterns. Dataverse environment operations (schema provisioning, data seeding, solution lifecycle, admin tasks) are better served by a dedicated, community-maintained plugin that evolves with the Dataverse SDK and MCP server.</p>
+
+      <h4>Scope Split</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Responsibility</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Schema provisioning (tables, columns, relationships, option sets)</td><td><strong>Dataverse-skills plugin</strong> (<code>dv-metadata</code>)</td></tr>
+          <tr><td>Data operations (CRUD, bulk import, sample data)</td><td><strong>Dataverse-skills plugin</strong> (<code>dv-data</code>, <code>dv-query</code>)</td></tr>
+          <tr><td>Solution lifecycle (export, import, deploy)</td><td><strong>Dataverse-skills plugin</strong> (<code>dv-solution</code>)</td></tr>
+          <tr><td>Environment admin (bulk delete, settings, roles)</td><td><strong>Dataverse-skills plugin</strong> (<code>dv-admin</code>, <code>dv-security</code>)</td></tr>
+          <tr><td>Business planning workflow (00a → 00d)</td><td><strong>This repo</strong></td></tr>
+          <tr><td>Code App scaffold, Fluent UI, Vite</td><td><strong>This repo</strong></td></tr>
+          <tr><td>Connector adapter pattern &amp; <code>pac code add-data-source</code></td><td><strong>This repo</strong></td></tr>
+          <tr><td>Form field metadata pattern (<code>DataverseFieldLabel</code>)</td><td><strong>This repo</strong></td></tr>
+        </tbody>
+      </table></div>
+
+      <h4 style="margin-top:var(--s5);">Install</h4>
+      <p style="margin-bottom:8px;">The wizard (Step 10) detects your coding agent and shows the correct command:</p>
+      <pre>GitHub Copilot:  /plugin install dataverse@awesome-copilot
+Claude Code:     /plugin install dataverse@claude-plugins-official</pre>
+      <p style="margin-top:8px;">Prerequisites: <code>python3</code> + <code>pip install PowerPlatform-Dataverse-Client pandas</code></p>
+
+      <h4 style="margin-top:var(--s5);">How It Flows Together</h4>
+      <ol style="margin-left:20px; margin-bottom:16px; line-height:2;">
+        <li>Plan the business problem (00a → 00c) → <code>dataverse/planning-payload.json</code></li>
+        <li>Validate &amp; generate plans → <code>node scripts/generate-dataverse-plan.mjs</code></li>
+        <li>Provision schema → agent uses <code>dv-metadata</code> from the plugin</li>
+        <li>Register data sources → <code>pac code add-data-source</code> generates TypeScript SDK</li>
+        <li>Build the UI with generated services, Fluent UI, TanStack Query</li>
+      </ol>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <div>If the plugin is not installed, Foundations' instruction files still contain enough guidance for direct Web API provisioning. The plugin is strongly recommended but not a hard requirement.</div>
+      </div>
     </section>
 
     <!-- Reference: Copilot Studio -->

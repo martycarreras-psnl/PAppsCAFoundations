@@ -21,9 +21,10 @@ import stepSolution from './steps/06-solution.mjs';
 import stepScaffold from './steps/07-scaffold.mjs';
 import stepConnectors from './steps/08-connectors.mjs';
 import stepVerifyAndDeploy from './steps/09-verify-deploy.mjs';
+import stepDataversePlugin from './steps/10-dataverse-plugin.mjs';
 
 // Increment when step order changes to detect stale resume state
-const WIZARD_VERSION = 3;
+const WIZARD_VERSION = 4;
 
 const steps = [
   stepPrerequisites,
@@ -35,6 +36,7 @@ const steps = [
   stepScaffold,
   stepConnectors,
   stepVerifyAndDeploy,
+  stepDataversePlugin,
 ];
 
 async function main() {

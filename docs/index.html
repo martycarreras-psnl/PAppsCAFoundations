@@ -2552,8 +2552,8 @@ h4 { font-size: 1.1rem; }
         <div class="timeline-marker">5</div>
         <div class="timeline-content">
           <h4>Schema Provision & Connector Binding</h4>
-          <p>Execute the golden sequence: Option Sets → Tables → Columns → Lookups → Security Roles → Publish → Register Data Sources. Every API call includes the solution context header. Scripts are re-runnable and idempotent.</p>
-          <span class="timeline-tag">Instruction: 07 + helper scripts</span>
+          <p>Execute the golden sequence: Option Sets → Tables → Columns → Lookups → Security Roles → Publish → Register Data Sources. Foundations generates a structured provisioning plan, then the <a href="https://github.com/microsoft/Dataverse-skills" target="_blank" rel="noopener" style="color:var(--brand-primary);">Dataverse-skills plugin</a> handles the actual provisioning through its <code>dv-metadata</code> skill — idempotent, error-aware, and MCP-native.</p>
+          <span class="timeline-tag">Instruction: 07 + Dataverse-skills plugin</span>
         </div>
       </div>
       <div class="timeline-step">
@@ -2575,9 +2575,9 @@ h4 { font-size: 1.1rem; }
   <div class="container">
     <div class="section-header fade-in">
       <span class="section-label">The Setup Wizard</span>
-      <h2>Nine Steps. <span class="gradient-text">Terminal or Browser.</span></h2>
+      <h2>Ten Steps. <span class="gradient-text">Terminal or Browser.</span></h2>
       <p class="subtitle">
-        Same `.wizard-state.json`, same opinionated sequence — pick the surface that fits the moment. Every step is self-contained, idempotent, and re-runnable. Every decision lands in audit-friendly state on disk. Smart paste handling means you never hand-edit a URL again.
+        Same `.wizard-state.json`, same opinionated sequence — pick the surface that fits the moment. Every step is self-contained, idempotent, and re-runnable. Every decision lands in audit-friendly state on disk. Smart paste handling means you never hand-edit a URL again. Step 10 detects your coding agent and shows the exact Dataverse-skills plugin install command.
       </p>
     </div>
 
@@ -2659,6 +2659,13 @@ h4 { font-size: 1.1rem; }
             <p>Built-in change tracking, audit logging, and data retention policies. Your compliance team will thank you for not building this from scratch.</p>
           </div>
         </li>
+        <li>
+          <div class="feature-check">✓</div>
+          <div class="feature-text">
+            <h4>Agent-Native with Dataverse-skills</h4>
+            <p>Schema provisioning, data operations, and solution lifecycle are handled by the <a href="https://github.com/microsoft/Dataverse-skills" target="_blank" rel="noopener" style="color:var(--brand-primary);">Dataverse-skills plugin</a> — a battle-tested, MCP-first toolkit that teaches your coding agent to drive Dataverse through natural language. Foundations plans, the plugin provisions.</p>
+          </div>
+        </li>
       </ul>
 
       <div class="feature-visual fade-in-right">
@@ -2692,6 +2699,14 @@ h4 { font-size: 1.1rem; }
             <div class="arch-layer-text">
               <strong>Generated SDK + Dataverse</strong>
               <span>Auto-generated TypeScript from pac code add-data-source</span>
+            </div>
+          </div>
+          <div class="arch-connector">↕</div>
+          <div class="arch-layer">
+            <div class="arch-layer-icon" style="background: rgba(216,59,1,0.1); color: var(--accent-orange);">🔌</div>
+            <div class="arch-layer-text">
+              <strong>Dataverse-skills Plugin</strong>
+              <span>Agent-driven schema, data, solutions via MCP + Python SDK</span>
             </div>
           </div>
         </div>

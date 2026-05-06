@@ -137,41 +137,34 @@ Skipping step 6 means users with only Basic User cannot access your custom table
 
 **Every Dataverse Web API call that creates schema must include the `MSCRM.SolutionUniqueName` header.** Without it, artifacts are created in the Default Solution — they won't travel with your solution export/import and become orphans that are painful to move later.
 
-```bash
-# ── api_call helper — ALWAYS pass the solution header ──
-# This is the standard helper function used throughout all schema scripts.
-# Define this at the top of every setup script.
+When using the Dataverse-skills plugin, pass `solution="<UniqueName>"` on every SDK call, or include `"MSCRM.SolutionName": "<UniqueName>"` on raw Web API calls. The plugin's `dv-metadata` skill enforces this automatically when you confirm the solution at the start of a metadata session.
 
-SOLUTION_NAME="${SOLUTION_UNIQUE_NAME}"   # From your .env or wizard state
-
-api_call() {
-  local method="$1" path="$2" body="$3"
-  local url="${DATAVERSE_URL}/api/data/v9.2${path}"
-  local args=(
-    -s -S
-    -X "$method"
-    -H "Authorization: Bearer ${ACCESS_TOKEN}"
-    -H "OData-MaxVersion: 4.0"
-    -H "OData-Version: 4.0"
-    -H "Accept: application/json"
-    -H "Content-Type: application/json; charset=utf-8"
-    -H "Prefer: return=representation"
-    -H "MSCRM.SolutionUniqueName: ${SOLUTION_NAME}"
-  )
-  if [ -n "$body" ]; then
-    args+=(-d "$body")
-  fi
-  curl "${args[@]}" "$url"
-}
-```
-
-**If you forget the `MSCRM.SolutionUniqueName` header:**
+**If you forget the solution context:**
 - The artifact is created in the Default Solution
 - It won't appear in your solution's component list
 - It won't be included when you export the solution
 - You'll have to manually "Add existing" from the Maker Portal to move it — and you'll miss dependencies
 
-The wizard stores the solution unique name in `SOLUTION_UNIQUE_NAME` state. The `wizard/lib/dataverse.mjs` helper supports this via the `{ solutionName }` option on `dvPost`.
+---
+
+## Preferred Provisioning Mechanism — Dataverse-skills Plugin
+
+If the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin is installed, use it for all schema provisioning operations. The plugin provides:
+
+- **`dv-metadata`** — Create tables, columns, relationships, forms, views. Handles idempotency, metadata propagation delays, and error recovery via the Python SDK.
+- **`dv-solution`** — Solution lifecycle: create, export, import, promote across environments.
+- **`dv-security`** — Role assignment via PAC CLI.
+- **`dv-data`** — Seed data, bulk import, CSV loads.
+
+The plugin uses a **MCP → Python SDK → Web API** priority order. It handles the common gotchas (metadata cache delays, `*Id` suffix collisions, field casing rules, global-vs-inline option sets) that are documented in detail below.
+
+**Install commands:**
+- GitHub Copilot: `/plugin install dataverse@awesome-copilot`
+- Claude Code: `/plugin install dataverse@claude-plugins-official`
+
+**Prerequisites:** Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`
+
+If the plugin is NOT installed, the bash/Web API patterns documented below remain a valid fallback. The golden sequence, naming rules, and TypeScript usage patterns apply regardless of which mechanism provisions the schema.
 
 ---
 
@@ -239,124 +232,17 @@ If a value is truly deprecated, rename it to `[Deprecated] OldName` rather than 
 
 ### Idempotent creation via setup script (recommended pattern)
 
-Do not create option sets manually through the Power Apps Maker Portal for any option set that a Code App depends on. Instead, define them in a setup script that:
+Do not create option sets manually through the Power Apps Maker Portal for any option set that a Code App depends on. Instead, define them programmatically so they are re-runnable on any fresh environment.
 
-1. Checks whether the option set already exists before creating it
-2. Adds individual values idempotently (checks before inserting)
-3. Can be run on any fresh environment to reproduce the full schema
+**With the Dataverse-skills plugin (preferred):** Use `dv-metadata` — it creates global option sets via the Python SDK with idempotent check-first patterns and handles metadata propagation delays automatically.
 
-This pattern comes directly from production use and handles both first-time setup and re-runs on existing environments:
+**Without the plugin (fallback):** Use the Web API with bash scripts that check existence before creating. The pattern requires:
 
-```bash
-#!/bin/bash
-# scripts/setup.sh — Dataverse schema bootstrap
+1. A `get_global_optionset_id()` helper that queries `GET /GlobalOptionSetDefinitions(Name='...')`
+2. A `create_global_optionset_if_missing()` wrapper that checks before POSTing
+3. An `ensure_global_optionset_option()` helper for adding individual values idempotently
 
-API_URL="${DATAVERSE_URL}/api/data/v9.2"
-
-# ---- Helper: Get global option set MetadataId by name ----
-get_global_optionset_id() {
-  local optionset_name="$1"
-  local body
-  body=$(api_call GET "/GlobalOptionSetDefinitions(Name='${optionset_name}')?\$select=MetadataId" 2>/dev/null || true)
-  python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(d.get('MetadataId',''))" "$body" 2>/dev/null || true
-}
-
-# ---- Helper: Create global option set if it doesn't already exist ----
-create_global_optionset_if_missing() {
-  local optionset_name="$1"   # e.g. "agtpo_ideastatus"
-  local display_name="$2"     # e.g. "Idea Status"
-  local options_json="$3"     # JSON array: [{"value":100000000,"label":"Draft"}, ...]
-
-  if [ -n "$(get_global_optionset_id "$optionset_name")" ]; then
-    echo "  [OK] Already exists: $optionset_name"
-    return
-  fi
-
-  payload=$(python3 - "$optionset_name" "$display_name" "$options_json" <<'PY'
-import json, sys
-name, display_name, options_json = sys.argv[1:4]
-options = json.loads(options_json)
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
-    "Name": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display_name, "LanguageCode": 1033}]},
-    "IsGlobal": True,
-    "OptionSetType": "Picklist",
-    "Options": [
-        {
-            "Value": option["value"],
-            "Label": {"LocalizedLabels": [{"Label": option["label"], "LanguageCode": 1033}]},
-        }
-        for option in options
-    ],
-}))
-PY
-)
-  api_call POST "/GlobalOptionSetDefinitions" "$payload" >/dev/null
-  echo "  [OK] Created: $optionset_name"
-}
-
-# ---- Helper: Add a single value to an existing option set (idempotent) ----
-ensure_global_optionset_option() {
-  local optionset_name="$1"
-  local option_value="$2"   # integer: 100000006
-  local option_label="$3"   # string: "Azure Storage"
-
-  # Check if value already exists
-  local body
-  body=$(api_call GET "/GlobalOptionSetDefinitions(Name='${optionset_name}')/Microsoft.Dynamics.CRM.OptionSetMetadata?\$select=Options" 2>/dev/null || true)
-  local exists
-  exists=$(python3 -c "
-import json, sys
-body = json.loads(sys.argv[1])
-values = [o.get('Value') for o in body.get('Options', [])]
-print('1' if int(sys.argv[2]) in values else '0')
-" "$body" "$option_value" 2>/dev/null || echo "0")
-
-  if [ "$exists" = "1" ]; then
-    echo "  [OK] Option already exists: ${option_label} (${option_value}) in ${optionset_name}"
-    return
-  fi
-
-  payload=$(python3 - "$optionset_name" "$option_value" "$option_label" <<'PY'
-import json, sys
-name, value, label = sys.argv[1], int(sys.argv[2]), sys.argv[3]
-print(json.dumps({
-    "OptionSetName": name,
-    "Value": value,
-    "Label": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
-              "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
-                                   "Label": label, "LanguageCode": 1033}]},
-}))
-PY
-)
-  api_call POST "/InsertOptionValue" "$payload" >/dev/null
-  echo "  [OK] Added option: ${option_label} (${option_value}) to ${optionset_name}"
-}
-
-# ============================================================
-# STEP 1: Create global option sets BEFORE any table columns
-# ============================================================
-
-echo ">>> Creating global option sets"
-
-create_global_optionset_if_missing "agtpo_ideastatus" "Idea Status" \
-  '[{"value":100000000,"label":"Draft"},
-    {"value":100000001,"label":"Under Review"},
-    {"value":100000002,"label":"Approved"},
-    {"value":100000003,"label":"In Development"},
-    {"value":100000004,"label":"Completed"},
-    {"value":100000005,"label":"Rejected"}]'
-
-create_global_optionset_if_missing "agtpo_complexitylevel" "Complexity Level" \
-  '[{"value":100000000,"label":"Low"},
-    {"value":100000001,"label":"Medium"},
-    {"value":100000002,"label":"High"}]'
-
-# To add a new value to an existing option set later (never delete old values):
-# ensure_global_optionset_option "agtpo_ideastatus" 100000006 "On Hold"
-```
-
+These helpers must always include the `MSCRM.SolutionUniqueName` header on every API call.
 ### Binding a column to a global option set
 
 When creating a Picklist column via the Web API, bind it to the global option set using `GlobalOptionSet@odata.bind` — do not redefine the values inline.
@@ -389,41 +275,11 @@ When creating a Picklist column via the Web API, bind it to the global option se
 >
 > If you are tempted to use an inline/local option set "just for this one column," don't — see the Global vs Inline table above. Local option sets also do not travel cleanly with solution export and are not scriptable.
 
-```bash
-create_picklist_column_if_missing() {
-  local entity_logical_name="$1"   # e.g. "agtpo_agentideas"
-  local attribute_logical_name="$2" # e.g. "agtpo_status"
-  local display_name="$3"           # e.g. "Status"
-  local optionset_name="$4"         # e.g. "agtpo_ideastatus"
-  local default_value="$5"          # e.g. "100000000"
+**With the Dataverse-skills plugin:** The `dv-metadata` skill's `add_columns` method handles choice columns via Python `IntEnum` classes — it creates the option set and binds it automatically, no manual MetadataId lookup needed.
 
-  local optionset_id
-  optionset_id=$(get_global_optionset_id "$optionset_name")
-  if [ -z "$optionset_id" ]; then
-    echo "[ERROR] Option set not found: $optionset_name — create it before the column"
-    exit 1
-  fi
+**Without the plugin (fallback):** Create a `create_picklist_column_if_missing()` bash helper that retrieves the global option set MetadataId via `GET /GlobalOptionSetDefinitions(Name='...')` and then creates the column with `GlobalOptionSet@odata.bind`.
 
-  payload=$(python3 - "$attribute_logical_name" "$display_name" "$optionset_id" "$default_value" <<'PY'
-import json, sys
-logical_name, display_name, optionset_id, default_value = sys.argv[1:5]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
-    "SchemaName": logical_name,
-    "LogicalName": logical_name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display_name, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": "None"},
-    "DefaultFormValue": int(default_value),
-    "GlobalOptionSet@odata.bind": f"/GlobalOptionSetDefinitions({optionset_id})"
-}))
-PY
-)
-  api_call POST "/EntityDefinitions(LogicalName='${entity_logical_name}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created column: ${attribute_logical_name} on ${entity_logical_name}"
-}
-```
-
-**Critical ordering rule:** Always create the global option set first, then the column that references it. If you reverse the order, `get_global_optionset_id` returns empty and the script exits with an error.
+**Critical ordering rule:** Always create the global option set first, then the column that references it.
 
 ---
 
@@ -546,79 +402,22 @@ make.powerapps.com → Solutions → [Your Solution] → New → Table
 
 A table created outside a solution lands in the default solution. Moving it later requires manually adding it and all dependent components — and you will miss some.
 
-### Programmatic table creation via Web API
+### Programmatic table creation
 
-When Copilot or a setup script creates tables, use this pattern. The `api_call` helper (defined in the Solution Context section above) automatically includes the `MSCRM.SolutionUniqueName` header.
+**With the Dataverse-skills plugin (preferred):** Use `dv-metadata` — `client.tables.create()` handles table creation with the Python SDK, including idempotent check-first patterns and metadata propagation delay handling.
 
-```bash
-# ---- Helper: Create table if it doesn't already exist ----
-create_table_if_missing() {
-  local logical_name="$1"       # e.g. "agtpo_agentidea" (all lowercase)
-  local schema_name="$2"        # e.g. "Agtpo_AgentIdea" (PascalCase with prefix)
-  local display_name="$3"       # e.g. "Agent Idea"
-  local display_name_plural="$4" # e.g. "Agent Ideas"
-  local primary_attr_name="$5"  # e.g. "agtpo_name" (the primary name column)
-  local primary_attr_label="$6" # e.g. "Name"
-  local description="$7"        # e.g. "Tracks ideas submitted by agents"
-
-  # Check if table already exists
-  local check
-  check=$(api_call GET "/EntityDefinitions(LogicalName='${logical_name}')?\\$select=LogicalName" 2>/dev/null || true)
-  if echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('LogicalName') else 1)" 2>/dev/null; then
-    echo "  [OK] Table already exists: ${logical_name}"
-    return
-  fi
-
-  payload=$(python3 - "$logical_name" "$schema_name" "$display_name" "$display_name_plural" "$primary_attr_name" "$primary_attr_label" "$description" <<'PY'
-import json, sys
-logical, schema, display, plural, pk_name, pk_label, desc = sys.argv[1:8]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
-    "SchemaName": schema,
-    "LogicalName": logical,
-    "DisplayName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
-                    "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
-                                         "Label": display, "LanguageCode": 1033}]},
-    "DisplayCollectionName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
-                              "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
-                                                   "Label": plural, "LanguageCode": 1033}]},
-    "Description": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
-                     "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
-                                          "Label": desc, "LanguageCode": 1033}]},
-    "HasActivities": False,
-    "HasNotes": False,
-    "OwnershipType": "UserOwned",
-    "IsActivity": False,
-    "PrimaryNameAttribute": pk_name,
-    "Attributes": [{
-        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": pk_name[0].upper() + pk_name[1:] if '_' not in pk_name else
-                      '_'.join(p.capitalize() if i > 0 else p for i, p in enumerate(pk_name.split('_'))),
-        "LogicalName": pk_name,
-        "DisplayName": {"@odata.type": "Microsoft.Dynamics.CRM.Label",
-                        "LocalizedLabels": [{"@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
-                                             "Label": pk_label, "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "ApplicationRequired"},
-        "MaxLength": 200,
-        "IsPrimaryName": True
-    }]
-}))
-PY
+```python
+# SDK approach via dv-metadata
+info = client.tables.create(
+    "prefix_ProjectBudget",
+    {"prefix_Amount": "decimal", "prefix_Description": "string"},
+    solution="MySolution",
+    primary_column="prefix_Name",
+    display_name="Project Budget",
 )
-  api_call POST "/EntityDefinitions" "$payload" >/dev/null
-  echo "  [OK] Created table: ${logical_name}"
-}
-
-# Usage:
-create_table_if_missing \
-  "agtpo_agentidea" \
-  "Agtpo_AgentIdea" \
-  "Agent Idea" \
-  "Agent Ideas" \
-  "agtpo_name" \
-  "Name" \
-  "Tracks ideas submitted by agents"
 ```
+
+**Without the plugin (fallback):** Use the Web API with a `create_table_if_missing()` bash helper that checks `GET /EntityDefinitions(LogicalName='...')` before POSTing the `EntityMetadata` payload. Always include the `MSCRM.SolutionUniqueName` header.
 
 **Critical properties for table creation:**
 
@@ -668,153 +467,20 @@ Only mark a column as **Business Required** if the data truly cannot be absent f
 
 For UI-level "required" (you want to prompt the user), enforce that in your React component validation, not at the Dataverse column level.
 
-### Programmatic column creation via Web API
+### Programmatic column creation
 
-The `api_call` helper passes `MSCRM.SolutionUniqueName` automatically. Create columns after the table exists.
+**With the Dataverse-skills plugin (preferred):** Use `dv-metadata` — `client.tables.add_columns()` supports string, integer, decimal, boolean, datetime, and choice columns. Example:
 
-```bash
-# ---- Helper: Check if a column already exists on a table ----
-column_exists() {
-  local entity="$1" attribute="$2"
-  local check
-  check=$(api_call GET "/EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='${attribute}')?\\$select=LogicalName" 2>/dev/null || true)
-  echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('LogicalName') else 1)" 2>/dev/null
-}
-
-# ---- Helper: Create a string column ----
-create_string_column_if_missing() {
-  local entity="$1" attr_name="$2" display="$3" max_length="${4:-200}" required="${5:-None}"
-  if column_exists "$entity" "$attr_name"; then
-    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
-    return
-  fi
-  payload=$(python3 - "$attr_name" "$display" "$max_length" "$required" <<'PY'
-import json, sys
-name, display, max_len, req = sys.argv[1:5]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-    "SchemaName": name,
-    "LogicalName": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": req},
-    "MaxLength": int(max_len),
-    "FormatName": {"Value": "Text"}
-}))
-PY
+```python
+client.tables.add_columns(
+    "prefix_tablename",
+    {"prefix_Description": "string", "prefix_Amount": "decimal", "prefix_Active": "bool"},
 )
-  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created string column: ${attr_name} on ${entity}"
-}
-
-# ---- Helper: Create a memo (multi-line text) column ----
-create_memo_column_if_missing() {
-  local entity="$1" attr_name="$2" display="$3" max_length="${4:-10000}"
-  if column_exists "$entity" "$attr_name"; then
-    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
-    return
-  fi
-  payload=$(python3 - "$attr_name" "$display" "$max_length" <<'PY'
-import json, sys
-name, display, max_len = sys.argv[1:4]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-    "SchemaName": name,
-    "LogicalName": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": "None"},
-    "MaxLength": int(max_len),
-    "Format": "TextArea"
-}))
-PY
-)
-  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created memo column: ${attr_name} on ${entity}"
-}
-
-# ---- Helper: Create a boolean (Yes/No) column ----
-create_boolean_column_if_missing() {
-  local entity="$1" attr_name="$2" display="$3" default_val="${4:-false}"
-  if column_exists "$entity" "$attr_name"; then
-    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
-    return
-  fi
-  local default_int=0
-  [ "$default_val" = "true" ] && default_int=1
-  payload=$(python3 - "$attr_name" "$display" "$default_int" <<'PY'
-import json, sys
-name, display, default_val = sys.argv[1], sys.argv[2], int(sys.argv[3])
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
-    "SchemaName": name,
-    "LogicalName": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": "None"},
-    "DefaultValue": default_val == 1,
-    "OptionSet": {
-        "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
-        "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}}
-    }
-}))
-PY
-)
-  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created boolean column: ${attr_name} on ${entity}"
-}
-
-# ---- Helper: Create a whole number column ----
-create_integer_column_if_missing() {
-  local entity="$1" attr_name="$2" display="$3" min_val="${4:-0}" max_val="${5:-2147483647}"
-  if column_exists "$entity" "$attr_name"; then
-    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
-    return
-  fi
-  payload=$(python3 - "$attr_name" "$display" "$min_val" "$max_val" <<'PY'
-import json, sys
-name, display, min_v, max_v = sys.argv[1:5]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-    "SchemaName": name,
-    "LogicalName": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": "None"},
-    "MinValue": int(min_v),
-    "MaxValue": int(max_v),
-    "Format": "None"
-}))
-PY
-)
-  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created integer column: ${attr_name} on ${entity}"
-}
-
-# ---- Helper: Create a date/time column ----
-create_datetime_column_if_missing() {
-  local entity="$1" attr_name="$2" display="$3" format="${4:-DateOnly}"
-  # format: "DateOnly" or "DateAndTime"
-  if column_exists "$entity" "$attr_name"; then
-    echo "  [OK] Column already exists: ${attr_name} on ${entity}"
-    return
-  fi
-  payload=$(python3 - "$attr_name" "$display" "$format" <<'PY'
-import json, sys
-name, display, fmt = sys.argv[1:4]
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-    "SchemaName": name,
-    "LogicalName": name,
-    "DisplayName": {"LocalizedLabels": [{"Label": display, "LanguageCode": 1033}]},
-    "RequiredLevel": {"Value": "None"},
-    "Format": fmt,
-    "DateTimeBehavior": {"Value": "UserLocal"}
-}))
-PY
-)
-  api_call POST "/EntityDefinitions(LogicalName='${entity}')/Attributes" "$payload" >/dev/null
-  echo "  [OK] Created datetime column: ${attr_name} on ${entity}"
-}
 ```
 
-**Usage examples (after table creation, before relationships):**
+**Without the plugin (fallback):** Use the Web API with `column_exists()` + type-specific `create_*_column_if_missing()` bash helpers. Each helper checks existence before POSTing to `/EntityDefinitions(LogicalName='...')/Attributes`. Always include the `MSCRM.SolutionUniqueName` header.
+
+**Usage pattern (after table creation, before relationships):**
 
 ```bash
 echo ">>> Creating columns on agtpo_agentidea"
@@ -825,7 +491,7 @@ create_boolean_column_if_missing "agtpo_agentidea" "agtpo_isarchived"  "Is Archi
 create_integer_column_if_missing "agtpo_agentidea" "agtpo_votecount"   "Vote Count" 0 100000
 create_datetime_column_if_missing "agtpo_agentidea" "agtpo_submittedon" "Submitted On" "DateOnly"
 
-# Picklist columns (uses the existing create_picklist_column_if_missing helper):
+# Picklist columns — must bind to global option set created earlier:
 create_picklist_column_if_missing "agtpo_agentidea" "agtpo_status" "Status" "agtpo_ideastatus" "100000000"
 ```
 
@@ -859,69 +525,22 @@ For most Code App relationships, these defaults are correct:
 
 Only change cascade delete to "Cascade All" if you explicitly want child records destroyed when a parent is deleted (e.g. a line item table that is meaningless without its header).
 
-### Programmatic relationship creation via Web API
+### Programmatic relationship creation
 
-Lookup columns and relationships are created together as a single `OneToManyRelationship` POST. The `api_call` helper passes `MSCRM.SolutionUniqueName` automatically.
+**With the Dataverse-skills plugin (preferred):** Use `dv-metadata` — `client.tables.create_lookup_field()` for simple lookups and `client.tables.create_one_to_many_relationship()` for full control. Many-to-many relationships use `client.tables.create_many_to_many_relationship()`.
 
-```bash
-# ---- Helper: Create a One-to-Many relationship (adds a lookup column on the child) ----
-create_relationship_if_missing() {
-  local relationship_name="$1"     # e.g. "agtpo_project_agentidea"
-  local parent_entity="$2"         # e.g. "agtpo_project" (the "one" side)
-  local child_entity="$3"          # e.g. "agtpo_agentidea" (the "many" side)
-  local lookup_attr_name="$4"      # e.g. "agtpo_projectid" (lookup column on child)
-  local lookup_display_name="$5"   # e.g. "Project"
-
-  # Check if relationship already exists
-  local check
-  check=$(api_call GET "/RelationshipDefinitions(SchemaName='${relationship_name}')?\\$select=SchemaName" 2>/dev/null || true)
-  if echo "$check" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); exit(0 if d.get('SchemaName') else 1)" 2>/dev/null; then
-    echo "  [OK] Relationship already exists: ${relationship_name}"
-    return
-  fi
-
-  payload=$(python3 - "$relationship_name" "$parent_entity" "$child_entity" "$lookup_attr_name" "$lookup_display_name" <<'PY'
-import json, sys
-rel_name, parent, child, lookup_name, lookup_display = sys.argv[1:6]
-# Build SchemaName for the lookup attribute (PascalCase)
-parts = lookup_name.split('_')
-schema = '_'.join(p.capitalize() if i > 0 else p for i, p in enumerate(parts))
-print(json.dumps({
-    "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
-    "SchemaName": rel_name,
-    "ReferencedEntity": parent,
-    "ReferencingEntity": child,
-    "CascadeConfiguration": {
-        "Assign": "NoCascade",
-        "Delete": "Restrict",
-        "Merge": "NoCascade",
-        "Reparent": "NoCascade",
-        "Share": "NoCascade",
-        "Unshare": "NoCascade",
-        "RollupView": "NoCascade"
-    },
-    "Lookup": {
-        "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
-        "SchemaName": schema,
-        "LogicalName": lookup_name,
-        "DisplayName": {"LocalizedLabels": [{"Label": lookup_display, "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "None"}
-    }
-}))
-PY
+```python
+# Simple lookup via dv-metadata
+result = client.tables.create_lookup_field(
+    referencing_table="prefix_agentidea",
+    lookup_field_name="prefix_ProjectId",
+    referenced_table="prefix_project",
+    display_name="Project",
+    solution="MySolution",
 )
-  api_call POST "/RelationshipDefinitions" "$payload" >/dev/null
-  echo "  [OK] Created relationship: ${relationship_name} (${parent_entity} → ${child_entity})"
-}
-
-# Usage:
-create_relationship_if_missing \
-  "agtpo_project_agentidea" \
-  "agtpo_project" \
-  "agtpo_agentidea" \
-  "agtpo_projectid" \
-  "Project"
 ```
+
+**Without the plugin (fallback):** Use the Web API with a `create_relationship_if_missing()` bash helper that checks `GET /RelationshipDefinitions(SchemaName='...')` before POSTing the `OneToManyRelationshipMetadata` payload.
 
 **Relationship creation order:** Both the parent and child tables must exist before creating the relationship. This is why the Golden Sequence places relationships after tables and columns.
 
@@ -998,154 +617,24 @@ The Collaborator permission setting (per [Microsoft docs](https://learn.microsof
 
 Depth values for the API: `0` = None, `1` = User, `2` = Business Unit (Local), `3` = Parent:Child BU, `4` = Organization (Global).
 
-### Programmatic creation via Web API
+### Programmatic creation
 
-The script below auto-detects all custom tables with your publisher prefix and grants Collaborator-level privileges on each.
+**With the Dataverse-skills plugin (preferred):** Use `dv-security` — `pac admin assign-user` handles role assignment. For creating the Collaborator role itself, use `dv-metadata` with the Python SDK to create the role record and add privileges.
 
-```bash
-# ── Helper: Create or update the app's Collaborator security role ──
-create_or_update_security_role() {
-  local role_name="${SOLUTION_DISPLAY_NAME} Collaborator"
-  local prefix="${PREFIX}_"
+**Without the plugin (fallback):** Use the Web API with a `create_or_update_security_role()` bash helper that:
 
-  echo "── Security Role: ${role_name} ──"
+1. Checks if the role exists via `GET /roles?$filter=name eq '...'`
+2. Creates if missing via `POST /roles`
+3. Auto-detects all custom tables with `GET /EntityDefinitions?$filter=IsCustomEntity eq true and startswith(LogicalName, '<prefix>')`
+4. Adds Collaborator-level privileges via `POST /AddPrivilegesRole`
 
-  # ── Step 1: Check if role already exists ──
-  local encoded_name
-  encoded_name=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$role_name")
-  local existing
-  existing=$(api_call GET "/roles?\$filter=name eq '${encoded_name}'&\$select=roleid,name" 2>/dev/null || echo '{}')
-  local role_id
-  role_id=$(echo "$existing" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); v=d.get('value',[]); print(v[0]['roleid'] if v else '')" 2>/dev/null || echo '')
-
-  if [ -z "$role_id" ]; then
-    # ── Step 2a: Create the role ──
-    local create_result
-    create_result=$(api_call POST "/roles" "$(python3 -c "
-import json,sys
-print(json.dumps({
-    'name': sys.argv[1],
-    'description': f'Collaborator-level access to all {sys.argv[1].replace(\" Collaborator\", \"\")} custom tables. Assign alongside Basic User.',
-    'isinherited': 0
-}))" "$role_name")")
-    role_id=$(echo "$create_result" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('roleid',''))" 2>/dev/null)
-    if [ -z "$role_id" ]; then
-      echo "  [ERROR] Failed to create security role '${role_name}'"
-      return 1
-    fi
-    echo "  [OK] Created security role: ${role_name} (${role_id})"
-  else
-    echo "  [OK] Security role already exists: ${role_name} (${role_id})"
-  fi
-
-  # ── Step 3: Auto-detect all custom tables with our prefix ──
-  local tables_json
-  tables_json=$(api_call GET "/EntityDefinitions?\$filter=IsCustomEntity eq true and startswith(LogicalName, '${prefix}')&\$select=LogicalName,ObjectTypeCode" 2>/dev/null || echo '{"value":[]}')
-  local table_count
-  table_count=$(echo "$tables_json" | python3 -c "import json,sys; print(len(json.loads(sys.stdin.read()).get('value',[])))" 2>/dev/null || echo '0')
-  echo "  Found ${table_count} custom tables with prefix '${prefix}'"
-
-  # ── Step 4: For each table, add Collaborator privileges ──
-  # Privilege names follow the pattern: prvCreate<EntityName>, prvRead<EntityName>, etc.
-  # The entity name in privilege names uses the SchemaName-like format (no underscores, PascalCase-ish)
-  echo "$tables_json" | python3 -c "
-import json, sys
-
-data = json.loads(sys.stdin.read())
-tables = data.get('value', [])
-
-# Collaborator privilege depths
-# Create=BU(2), Read=Org(4), Write=BU(2), Delete=BU(2), Append=BU(2), AppendTo=BU(2), Assign=BU(2), Share=BU(2)
-privileges = [
-    ('Create',   2),
-    ('Read',     4),  # 4 = Organization (Global) depth in privilege API
-    ('Write',    2),
-    ('Delete',   2),
-    ('Append',   2),
-    ('AppendTo', 2),
-    ('Assign',   2),
-    ('Share',    2),
-]
-
-for t in tables:
-    otc = t['ObjectTypeCode']
-    logical = t['LogicalName']
-    for priv_name, depth in privileges:
-        # Output: ObjectTypeCode|PrivilegeName|Depth
-        print(f'{otc}|{priv_name}|{depth}|{logical}')
-" | while IFS='|' read -r otc priv_action depth logical_name; do
-    # Look up the privilege ID for this action on this entity
-    local priv_name="prv${priv_action}${logical_name}"
-    local priv_result
-    priv_result=$(api_call GET "/privileges?\$filter=Name eq '${priv_name}'&\$select=privilegeid,Name" 2>/dev/null || echo '{"value":[]}')
-    local priv_id
-    priv_id=$(echo "$priv_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['privilegeid'] if v else '')" 2>/dev/null || echo '')
-
-    if [ -n "$priv_id" ]; then
-      # Add privilege to role with the specified depth
-      # Depth mapping for AddPrivilegesRole: 1=User, 2=BU, 3=Parent:Child, 4=Org
-      api_call POST "/roles(${role_id})/systemuserroles_association/\$ref" \
-        "{}" >/dev/null 2>&1 || true
-      # Use the dedicated AddPrivilegesRole action
-      api_call POST "/AddPrivilegesRole" "$(python3 -c "
-import json
-print(json.dumps({
-    'RoleId': '${role_id}',
-    'Privileges': [{
-        'PrivilegeId': '${priv_id}',
-        'Depth': '${depth}'
-    }]
-}))" )" >/dev/null 2>&1 || true
-    fi
-  done
-  echo "  [OK] Collaborator privileges applied to ${table_count} tables"
-}
-
-# Usage in bootstrap script:
-create_or_update_security_role
-```
+The script must include `MSCRM.SolutionUniqueName` on the role creation call so the role travels with the solution.
 
 ### Assigning the role to users (dev/test environments)
 
-For automated test/dev setup, you can assign the role programmatically:
+**With the Dataverse-skills plugin:** Use `pac admin assign-user --user <email> --role "<RoleName>" --environment <url>`.
 
-```bash
-# ── Helper: Assign a security role to a user ──
-assign_security_role() {
-  local user_email="$1"     # e.g. "testuser@contoso.com"
-  local role_name="$2"      # e.g. "Project Tracker Collaborator"
-
-  # Find the user's systemuserid
-  local user_result
-  user_result=$(api_call GET "/systemusers?\$filter=internalemailaddress eq '${user_email}'&\$select=systemuserid" 2>/dev/null)
-  local user_id
-  user_id=$(echo "$user_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['systemuserid'] if v else '')" 2>/dev/null || echo '')
-  if [ -z "$user_id" ]; then
-    echo "  [WARN] User not found: ${user_email}"
-    return 1
-  fi
-
-  # Find the role ID
-  local encoded_name
-  encoded_name=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$role_name")
-  local role_result
-  role_result=$(api_call GET "/roles?\$filter=name eq '${encoded_name}'&\$select=roleid" 2>/dev/null)
-  local role_id
-  role_id=$(echo "$role_result" | python3 -c "import json,sys; v=json.loads(sys.stdin.read()).get('value',[]); print(v[0]['roleid'] if v else '')" 2>/dev/null || echo '')
-  if [ -z "$role_id" ]; then
-    echo "  [WARN] Role not found: ${role_name}"
-    return 1
-  fi
-
-  # Associate the role with the user
-  api_call POST "/systemusers(${user_id})/systemuserroles_association/\$ref" \
-    "{\"@odata.id\": \"${DATAVERSE_URL}/api/data/v9.2/roles(${role_id})\"}" >/dev/null 2>&1
-  echo "  [OK] Assigned '${role_name}' to ${user_email}"
-}
-
-# Usage:
-assign_security_role "testuser@contoso.com" "${SOLUTION_DISPLAY_NAME} Collaborator"
-```
+**Without the plugin:** Use the Web API to look up the user via `GET /systemusers?$filter=internalemailaddress eq '...'`, look up the role via `GET /roles?$filter=name eq '...'`, then associate via `POST /systemusers(<id>)/systemuserroles_association/$ref`.
 
 ### Key rules for security roles
 
@@ -1229,53 +718,21 @@ npm install @microsoft/power-apps@^1.0.3
 
 ### Complete bootstrap sequence
 
-Here's the full end-to-end script pattern for a schema bootstrap:
+**With the Dataverse-skills plugin (preferred):**
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+The agent uses the planning artifact (`dataverse/planning-payload.json`) to drive `dv-metadata` for schema provisioning, then returns to this repo's data-source registration:
 
-# ── 1. Configuration (from .env / wizard output) ──
-DATAVERSE_URL="${DATAVERSE_URL:?Set DATAVERSE_URL}"
-TENANT_ID="${TENANT_ID:?Set TENANT_ID}"
-SOLUTION_NAME="${PP_SOLUTION_NAME:?Set PP_SOLUTION_NAME}"
-PREFIX="${PP_PUBLISHER_PREFIX:?Set PP_PUBLISHER_PREFIX}"
+1. Validate: `node scripts/validate-schema-plan.mjs dataverse/planning-payload.json`
+2. Generate plans: `node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json`
+3. Provision via `dv-metadata`: Create global option sets, tables, columns, relationships (the plugin handles idempotency and propagation delays)
+4. Create security role via `dv-security` or `dv-metadata`
+5. Publish: The plugin calls `PublishAllXml` automatically after metadata changes
+6. Register data sources: `node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json`
+7. Install SDK: `npm install @microsoft/power-apps@^1.0.3`
 
-# ── 2. Auth token ──
-TOKEN=$(az account get-access-token --resource "$DATAVERSE_URL" --tenant "$TENANT_ID" --query accessToken -o tsv)
+**Without the plugin (fallback):**
 
-# ── 3. api_call helper (includes MSCRM.SolutionUniqueName on every call) ──
-api_call() { ... }  # (defined above in Solution Context section)
-
-# ── 4. Create global option sets ──
-# ... option set creation calls ...
-
-# ── 5. Create tables ──
-# ... create_table_if_missing calls ...
-
-# ── 6. Create simple columns ──
-# ... column creation calls (string, integer, boolean, memo, datetime) ...
-
-# ── 7. Create picklist columns (referencing option sets from step 4) ──
-# ... picklist column creation calls ...
-
-# ── 8. Create relationships (lookup columns) ──
-# ... create_relationship_if_missing calls ...
-
-# ── 9. Create / update security role ──
-create_or_update_security_role   # (defined above in Security Role section)
-
-# ── 10. Publish ──
-api_call POST "/PublishAllXml" '{}'
-echo "[DONE] Schema created and published."
-
-# ── 11. Register data sources (run from the Code App project directory) ──
-echo ""
-echo "Now run these commands in your project directory:"
-echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_project"
-echo "  ~/.dotnet/tools/pac code add-data-source -a dataverse -t ${PREFIX}_agentidea"
-echo "  npm install @microsoft/power-apps@^1.0.3"
-```
+Use the bash/Web API patterns described above in a single bootstrap script that follows the golden sequence.
 
 ## Validation and Output Contract
 

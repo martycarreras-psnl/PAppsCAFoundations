@@ -158,6 +158,40 @@ If `pac org who` shows an interactive user instead of your App Registration name
 
 ---
 
+## Step 8: Install the Dataverse-skills Plugin
+
+The [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin teaches your coding agent how to provision Dataverse schema, import data, manage solutions, and administer environments through the Dataverse MCP server, Python SDK, and PAC CLI. It replaces hand-written bash/curl scripts with tested, idempotent, agent-native operations.
+
+### Prerequisites
+
+1. **Python 3** must be installed (`python3 --version` or `python --version`)
+2. Install the Python SDK and pandas:
+   ```bash
+   pip install PowerPlatform-Dataverse-Client pandas
+   ```
+
+### Install the plugin
+
+The install command depends on which coding agent you use:
+
+| Agent | Install command |
+|---|---|
+| **GitHub Copilot** | `/plugin install dataverse@awesome-copilot` |
+| **Claude Code** | `/plugin install dataverse@claude-plugins-official` |
+| **Cursor / Windsurf / Other** | See [Dataverse-skills README](https://github.com/microsoft/Dataverse-skills) for manual MCP configuration |
+
+### Verify
+
+After installation, ask your agent:
+
+> "Connect to Dataverse"
+
+The `dv-connect` skill walks through tool checks, authentication, and MCP server registration. When it finishes, `pac auth list` should show your active environment.
+
+> The setup wizard detects your coding agent and provides the correct install command. If you haven't run the wizard yet, it will prompt you during setup.
+
+---
+
 ## Project Values — Fill This In Before Committing
 
 Replace every placeholder below with your actual values. These are referenced throughout all instruction files and scripts.
