@@ -116,18 +116,24 @@ export default {
 
     // PowerPlatform-Dataverse-Client SDK (requires Python)
     if (pythonCmd) {
-      const hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
+      let hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
+      if (!hasSdk) {
+        const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
+        log.info(`Installing PowerPlatform-Dataverse-Client and pandas via ${pip}…`);
+        const installResult = tryRun(`${pip} install PowerPlatform-Dataverse-Client pandas 2>&1`);
+        if (installResult) log.info(installResult.split('\n').pop() || '');
+        hasSdk = tryRun(`${pythonCmd} -c "from PowerPlatform.Dataverse.client import DataverseClient; print('ok')"`) === 'ok';
+      }
       if (hasSdk) {
         checks.push({ name: 'Dataverse SDK', ok: true, value: 'installed', hint: null });
         log.ok('PowerPlatform-Dataverse-Client SDK installed');
       } else {
         const pip = pythonCmd === 'python3' ? 'pip3' : 'pip';
-        checks.push({ name: 'Dataverse SDK', ok: false, value: null, hint: `Not installed — run: ${pip} install PowerPlatform-Dataverse-Client pandas`, optional: true });
-        log.warn(`PowerPlatform-Dataverse-Client SDK — not installed`);
-        log.info(`  → Install: ${pip} install PowerPlatform-Dataverse-Client pandas`);
+        checks.push({ name: 'Dataverse SDK', ok: false, value: null, hint: `Auto-install failed — run manually: ${pip} install PowerPlatform-Dataverse-Client pandas`, optional: true });
+        log.warn('PowerPlatform-Dataverse-Client SDK — auto-install failed');
+        log.info(`  → Run manually: ${pip} install PowerPlatform-Dataverse-Client pandas`);
         log.info('  → Required by the Dataverse-skills plugin:');
         log.info('    https://github.com/microsoft/Dataverse-skills');
-        log.info('  → After installing, re-run this step to verify');
       }
     }
 
