@@ -20,6 +20,7 @@ export default async function streamRoutes(app /* , opts */) {
 
     // Replay buffered lines to late joiners
     for (const line of run.lines) send('line', line);
+    if (run.deviceCode) send('deviceCode', run.deviceCode);
     if (run.status === 'done' || run.status === 'error') {
       send('end', { status: run.status, exitCode: run.exitCode, error: run.error });
       reply.raw.end();
@@ -27,16 +28,19 @@ export default async function streamRoutes(app /* , opts */) {
     }
 
     const onLine = (line) => send('line', line);
+    const onDeviceCode = (dc) => send('deviceCode', dc);
     const onEnd = () => {
       send('end', { status: run.status, exitCode: run.exitCode, error: run.error });
       reply.raw.end();
     };
 
     run.on('line', onLine);
+    run.on('deviceCode', onDeviceCode);
     run.on('end', onEnd);
 
     req.raw.on('close', () => {
       run.off('line', onLine);
+      run.off('deviceCode', onDeviceCode);
       run.off('end', onEnd);
     });
 

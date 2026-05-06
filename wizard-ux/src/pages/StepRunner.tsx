@@ -7,7 +7,8 @@ import {
 } from '@fluentui/react-components';
 import {
   ArrowLeftRegular, ArrowRightFilled, PlayRegular,
-  CheckmarkCircleFilled, WindowConsoleRegular,
+  CheckmarkCircleFilled, WindowConsoleRegular, CopyRegular,
+  OpenRegular,
 } from '@fluentui/react-icons';
 
 import { useStepQuestions, useSteps } from '../hooks/useWizardData';
@@ -118,6 +119,39 @@ const useStyles = makeStyles({
     fontSize: '20px',
     color: tokens.colorBrandForeground1,
     flexShrink: 0,
+  },
+  deviceCodeCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+    padding: '20px',
+    borderRadius: '10px',
+    background: 'linear-gradient(135deg, rgba(0,120,212,0.08), rgba(0,150,255,0.04))',
+    border: `1.5px solid ${tokens.colorBrandStroke1}`,
+  },
+  deviceCodeHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontWeight: 600,
+  },
+  deviceCodeBody: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    flexWrap: 'wrap' as const,
+  },
+  deviceCodeValue: {
+    fontFamily: 'monospace',
+    fontSize: '28px',
+    fontWeight: 700,
+    letterSpacing: '4px',
+    color: tokens.colorBrandForeground1,
+    padding: '8px 16px',
+    background: tokens.colorNeutralBackground1,
+    borderRadius: '8px',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    userSelect: 'all' as const,
   },
 });
 
@@ -355,6 +389,40 @@ export function StepRunner() {
                 <MessageBar intent="error">
                   <MessageBarBody>{stream.error || 'Step failed — see output above.'}</MessageBarBody>
                 </MessageBar>
+              )}
+
+              {/* Device code card — surface sign-in code prominently */}
+              {stream.deviceCode?.code && stream.status === 'running' && (
+                <div className={s.deviceCodeCard}>
+                  <div className={s.deviceCodeHeader}>
+                    <OpenRegular style={{ color: tokens.colorBrandForeground1 }} />
+                    <Body1>Sign in with a device code</Body1>
+                  </div>
+                  <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                    Open the link below, then enter the code to authenticate.
+                  </Caption1>
+                  <div className={s.deviceCodeBody}>
+                    <span className={s.deviceCodeValue}>{stream.deviceCode.code}</span>
+                    <Button
+                      appearance="subtle"
+                      icon={<CopyRegular />}
+                      onClick={() => navigator.clipboard.writeText(stream.deviceCode!.code!)}
+                    >
+                      Copy code
+                    </Button>
+                  </div>
+                  <Button
+                    appearance="primary"
+                    icon={<OpenRegular />}
+                    as="a"
+                    href={stream.deviceCode.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    Open {stream.deviceCode.url}
+                  </Button>
+                </div>
               )}
 
               {/* Success banner with auto-advance */}

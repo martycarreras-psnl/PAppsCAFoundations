@@ -25,6 +25,16 @@ class Run extends EventEmitter {
     this.lines.push(evt);
     if (this.lines.length > 1000) this.lines.shift();
     this.emit('line', evt);
+    // Detect device code prompts from pac auth create
+    const codeMatch = text.match(/enter the code\s+([A-Z0-9]{6,12})/i);
+    const urlMatch = text.match(/(https:\/\/microsoft\.com\/devicelogin)/i);
+    if (codeMatch) {
+      this.deviceCode = { code: codeMatch[1], url: 'https://microsoft.com/devicelogin', ts: Date.now() };
+      this.emit('deviceCode', this.deviceCode);
+    } else if (urlMatch && !this.deviceCode) {
+      this.deviceCode = { code: null, url: urlMatch[1], ts: Date.now() };
+      this.emit('deviceCode', this.deviceCode);
+    }
   }
 
   cancel() {

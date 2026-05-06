@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
-import { LogLine } from '../types/schema';
+import { DeviceCode, LogLine } from '../types/schema';
 
 export interface StreamState {
   lines: LogLine[];
   status: 'idle' | 'running' | 'done' | 'error';
   error: string | null;
   exitCode: number | null;
+  deviceCode: DeviceCode | null;
 }
 
 export function useStepStream(stepNumber: number | null, runId: string | null): StreamState {
-  const [state, setState] = useState<StreamState>({ lines: [], status: 'idle', error: null, exitCode: null });
+  const [state, setState] = useState<StreamState>({ lines: [], status: 'idle', error: null, exitCode: null, deviceCode: null });
 
   useEffect(() => {
     if (!runId || !stepNumber) {
-      setState({ lines: [], status: 'idle', error: null, exitCode: null });
+      setState({ lines: [], status: 'idle', error: null, exitCode: null, deviceCode: null });
       return;
     }
-    setState({ lines: [], status: 'running', error: null, exitCode: null });
+    setState({ lines: [], status: 'running', error: null, exitCode: null, deviceCode: null });
 
     const url = `/api/steps/${stepNumber}/stream?runId=${encodeURIComponent(runId)}`;
     const es = new EventSource(url, { withCredentials: true });
@@ -25,6 +26,13 @@ export function useStepStream(stepNumber: number | null, runId: string | null): 
       try {
         const line = JSON.parse((e as MessageEvent).data) as LogLine;
         setState((s) => ({ ...s, lines: [...s.lines, line] }));
+      } catch { /* noop */ }
+    });
+
+    es.addEventListener('deviceCode', (e) => {
+      try {
+        const dc = JSON.parse((e as MessageEvent).data) as DeviceCode;
+        setState((s) => ({ ...s, deviceCode: dc }));
       } catch { /* noop */ }
     });
 

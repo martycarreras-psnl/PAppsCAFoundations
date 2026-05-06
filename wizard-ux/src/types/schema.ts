@@ -89,3 +89,9 @@ export interface LogLine {
   text: string;
   ts: number;
 }
+
+export interface DeviceCode {
+  code: string | null;
+  url: string;
+  ts: number;
+}
