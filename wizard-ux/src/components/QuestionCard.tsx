@@ -4,7 +4,22 @@ import {
   Popover, PopoverTrigger, PopoverSurface, Button, Spinner,
 } from '@fluentui/react-components';
 import { QuestionCircleRegular, LockClosedRegular, EditRegular } from '@fluentui/react-icons';
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+
+/** Turn plain-text URLs into clickable <a> elements, preserving surrounding text. */
+function linkify(text: string): ReactNode[] {
+  const urlRe = /https?:\/\/[^\s)]+/g;
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = urlRe.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<a key={m.index} href={m[0]} target="_blank" rel="noopener noreferrer">{m[0]}</a>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 const useStyles = makeStyles({
   card: {
@@ -171,7 +186,7 @@ function QuestionContent({ question: q, value, onChange, showError, answers }: P
             />
           </PopoverTrigger>
           <PopoverSurface>
-            <div className={s.why}>{q.why}</div>
+            <div className={s.why}>{linkify(q.why)}</div>
           </PopoverSurface>
         </Popover>
       )}

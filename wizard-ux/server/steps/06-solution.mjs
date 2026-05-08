@@ -103,6 +103,30 @@ export default {
       showIf: { id: 'SOLUTION_SELECTION', equals: CREATE_NEW },
     });
 
+    if (isUserAuth) {
+      const devUrl = (state.PP_ENV_DEV || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const makerLink = devUrl
+        ? `https://make.powerapps.com (select environment "${devUrl}")`
+        : 'https://make.powerapps.com';
+      questions.push({
+        id: 'SOLUTION_CREATED_MANUALLY',
+        type: 'confirm',
+        label: 'I have created this solution in the Maker Portal',
+        help: `With user credentials, the wizard cannot create the solution automatically. You must create it manually at ${makerLink} before continuing.`,
+        defaultValue: false,
+        showIf: { id: 'SOLUTION_SELECTION', equals: CREATE_NEW },
+        why: [
+          'Manual solution creation steps:',
+          `1. Open ${makerLink}`,
+          `2. Go to Solutions → + New Solution`,
+          `3. Enter the Display name from above`,
+          `4. Select the publisher you created in Step 5`,
+          `5. Save the solution`,
+          `6. Return here and confirm`,
+        ].join('\n'),
+      });
+    }
+
     return questions;
   },
 
@@ -161,14 +185,10 @@ export default {
     const unique = friendly.replace(/[\s\-]+/g, '');
 
     if (isUserAuth) {
-      log.warn('User auth does not support automated solution creation via the Dataverse API.');
-      log.info('Create the solution manually in the Maker Portal:');
-      log.info(`  1. Go to make.powerapps.com → your Dev environment`);
-      log.info(`  2. Solutions → New Solution`);
-      log.info(`  3. Display name: ${friendly}`);
-      log.info(`  4. Publisher: select the publisher from Step 5`);
-      log.info(`  5. Version: 1.0.0.0 → Create`);
-      log.ok(`Solution metadata saved: "${friendly}" (${unique})`);
+      if (answers.SOLUTION_CREATED_MANUALLY !== true) {
+        throw new Error('You must create the solution in the Maker Portal before continuing. Toggle the confirmation after creating it.');
+      }
+      log.ok(`Solution confirmed as created in the Maker Portal: "${friendly}" (${unique})`);
       clearSecret();
       return {
         stateUpdate: {

@@ -147,6 +147,30 @@ export default {
       showIf: { id: 'PUBLISHER_SELECTION', equals: CREATE_NEW },
     });
 
+    if (isUserAuth) {
+      const devUrl = (state.PP_ENV_DEV || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const makerLink = devUrl
+        ? `https://make.powerapps.com (select environment "${devUrl}")`
+        : 'https://make.powerapps.com';
+      questions.push({
+        id: 'PUBLISHER_CREATED_MANUALLY',
+        type: 'confirm',
+        label: 'I have created this publisher in the Maker Portal',
+        help: `With user credentials, the wizard cannot create the publisher automatically. You must create it manually at ${makerLink} before continuing.`,
+        defaultValue: false,
+        showIf: { id: 'PUBLISHER_SELECTION', equals: CREATE_NEW },
+        why: [
+          'Manual publisher creation steps:',
+          `1. Open ${makerLink}`,
+          '2. Go to Solutions → Publishers',
+          '3. Click + New Publisher',
+          '4. Enter the Display name and Prefix from above',
+          '5. Save the publisher',
+          '6. Return here and confirm',
+        ].join('\n'),
+      });
+    }
+
     return questions;
   },
 
@@ -217,16 +241,10 @@ export default {
     const uniqueName = friendly.toLowerCase().replace(/[\s\-]+/g, '');
 
     if (isUserAuth) {
-      // With user auth, we can't create the publisher via SPN Dataverse API.
-      // Save the entered metadata and instruct the user to create it in the Maker Portal.
-      log.warn(`User auth does not support automated publisher creation via the Dataverse API.`);
-      log.info(`Create the publisher manually in the Maker Portal:`);
-      log.info(`  1. Go to make.powerapps.com → your Dev environment`);
-      log.info(`  2. Solutions → Publishers → New Publisher`);
-      log.info(`  3. Display name: ${friendly}`);
-      log.info(`  4. Prefix: ${prefix}`);
-      log.info(`  5. Save, then continue to Step 6.`);
-      log.ok(`Publisher metadata saved: "${friendly}" (prefix ${prefix})`);
+      if (answers.PUBLISHER_CREATED_MANUALLY !== true) {
+        throw new Error('You must create the publisher in the Maker Portal before continuing. Toggle the confirmation after creating it.');
+      }
+      log.ok(`Publisher confirmed as created in the Maker Portal: "${friendly}" (prefix ${prefix})`);
       return {
         stateUpdate: publisherStateUpdate(state, {
           id: '',
