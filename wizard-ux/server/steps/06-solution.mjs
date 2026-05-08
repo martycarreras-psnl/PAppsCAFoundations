@@ -1,6 +1,7 @@
 // Step 6 — Solution. Pick existing or create new in the publisher.
 import { dvGet, dvPost, hasUsableSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
 const CREATE_NEW = '__create_new__';
+const ENTER_EXISTING = '__enter_existing__';
 
 async function listSolutions(publisherId) {
   let filter = 'ismanaged eq false and isvisible eq true';
@@ -65,14 +66,33 @@ export default {
       type: 'select',
       label: 'Solution',
       help: isUserAuth
-        ? 'With user auth, solutions cannot be auto-loaded. Create a new solution or enter details from a solution you created in the Maker Portal.'
+        ? 'With user auth, solutions cannot be auto-loaded. Enter an existing solution\'s details or create a new one.'
         : (solutionLoadHelp || 'Choose an existing unmanaged solution for the selected publisher, or choose Create new solution.'),
       defaultValue: preferredSolution,
       options: [
         ...solutions.map(solutionOption),
+        { value: ENTER_EXISTING, label: 'Enter existing solution details' },
         { value: CREATE_NEW, label: '+ Create new solution' },
       ],
       hideIf: { id: '__resume', equals: true },
+    });
+
+    questions.push({
+      id: 'EXISTING_SOLUTION_UNIQUE_NAME',
+      type: 'text',
+      label: 'Solution unique name',
+      help: 'The internal name (no spaces). Find this in the Maker Portal under Solutions.',
+      defaultValue: state.SOLUTION_UNIQUE_NAME || '',
+      showIf: { id: 'SOLUTION_SELECTION', equals: ENTER_EXISTING },
+    });
+
+    questions.push({
+      id: 'EXISTING_SOLUTION_DISPLAY_NAME',
+      type: 'text',
+      label: 'Solution display name',
+      help: 'The human-readable name shown in the Maker Portal.',
+      defaultValue: state.SOLUTION_DISPLAY_NAME || state.APP_NAME || '',
+      showIf: { id: 'SOLUTION_SELECTION', equals: ENTER_EXISTING },
     });
 
     questions.push({
@@ -98,9 +118,27 @@ export default {
     const publisherId = state.PUBLISHER_ID;
     const selectedSolutionId = String(answers.SOLUTION_SELECTION || '').trim();
 
+    // ── Enter existing solution details manually ──
+    if (selectedSolutionId === ENTER_EXISTING) {
+      const unique = (answers.EXISTING_SOLUTION_UNIQUE_NAME || '').trim();
+      const friendly = (answers.EXISTING_SOLUTION_DISPLAY_NAME || '').trim();
+      if (!unique) throw new Error('Solution unique name is required.');
+      if (!friendly) throw new Error('Solution display name is required.');
+      log.ok(`Using existing solution: "${friendly}" (${unique})`);
+      clearSecret();
+      return {
+        stateUpdate: {
+          SOLUTION_ID: '',
+          SOLUTION_UNIQUE_NAME: unique,
+          SOLUTION_DISPLAY_NAME: friendly,
+        },
+        completedStep: 6,
+      };
+    }
+
     if (selectedSolutionId && selectedSolutionId !== CREATE_NEW) {
       if (isUserAuth) {
-        throw new Error('Cannot look up solutions from Dataverse with user auth. Select "Create new solution" and enter the details manually, or create the solution in the Maker Portal first.');
+        throw new Error('Cannot look up solutions from Dataverse with user auth. Use "Enter existing solution details" instead.');
       }
       log.info('Loading selected solution...');
       const solutions = await listSolutions(publisherId);

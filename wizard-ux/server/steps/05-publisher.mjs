@@ -6,6 +6,7 @@ import { dvGet, dvPost, hasUsableSecret, setSecret } from '../lib/dataverse-brid
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VALIDATE = await import(pathToFileURL(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs')).href);
 const CREATE_NEW = '__create_new__';
+const ENTER_EXISTING = '__enter_existing__';
 
 async function listPublishers() {
   const data = await dvGet(
@@ -99,14 +100,33 @@ export default {
       type: 'select',
       label: 'Publisher',
       help: isUserAuth
-        ? 'With user auth, publishers cannot be auto-loaded. Create a new publisher or enter a known publisher prefix.'
+        ? 'With user auth, publishers cannot be auto-loaded. Enter an existing publisher\'s details or create a new one.'
         : (publisherLoadHelp || 'Choose an existing publisher from this Dev environment, or choose Create new publisher.'),
       defaultValue: preferredPublisher,
       options: [
         ...publishers.map(publisherOption),
+        { value: ENTER_EXISTING, label: 'Enter existing publisher details' },
         { value: CREATE_NEW, label: '+ Create new publisher' },
       ],
       hideIf: { id: '__resume', equals: true },
+    });
+
+    questions.push({
+      id: 'EXISTING_PUBLISHER_PREFIX',
+      type: 'text',
+      label: 'Existing publisher prefix',
+      help: '2–8 lowercase letters. Find this in the Maker Portal under Solutions → Publishers.',
+      defaultValue: state.PUBLISHER_PREFIX || '',
+      showIf: { id: 'PUBLISHER_SELECTION', equals: ENTER_EXISTING },
+    });
+
+    questions.push({
+      id: 'EXISTING_PUBLISHER_DISPLAY_NAME',
+      type: 'text',
+      label: 'Existing publisher display name',
+      help: 'The human-readable name shown in the Maker Portal.',
+      defaultValue: state.PUBLISHER_DISPLAY_NAME || '',
+      showIf: { id: 'PUBLISHER_SELECTION', equals: ENTER_EXISTING },
     });
 
     questions.push({
@@ -145,9 +165,30 @@ export default {
     }
 
     const selectedPublisherId = String(answers.PUBLISHER_SELECTION || '').trim();
+
+    // ── Enter existing publisher details manually ──
+    if (selectedPublisherId === ENTER_EXISTING) {
+      const prefix = (answers.EXISTING_PUBLISHER_PREFIX || '').trim();
+      const friendly = (answers.EXISTING_PUBLISHER_DISPLAY_NAME || '').trim();
+      if (!VALIDATE.isValidPrefix(prefix)) throw new Error('Prefix must be 2–8 lowercase letters only.');
+      if (!friendly) throw new Error('Publisher display name is required.');
+      const uniqueName = friendly.toLowerCase().replace(/[\s\-]+/g, '');
+      log.ok(`Using existing publisher: "${friendly}" (prefix ${prefix})`);
+      return {
+        stateUpdate: publisherStateUpdate(state, {
+          id: '',
+          name: uniqueName,
+          displayName: friendly,
+          prefix,
+          choiceValuePrefix: '',
+        }),
+        completedStep: 5,
+      };
+    }
+
     if (selectedPublisherId && selectedPublisherId !== CREATE_NEW) {
       if (isUserAuth) {
-        throw new Error('Cannot look up publishers from Dataverse with user auth. Select "Create new publisher" and enter the details manually, or create the publisher in the Maker Portal first.');
+        throw new Error('Cannot look up publishers from Dataverse with user auth. Use "Enter existing publisher details" instead.');
       }
       log.info('Loading selected publisher from your Dev environment...');
       const publishers = await listPublishers();
