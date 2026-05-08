@@ -1,5 +1,5 @@
-// wizard/steps/03-app-registration.mjs — App Registration + Application User (manual portal steps)
-import { input, password, confirm } from '@inquirer/prompts';
+// wizard/steps/03-app-registration.mjs — Authentication method + optional App Registration
+import { input, password, confirm, select } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, stateHas, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
 import { isValidUUID } from '../lib/validate.mjs';
@@ -7,7 +7,7 @@ import { setSecret } from '../lib/secrets.mjs';
 import { hasCommand, runSafe } from '../lib/shell.mjs';
 
 export default async function stepAppRegistration() {
-  ui.stepHeader(3, TOTAL_STEPS, 'App Registration & Application User');
+  ui.stepHeader(3, TOTAL_STEPS, 'Authentication');
 
   const appName = stateGet('APP_NAME');
   const appRegName = `PowerApps-CodeApps-${appName.replace(/ /g, '-')}`;
@@ -15,40 +15,132 @@ export default async function stepAppRegistration() {
   const testUrl = stateGet('PP_ENV_TEST', '');
   const prodUrl = stateGet('PP_ENV_PROD', '');
 
-  // ── 1Password detection ──
+  // ── Authentication method choice ──
+  const currentAuthType = stateGet('AUTH_PROFILE_TYPE', 'user');
+  ui.line('How do you want to authenticate with your Power Platform environment?');
+  ui.line('');
+  ui.line('  • User credentials: Sign in interactively with your own account.');
+  ui.line('    Best for individual developers. No tenant admin access required.');
+  ui.line('');
+  ui.line('  • Service Principal: Use an App Registration for headless auth.');
+  ui.line('    Best for CI/CD and shared environments. Requires tenant admin access.');
+  ui.line('');
+
+  const authProfileType = await select({
+    message: 'Authentication method',
+    choices: [
+      { name: 'User credentials (interactive sign-in)', value: 'user' },
+      { name: 'Service Principal (App Registration)', value: 'spn' },
+    ],
+    default: currentAuthType,
+  });
+
+  stateSet('AUTH_PROFILE_TYPE', authProfileType);
+
+  // ── 1Password detection (available for both auth types) ──
   const hasOp = hasCommand('op');
   let use1Password = false;
   let vault = '';
   let itemName = '';
-  let opTenantId = '';
-  let opClientId = '';
-  let opSecret = '';
 
   if (hasOp) {
     ui.line('1Password CLI (op) detected on your system.');
     ui.line('');
     use1Password = await confirm({
-      message: 'Do you use 1Password to manage your credentials?',
+      message: 'Use 1Password to store credentials and environment URLs?',
       default: true,
     });
   }
 
   if (use1Password) {
-    vault = stateGet('OP_VAULT', '') || '';
-    itemName = stateGet('OP_ITEM', '') || '';
+    // ── Vault selection with discovery (2s timeout to avoid hanging) ──
+    const vaultsRaw = runSafe('op', ['vault', 'list', '--format=json'], { timeout: 2000 });
+    let vaults = [];
+    try { vaults = vaultsRaw ? JSON.parse(vaultsRaw) : []; } catch { /* ignore */ }
+    vaults.sort((a, b) => a.name.localeCompare(b.name));
 
-    vault = await input({ message: '1Password vault name', default: vault || 'Engineering' });
-    itemName = await input({
-      message: '1Password item name',
-      default: itemName || `PowerApps CodeApps - ${appName}`,
-    });
+    if (vaults.length > 0) {
+      const vaultChoices = [
+        ...vaults.map((v) => ({ name: `${v.name} (${v.items} item${v.items === 1 ? '' : 's'})`, value: v.name })),
+        { name: '+ Create new vault', value: '__create__' },
+      ];
+      const savedVault = stateGet('OP_VAULT', '');
+      const defaultVault = savedVault && vaults.some((v) => v.name === savedVault) ? savedVault : vaults[0].name;
+      const vaultChoice = await select({ message: '1Password vault', choices: vaultChoices, default: defaultVault });
+      if (vaultChoice === '__create__') {
+        vault = await input({ message: 'New vault name', default: 'Power Platform Environments' });
+        const created = runSafe('op', ['vault', 'create', vault, '--format=json']);
+        if (created) ui.ok(`Created vault "${vault}"`);
+        else ui.warn(`Could not create vault "${vault}". Create it manually in 1Password.`);
+      } else {
+        vault = vaultChoice;
+      }
+    } else {
+      vault = await input({ message: '1Password vault name', default: stateGet('OP_VAULT', '') || 'Power Platform Environments' });
+    }
+
+    // ── Item selection with discovery (2s timeout) ──
+    const itemsRaw = runSafe('op', ['item', 'list', '--vault', vault, '--format=json'], { timeout: 2000 });
+    let items = [];
+    try { items = itemsRaw ? JSON.parse(itemsRaw) : []; } catch { /* ignore */ }
+    items.sort((a, b) => a.title.localeCompare(b.title));
+
+    if (items.length > 0) {
+      const itemChoices = [
+        ...items.map((i) => ({ name: `${i.title} (${(i.category || '').toLowerCase().replace(/_/g, ' ')})`, value: i.title })),
+        { name: '+ Create new item', value: '__create__' },
+      ];
+      const savedItem = stateGet('OP_ITEM', '');
+      const defaultItem = savedItem && items.some((i) => i.title === savedItem) ? savedItem : items[0].title;
+      const itemChoice = await select({ message: '1Password item', choices: itemChoices, default: defaultItem });
+      if (itemChoice === '__create__') {
+        itemName = await input({ message: 'New item name', default: `PowerApps CodeApps - ${appName}` });
+        // Item creation deferred until we have field values
+      } else {
+        itemName = itemChoice;
+      }
+    } else {
+      itemName = await input({ message: '1Password item name', default: stateGet('OP_ITEM', '') || `PowerApps CodeApps - ${appName}` });
+    }
 
     stateSet('AUTH_MODE', '1password');
     stateSet('HAS_OP', true);
     stateSet('OP_VAULT', vault);
     stateSet('OP_ITEM', itemName);
-
     ui.line('');
+  }
+
+  // ── User credentials + 1Password ──
+  if (authProfileType === 'user') {
+    if (use1Password) {
+      // Create or sync the 1Password item with env URLs
+      const existingItem = runSafe('op', ['item', 'get', itemName, '--vault', vault, '--format', 'json']);
+      if (!existingItem) {
+        const createArgs = ['item', 'create', '--vault', vault, '--category', 'Secure Note', '--title', itemName];
+        if (devUrl) createArgs.push(`env-dev[text]=${devUrl}`);
+        if (testUrl) createArgs.push(`env-test[text]=${testUrl}`);
+        if (prodUrl) createArgs.push(`env-prod[text]=${prodUrl}`);
+        if (runSafe('op', createArgs) !== null) ui.ok(`Created 1Password item "${itemName}"`);
+        else ui.warn(`Could not create 1Password item. Create it manually.`);
+      } else {
+        syncEnv1PasswordFields(vault, itemName, devUrl, testUrl, prodUrl);
+      }
+      ui.ok(`User credentials with 1Password — environment URLs stored in "${vault}" → "${itemName}".`);
+    } else {
+      ui.ok('User credentials selected — you will sign in interactively in the next step.');
+    }
+    stateSet('PP_TENANT_ID', '');
+    stateSet('PP_APP_ID', '');
+    setCompletedStep(3);
+    return;
+  }
+
+  // ── Service Principal flow ──
+  let opTenantId = '';
+  let opClientId = '';
+  let opSecret = '';
+
+  if (use1Password) {
     ui.line(`Looking up credentials in "${vault}" → "${itemName}"...`);
     ui.line('');
 

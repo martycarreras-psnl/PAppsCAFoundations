@@ -347,9 +347,10 @@ export function Summary() {
                 <div className={s.cardIcon}><DocumentBulletListRegular /></div>
                 <Subtitle2>Identity</Subtitle2>
               </div>
-              <Field label="Tenant ID" value={st.PP_TENANT_ID} />
-              <Field label="App ID" value={st.PP_APP_ID} />
-              <Field label="Auth mode" value={st.AUTH_MODE} />
+              <Field label="Auth method" value={st.AUTH_PROFILE_TYPE === 'spn' ? 'Service Principal' : 'User credentials'} />
+              {st.AUTH_PROFILE_TYPE === 'spn' && <Field label="Tenant ID" value={st.PP_TENANT_ID} />}
+              {st.AUTH_PROFILE_TYPE === 'spn' && <Field label="App ID" value={st.PP_APP_ID} />}
+              {st.AUTH_PROFILE_TYPE === 'spn' && <Field label="Credential storage" value={st.AUTH_MODE} />}
             </div>
 
             <div className={s.card}>

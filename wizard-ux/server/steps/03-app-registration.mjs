@@ -1,4 +1,4 @@
-// Step 3 - App Registration. Browser-native collection with optional 1Password sync.
+// Step 3 - Authentication. Browser-native auth method selection with optional 1Password sync.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
@@ -27,8 +27,62 @@ function runSafe(file, args) {
   }
 }
 
+function runSafeWithTimeout(file, args, timeoutMs = 2000) {
+  try {
+    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: ROOT_DIR, timeout: timeoutMs }).trim();
+  } catch {
+    return null;
+  }
+}
+
 function readOpField(vault, itemName, field) {
   return (runSafe('op', ['read', `op://${vault}/${itemName}/${field}`]) || '').trim();
+}
+
+const CREATE_NEW_VAULT = '__create_new_vault__';
+const CREATE_NEW_ITEM = '__create_new_item__';
+const ENTER_MANUALLY = '__enter_manually__';
+
+function listOpVaults() {
+  const raw = runSafeWithTimeout('op', ['vault', 'list', '--format=json']);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw)
+      .map((v) => ({ value: v.name, label: `${v.name} (${v.items} item${v.items === 1 ? '' : 's'})` }))
+      .sort((a, b) => a.value.localeCompare(b.value));
+  } catch { return []; }
+}
+
+function listOpItems(vaultName) {
+  if (!vaultName) return [];
+  const raw = runSafeWithTimeout('op', ['item', 'list', '--vault', vaultName, '--format=json']);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw)
+      .map((i) => ({ value: i.title, label: `${i.title} (${i.category.toLowerCase().replace(/_/g, ' ')})` }))
+      .sort((a, b) => a.value.localeCompare(b.value));
+  } catch { return []; }
+}
+
+// Exported for the API route to call
+export { listOpItems };
+
+function createOpVault(log, name) {
+  const result = runSafe('op', ['vault', 'create', name, '--format=json']);
+  if (result) { log.ok(`Created 1Password vault "${name}"`); return true; }
+  log.warn(`Could not create vault "${name}". Create it manually in 1Password.`);
+  return false;
+}
+
+function createOpItem(log, vault, title, fields) {
+  const args = ['item', 'create', '--vault', vault, '--category', 'Secure Note', '--title', title];
+  for (const [key, value] of Object.entries(fields)) {
+    if (value) args.push(`${key}=${value}`);
+  }
+  const result = runSafe('op', args);
+  if (result !== null) { log.ok(`Created 1Password item "${title}" in vault "${vault}"`); return true; }
+  log.warn(`Could not create item "${title}". Create it manually in 1Password.`);
+  return false;
 }
 
 function save1PasswordItem(log, vault, itemName, values, had) {
@@ -80,8 +134,8 @@ function sync1PasswordEnvFields(log, vault, itemName, values) {
 export default {
   meta: {
     number: 3,
-    title: 'App Registration',
-    description: 'Create or reuse an Entra ID App Registration and confirm it is registered as an Application User.',
+    title: 'Authentication',
+    description: 'Choose how to authenticate with your Power Platform environment — user credentials or a service principal.',
     canRunInBrowser: true,
   },
 
@@ -89,35 +143,117 @@ export default {
     const appName = state.APP_NAME || 'My App';
     const appRegName = `PowerApps-CodeApps-${String(appName).replace(/ /g, '-')}`;
     const hasOp = hasCommand('op') || state.HAS_OP === true;
+    const currentAuthType = state.AUTH_PROFILE_TYPE || 'user';
+
+    // ── 1Password vault/item discovery ──
+    const vaults = hasOp ? listOpVaults() : [];
+    const defaultVault = state.OP_VAULT || vaults[0]?.value || '';
+
     return [
+      {
+        id: 'AUTH_PROFILE_TYPE',
+        type: 'select',
+        label: 'Authentication method',
+        help: 'User credentials: sign in interactively — no App Registration needed. Service Principal: headless auth via an App Registration — required for CI/CD but needs tenant admin access to create.',
+        defaultValue: currentAuthType,
+        options: [
+          { value: 'user', label: 'User credentials (interactive sign-in)' },
+          { value: 'spn', label: 'Service Principal (App Registration)' },
+        ],
+      },
+
+      // ── 1Password (available for both auth types) ──
       {
         id: 'USE_1PASSWORD',
         type: 'confirm',
-        label: 'Use 1Password for these credentials',
-        help: hasOp ? 'WizardUX can read existing fields and optionally save missing values.' : '1Password CLI was not detected. Leave this off unless op is available in your shell.',
+        label: 'Use 1Password to store credentials',
+        help: hasOp
+          ? 'Store environment URLs and credentials as 1Password references. Secrets never touch disk.'
+          : '1Password CLI was not detected. Leave this off unless op is available in your shell.',
         defaultValue: hasOp && state.AUTH_MODE === '1password',
       },
       {
         id: 'OP_VAULT',
+        type: 'select',
+        label: '1Password vault',
+        help: vaults.length > 0
+          ? 'Select an existing vault, create a new one, or enter a name manually.'
+          : 'Could not discover vaults (1Password may be locked or offline). Enter a vault name manually or create a new one.',
+        defaultValue: state.OP_VAULT && vaults.some((v) => v.value === state.OP_VAULT)
+          ? state.OP_VAULT
+          : (vaults[0]?.value || ENTER_MANUALLY),
+        options: [
+          ...vaults,
+          { value: ENTER_MANUALLY, label: 'Enter vault name manually' },
+          { value: CREATE_NEW_VAULT, label: '+ Create new vault' },
+        ],
+        hideIf: { id: 'USE_1PASSWORD', equals: false },
+      },
+      {
+        id: 'OP_VAULT_MANUAL',
         type: 'text',
-        label: '1Password vault name',
-        defaultValue: state.OP_VAULT || 'Engineering',
+        label: 'Vault name',
+        help: 'Type the exact 1Password vault name. It must already exist in your 1Password account.',
+        defaultValue: state.OP_VAULT || '',
+        showIf: { id: 'OP_VAULT', equals: ENTER_MANUALLY },
+        hideIf: { id: 'USE_1PASSWORD', equals: false },
+      },
+      {
+        id: 'OP_NEW_VAULT_NAME',
+        type: 'text',
+        label: 'New vault name',
+        help: 'Name for the new 1Password vault.',
+        defaultValue: 'Power Platform Environments',
+        showIf: { id: 'OP_VAULT', equals: CREATE_NEW_VAULT },
         hideIf: { id: 'USE_1PASSWORD', equals: false },
       },
       {
         id: 'OP_ITEM',
+        type: 'select',
+        label: '1Password item',
+        help: 'Items are loaded from the selected vault. Select an existing item, create a new one, or enter a name manually.',
+        defaultValue: state.OP_ITEM || ENTER_MANUALLY,
+        options: [
+          { value: ENTER_MANUALLY, label: 'Enter item name manually' },
+          { value: CREATE_NEW_ITEM, label: '+ Create new item' },
+        ],
+        dynamicOptions: {
+          endpoint: '/api/1password/items',
+          param: 'vault',
+          dependsOn: 'OP_VAULT',
+          responseKey: 'items',
+        },
+        hideIf: [{ id: 'USE_1PASSWORD', equals: false }],
+      },
+      {
+        id: 'OP_ITEM_MANUAL',
         type: 'text',
-        label: '1Password item name',
+        label: 'Item name',
+        help: 'Type the exact 1Password item name (e.g. the Secure Note title).',
         defaultValue: state.OP_ITEM || `PowerApps CodeApps - ${appName}`,
+        showIf: { id: 'OP_ITEM', equals: ENTER_MANUALLY },
         hideIf: { id: 'USE_1PASSWORD', equals: false },
       },
+      {
+        id: 'OP_NEW_ITEM_NAME',
+        type: 'text',
+        label: 'New item name',
+        help: 'Name for the new 1Password Secure Note.',
+        defaultValue: state.OP_ITEM || `PowerApps CodeApps - ${appName}`,
+        showIf: { id: 'OP_ITEM', equals: CREATE_NEW_ITEM },
+        hideIf: { id: 'USE_1PASSWORD', equals: false },
+      },
+
+      // ── SPN-only fields ──
+      // These show when: SPN is selected AND (1Password is off, OR creating a new 1Password item).
+      // When 1Password is on with an existing item, credentials are read from 1Password automatically.
       {
         id: 'PP_TENANT_ID',
         type: 'text',
         label: 'Tenant ID (Directory ID)',
-        help: 'Leave blank if your 1Password item already has a tenant-id field.',
+        help: 'Required for the App Registration. Leave blank only if your existing 1Password item already has a tenant-id field.',
         defaultValue: state.PP_TENANT_ID || '',
-        hideIf: { id: 'USE_1PASSWORD', equals: true },
+        showIf: { id: 'AUTH_PROFILE_TYPE', equals: 'spn' },
         why: [
           'Azure Portal steps:',
           '1. Open https://portal.azure.com',
@@ -132,9 +268,9 @@ export default {
         id: 'PP_APP_ID',
         type: 'text',
         label: 'Client ID (Application ID)',
-        help: 'Leave blank if your 1Password item already has an app-id field.',
+        help: 'Required for the App Registration. Leave blank only if your existing 1Password item already has an app-id field.',
         defaultValue: state.PP_APP_ID || '',
-        hideIf: { id: 'USE_1PASSWORD', equals: true },
+        showIf: { id: 'AUTH_PROFILE_TYPE', equals: 'spn' },
       },
       {
         id: 'PP_CLIENT_SECRET',
@@ -142,10 +278,10 @@ export default {
         label: 'Client secret value',
         help: hasUsableSecret()
           ? 'A secret is already held in memory from a previous run. Leave blank to keep it.'
-          : 'Create this under Certificates & secrets.',
+          : 'Required for the App Registration. Leave blank only if your existing 1Password item already has a client-secret field.',
         defaultValue: '',
         savedHint: hasUsableSecret() ? 'Secret saved from previous run' : undefined,
-        hideIf: { id: 'USE_1PASSWORD', equals: true },
+        showIf: { id: 'AUTH_PROFILE_TYPE', equals: 'spn' },
         why: [
           'Client secret steps:',
           '1. In the App Registration, open Certificates & secrets',
@@ -159,6 +295,7 @@ export default {
         type: 'confirm',
         label: 'Please confirm that the Application User is registered in the Dev environment',
         defaultValue: false,
+        showIf: { id: 'AUTH_PROFILE_TYPE', equals: 'spn' },
         why: [
           'Power Platform Admin Center steps:',
           '1. Open https://admin.powerplatform.microsoft.com',
@@ -174,9 +311,90 @@ export default {
   },
 
   async apply(answers, state, log) {
+    const authProfileType = answers.AUTH_PROFILE_TYPE || 'user';
     const use1Password = answers.USE_1PASSWORD === true;
-    const vault = String(answers.OP_VAULT || state.OP_VAULT || '').trim();
-    const itemName = String(answers.OP_ITEM || state.OP_ITEM || '').trim();
+
+    // ── Resolve vault and item names (shared by both auth flows) ──
+    let vault = '';
+    let itemName = '';
+    if (use1Password) {
+      if (!hasCommand('op')) throw new Error('1Password was selected, but the op CLI is not available to the WizardUX server process.');
+
+      // Vault: existing selection, manual entry, or create new
+      if (answers.OP_VAULT === CREATE_NEW_VAULT) {
+        vault = String(answers.OP_NEW_VAULT_NAME || '').trim();
+        if (!vault) throw new Error('New vault name is required.');
+        createOpVault(log, vault);
+      } else if (answers.OP_VAULT === ENTER_MANUALLY) {
+        vault = String(answers.OP_VAULT_MANUAL || '').trim();
+        if (!vault) throw new Error('Vault name is required.');
+      } else {
+        vault = String(answers.OP_VAULT || state.OP_VAULT || '').trim();
+      }
+
+      // Item: existing selection, manual entry, or create new
+      if (answers.OP_ITEM === CREATE_NEW_ITEM) {
+        itemName = String(answers.OP_NEW_ITEM_NAME || '').trim();
+        if (!itemName) throw new Error('New item name is required.');
+        // Item creation happens below after we have field values
+      } else if (answers.OP_ITEM === ENTER_MANUALLY) {
+        itemName = String(answers.OP_ITEM_MANUAL || '').trim();
+        if (!itemName) throw new Error('Item name is required.');
+      } else {
+        itemName = String(answers.OP_ITEM || state.OP_ITEM || '').trim();
+      }
+
+      if (!vault || !itemName) throw new Error('1Password vault and item name are required.');
+    }
+
+    // ── User credentials + 1Password ──
+    if (authProfileType === 'user') {
+      if (use1Password) {
+        const devUrl = state.PP_ENV_DEV || '';
+        const testUrl = state.PP_ENV_TEST || '';
+        const prodUrl = state.PP_ENV_PROD || '';
+
+        // Create item if needed (env URLs only — no secrets for user auth)
+        if (answers.OP_ITEM === CREATE_NEW_ITEM) {
+          const fields = {};
+          if (devUrl) fields['env-dev[text]'] = devUrl;
+          if (testUrl) fields['env-test[text]'] = testUrl;
+          if (prodUrl) fields['env-prod[text]'] = prodUrl;
+          createOpItem(log, vault, itemName, fields);
+        } else {
+          // Sync env URLs on existing item
+          sync1PasswordEnvFields(log, vault, itemName, { devUrl, testUrl, prodUrl });
+        }
+
+        log.ok(`User credentials with 1Password selected — environment URLs stored in "${vault}" → "${itemName}".`);
+        return {
+          stateUpdate: {
+            AUTH_PROFILE_TYPE: 'user',
+            PP_TENANT_ID: '',
+            PP_APP_ID: '',
+            AUTH_MODE: '1password',
+            HAS_OP: true,
+            OP_VAULT: vault,
+            OP_ITEM: itemName,
+          },
+          completedStep: 3,
+        };
+      }
+
+      // User credentials without 1Password
+      log.ok('User credentials selected — you will sign in interactively in the next step.');
+      return {
+        stateUpdate: {
+          AUTH_PROFILE_TYPE: 'user',
+          PP_TENANT_ID: '',
+          PP_APP_ID: '',
+          AUTH_MODE: state.AUTH_MODE === '1password' ? '' : (state.AUTH_MODE || ''),
+        },
+        completedStep: 3,
+      };
+    }
+
+    // ── Service Principal flow ──
     const devUrl = state.PP_ENV_DEV || '';
     const testUrl = state.PP_ENV_TEST || '';
     const prodUrl = state.PP_ENV_PROD || '';
@@ -187,18 +405,21 @@ export default {
     const had = { tenantId: false, clientId: false, clientSecret: false };
 
     if (use1Password) {
-      if (!hasCommand('op')) throw new Error('1Password was selected, but the op CLI is not available to the WizardUX server process.');
-      if (!vault || !itemName) throw new Error('1Password vault and item name are required.');
       log.info(`Looking for credentials in 1Password item "${itemName}"...`);
-      const opTenantId = readOpField(vault, itemName, 'tenant-id');
-      const opClientId = readOpField(vault, itemName, 'app-id');
-      const opSecret = readOpField(vault, itemName, 'client-secret');
-      if (opTenantId) { tenantId = opTenantId; had.tenantId = true; }
-      if (opClientId) { clientId = opClientId; had.clientId = true; }
-      if (opSecret) { clientSecret = opSecret; had.clientSecret = true; }
-      const found = [had.tenantId && 'tenant-id', had.clientId && 'app-id', had.clientSecret && 'client-secret'].filter(Boolean);
-      if (found.length > 0) log.ok(`Found ${found.join(', ')} in 1Password`);
-      if (found.length < 3) log.warn('Some 1Password fields were missing; using the values entered in WizardUX for the rest.');
+      if (answers.OP_ITEM !== CREATE_NEW_ITEM) {
+        // Read from existing item
+        const opTenantId = readOpField(vault, itemName, 'tenant-id');
+        const opClientId = readOpField(vault, itemName, 'app-id');
+        const opSecret = readOpField(vault, itemName, 'client-secret');
+        if (opTenantId) { tenantId = opTenantId; had.tenantId = true; }
+        if (opClientId) { clientId = opClientId; had.clientId = true; }
+        if (opSecret) { clientSecret = opSecret; had.clientSecret = true; }
+        const found = [had.tenantId && 'tenant-id', had.clientId && 'app-id', had.clientSecret && 'client-secret'].filter(Boolean);
+        if (found.length > 0) log.ok(`Found ${found.join(', ')} in 1Password`);
+        if (found.length < 3) log.warn('Some 1Password fields were missing; using the values entered in WizardUX for the rest.');
+      } else {
+        log.info('New item will be created after validating credentials.');
+      }
     }
 
     if (!VALIDATE.isValidUUID(tenantId)) throw new Error('Tenant ID must be a valid UUID.');
@@ -228,13 +449,26 @@ export default {
     log.ok('Credential values captured');
 
     if (use1Password) {
-      const values = { tenantId, clientId, clientSecret, devUrl, testUrl, prodUrl };
-      if (had.tenantId && had.clientId && had.clientSecret) sync1PasswordEnvFields(log, vault, itemName, values);
-      else save1PasswordItem(log, vault, itemName, values, had);
+      if (answers.OP_ITEM === CREATE_NEW_ITEM) {
+        // Create a brand new item with all fields
+        createOpItem(log, vault, itemName, {
+          'tenant-id[text]': tenantId,
+          'app-id[text]': clientId,
+          'client-secret[password]': clientSecret,
+          ...(devUrl ? { 'env-dev[text]': devUrl } : {}),
+          ...(testUrl ? { 'env-test[text]': testUrl } : {}),
+          ...(prodUrl ? { 'env-prod[text]': prodUrl } : {}),
+        });
+      } else {
+        const values = { tenantId, clientId, clientSecret, devUrl, testUrl, prodUrl };
+        if (had.tenantId && had.clientId && had.clientSecret) sync1PasswordEnvFields(log, vault, itemName, values);
+        else save1PasswordItem(log, vault, itemName, values, had);
+      }
     }
 
     return {
       stateUpdate: {
+        AUTH_PROFILE_TYPE: 'spn',
         PP_TENANT_ID: tenantId,
         PP_APP_ID: clientId,
         AUTH_MODE: use1Password ? '1password' : (state.AUTH_MODE || 'envlocal'),

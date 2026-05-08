@@ -13,6 +13,17 @@ export interface QuestionGroup {
   help?: string;
 }
 
+export interface DynamicOptionsSource {
+  /** API endpoint to fetch options from, e.g. '/api/1password/items' */
+  endpoint: string;
+  /** Query parameter name to pass the dependency value as */
+  param: string;
+  /** ID of another question whose value drives this lookup */
+  dependsOn: string;
+  /** Property name in the response JSON that contains the options array */
+  responseKey: string;
+}
+
 export interface Question {
   id: string;
   type: QuestionType;
@@ -23,6 +34,7 @@ export interface Question {
   defaultValue?: unknown;
   savedHint?: string;
   options?: Array<{ value: string; label: string }>;
+  dynamicOptions?: DynamicOptionsSource;
   group?: QuestionGroup;
   validatePattern?: 'dataverseUrl';
   hideIf?: QuestionCondition | QuestionCondition[];

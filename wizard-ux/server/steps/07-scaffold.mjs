@@ -88,7 +88,7 @@ function verifyPacTarget({ pac, projectDir, state, credentialValues, profileType
     profileType,
     credentialValues,
     powerConfigPath: join(projectDir, 'power.config.json'),
-    requireCredentialMatch: true,
+    requireCredentialMatch: credentialValues !== null,
     requirePowerConfig,
     requirePowerConfigTarget,
   });
@@ -261,7 +261,8 @@ export default {
     const pac = SHELL.pacPath();
     if (pac) {
       log.info('Registering Code App in Power Platform...');
-      const credentialValues = resolveCredentialValues(state);
+      const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+      const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
       try {
         verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: false, requirePowerConfigTarget: false });
       } catch (error) {

@@ -14,6 +14,7 @@ import systemRoutes from './routes/system.mjs';
 import stepsRoutes from './routes/steps.mjs';
 import streamRoutes from './routes/stream.mjs';
 import ptyRoutes from './routes/pty.mjs';
+import onepasswordRoutes from './routes/onepassword.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UX_DIR = resolve(__dirname, '..');
@@ -72,6 +73,7 @@ await app.register(systemRoutes, { prefix: '/api/system', rootDir: ROOT_DIR });
 await app.register(stepsRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(streamRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(ptyRoutes, { rootDir: ROOT_DIR, csrfToken: CSRF_TOKEN });
+await app.register(onepasswordRoutes, { prefix: '/api/1password' });
 
 // Serve the UI — Vite middleware in dev, static dist/ in prod
 if (IS_PROD) {

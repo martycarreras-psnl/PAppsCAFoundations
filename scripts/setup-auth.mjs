@@ -99,6 +99,24 @@ try {
 }
 
 const loadedState = loadState();
+const authProfileType = loadedState.AUTH_PROFILE_TYPE || 'user';
+
+if (authProfileType === 'user') {
+  console.log('Auth profile type: User credentials (interactive sign-in)');
+  console.log('');
+  console.log('User auth profiles are created interactively during the wizard.');
+  console.log('To re-create a user profile, run:');
+  const targetKey = loadedState.WIZARD_TARGET_ENV || 'dev';
+  const devUrl = loadedState.PP_ENV_DEV || process.env.PP_ENV_DEV || '';
+  if (devUrl) {
+    const profileName = buildPacProfileName({ rootDir: process.cwd(), targetKey, profileType: 'user', url: devUrl });
+    console.log(`  ${pacBin} auth create --name ${profileName} --environment ${devUrl} --deviceCode`);
+  } else {
+    console.log(`  ${pacBin} auth create --environment <your-dev-url> --deviceCode`);
+  }
+  console.log('');
+  process.exit(0);
+}
 
 console.log('');
 console.log('Validating credentials...');

@@ -1,10 +1,10 @@
 import { Question, QuestionCondition, QuestionGroup } from '../types/schema';
 import {
   Field, Input, Switch, Combobox, Option, Textarea, Caption1, makeStyles, tokens, Body2, Body1, Checkbox,
-  Popover, PopoverTrigger, PopoverSurface, Button,
+  Popover, PopoverTrigger, PopoverSurface, Button, Spinner,
 } from '@fluentui/react-components';
 import { QuestionCircleRegular, LockClosedRegular, EditRegular } from '@fluentui/react-icons';
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 const useStyles = makeStyles({
   card: {
@@ -111,11 +111,50 @@ function questionError(q: Question, value: unknown, showError?: boolean): string
   );
 }
 
-function QuestionContent({ question: q, value, onChange, showError }: Omit<Props, 'answers'>) {
+function QuestionContent({ question: q, value, onChange, showError, answers }: Props) {
   const s = useStyles();
   const error = questionError(q, value, showError);
   const [editingSecret, setEditingSecret] = useState(false);
   const showSavedIndicator = q.type === 'secret' && q.savedHint && !value && !editingSecret;
+
+  // ── Dynamic options: fetch from API when dependency changes ──
+  const dyn = q.dynamicOptions;
+  const depValue = dyn ? String(answers[dyn.dependsOn] ?? '') : '';
+  const [dynamicOpts, setDynamicOpts] = useState<Array<{ value: string; label: string }>>([]);
+  const [dynamicLoading, setDynamicLoading] = useState(false);
+  const prevDepRef = useRef(depValue);
+
+  useEffect(() => {
+    if (!dyn) return;
+    // Skip sentinel values (create new / enter manually)
+    if (!depValue || depValue.startsWith('__')) {
+      setDynamicOpts([]);
+      return;
+    }
+    if (depValue === prevDepRef.current && dynamicOpts.length > 0) return;
+    prevDepRef.current = depValue;
+    setDynamicLoading(true);
+    const controller = new AbortController();
+    fetch(`${dyn.endpoint}?${dyn.param}=${encodeURIComponent(depValue)}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        const items: Array<{ value: string; label: string }> = data[dyn.responseKey] || [];
+        setDynamicOpts(items);
+        setDynamicLoading(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDynamicLoading(false);
+      });
+    return () => controller.abort();
+  }, [dyn, depValue]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Merge: static sentinel options (create new, enter manually) come from q.options,
+  // dynamic items from the API. Static options starting with __ are always appended at the end.
+  const resolvedOptions = useMemo(() => {
+    if (!dyn) return q.options || [];
+    const sentinels = (q.options || []).filter((o) => o.value.startsWith('__'));
+    return [...dynamicOpts, ...sentinels];
+  }, [dyn, q.options, dynamicOpts]);
 
   const labelEl = (
     <span className={s.labelRow}>
@@ -179,15 +218,19 @@ function QuestionContent({ question: q, value, onChange, showError }: Omit<Props
         ) : q.type === 'confirm' ? (
           <Switch checked={!!value} onChange={(_e, d) => onChange(q.id, d.checked)} />
         ) : q.type === 'select' ? (
-          <Combobox
-            value={(q.options?.find((o) => o.value === value)?.label) ?? ''}
-            selectedOptions={value ? [String(value)] : []}
-            onOptionSelect={(_e, d) => onChange(q.id, d.optionValue)}
-          >
-            {(q.options || []).map((o) => (
-              <Option key={o.value} value={o.value}>{o.label}</Option>
-            ))}
-          </Combobox>
+          dynamicLoading ? (
+            <Spinner size="tiny" label="Loading options…" />
+          ) : (
+            <Combobox
+              value={(resolvedOptions.find((o) => o.value === value)?.label) ?? ''}
+              selectedOptions={value ? [String(value)] : []}
+              onOptionSelect={(_e, d) => onChange(q.id, d.optionValue)}
+            >
+              {resolvedOptions.map((o) => (
+                <Option key={o.value} value={o.value}>{o.label}</Option>
+              ))}
+            </Combobox>
+          )
         ) : q.type === 'multiselect' ? (
           <Textarea
             value={Array.isArray(value) ? (value as string[]).join(', ') : ''}
@@ -228,7 +271,7 @@ export function QuestionCard({ question: q, answers, value, onChange, showError 
 
   return (
     <div className={s.card}>
-      <QuestionContent question={q} value={value} onChange={onChange} showError={showError} />
+      <QuestionContent question={q} answers={answers} value={value} onChange={onChange} showError={showError} />
     </div>
   );
 }
@@ -257,6 +300,7 @@ export function QuestionGroupCard({ group, questions, answers, onChange, showErr
           <div key={q.id} className={`${s.groupItem} ${index === 0 ? s.firstGroupItem : ''}`}>
             <QuestionContent
               question={q}
+              answers={answers}
               value={answers[q.id]}
               onChange={onChange}
               showError={showError}

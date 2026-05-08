@@ -55,7 +55,8 @@ export default {
   async questions(state) {
     const questions = [];
     const hasResume = state.PUBLISHER_PREFIX && state.PUBLISHER_ID;
-    const hasSecret = hasUsableSecret();
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+    const hasSecret = !isUserAuth && hasUsableSecret();
     let publishers = [];
     let publisherLoadHelp = '';
 
@@ -77,7 +78,7 @@ export default {
       });
     }
 
-    if (!hasSecret) {
+    if (!hasSecret && !isUserAuth) {
       questions.push({
         id: 'PP_CLIENT_SECRET',
         type: 'secret',
@@ -97,7 +98,9 @@ export default {
       id: 'PUBLISHER_SELECTION',
       type: 'select',
       label: 'Publisher',
-      help: publisherLoadHelp || 'Choose an existing publisher from this Dev environment, or choose Create new publisher.',
+      help: isUserAuth
+        ? 'With user auth, publishers cannot be auto-loaded. Create a new publisher or enter a known publisher prefix.'
+        : (publisherLoadHelp || 'Choose an existing publisher from this Dev environment, or choose Create new publisher.'),
       defaultValue: preferredPublisher,
       options: [
         ...publishers.map(publisherOption),
@@ -133,14 +136,19 @@ export default {
       return { stateUpdate: {}, completedStep: 5 };
     }
 
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+
     if (answers.PP_CLIENT_SECRET) {
       setSecret(answers.PP_CLIENT_SECRET);
-    } else if (!hasUsableSecret()) {
+    } else if (!isUserAuth && !hasUsableSecret()) {
       throw new Error('Client secret is required to query Dataverse. Provide it or run from CLI.');
     }
 
     const selectedPublisherId = String(answers.PUBLISHER_SELECTION || '').trim();
     if (selectedPublisherId && selectedPublisherId !== CREATE_NEW) {
+      if (isUserAuth) {
+        throw new Error('Cannot look up publishers from Dataverse with user auth. Select "Create new publisher" and enter the details manually, or create the publisher in the Maker Portal first.');
+      }
       log.info('Loading selected publisher from your Dev environment...');
       const publishers = await listPublishers();
       const pub = publishers.find((p) => p.publisherid === selectedPublisherId);
@@ -166,6 +174,29 @@ export default {
     if (!VALIDATE.isValidPrefix(prefix)) throw new Error('Prefix must be 2–8 lowercase letters only.');
     if (!friendly) throw new Error('Publisher display name is required.');
     const uniqueName = friendly.toLowerCase().replace(/[\s\-]+/g, '');
+
+    if (isUserAuth) {
+      // With user auth, we can't create the publisher via SPN Dataverse API.
+      // Save the entered metadata and instruct the user to create it in the Maker Portal.
+      log.warn(`User auth does not support automated publisher creation via the Dataverse API.`);
+      log.info(`Create the publisher manually in the Maker Portal:`);
+      log.info(`  1. Go to make.powerapps.com → your Dev environment`);
+      log.info(`  2. Solutions → Publishers → New Publisher`);
+      log.info(`  3. Display name: ${friendly}`);
+      log.info(`  4. Prefix: ${prefix}`);
+      log.info(`  5. Save, then continue to Step 6.`);
+      log.ok(`Publisher metadata saved: "${friendly}" (prefix ${prefix})`);
+      return {
+        stateUpdate: publisherStateUpdate(state, {
+          id: '',
+          name: uniqueName,
+          displayName: friendly,
+          prefix,
+          choiceValuePrefix: '',
+        }),
+        completedStep: 5,
+      };
+    }
 
     log.info(`Creating publisher "${friendly}" (prefix ${prefix})…`);
     const result = await dvPost('publishers', {

@@ -35,10 +35,11 @@ export default {
     const questions = [];
     const hasResume = state.SOLUTION_UNIQUE_NAME;
     const publisherId = state.PUBLISHER_ID;
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
     let solutions = [];
     let solutionLoadHelp = '';
 
-    if (hasUsableSecret()) {
+    if (!isUserAuth && hasUsableSecret()) {
       try {
         solutions = await listSolutions(publisherId);
       } catch (err) {
@@ -63,7 +64,9 @@ export default {
       id: 'SOLUTION_SELECTION',
       type: 'select',
       label: 'Solution',
-      help: solutionLoadHelp || 'Choose an existing unmanaged solution for the selected publisher, or choose Create new solution.',
+      help: isUserAuth
+        ? 'With user auth, solutions cannot be auto-loaded. Create a new solution or enter details from a solution you created in the Maker Portal.'
+        : (solutionLoadHelp || 'Choose an existing unmanaged solution for the selected publisher, or choose Create new solution.'),
       defaultValue: preferredSolution,
       options: [
         ...solutions.map(solutionOption),
@@ -89,12 +92,16 @@ export default {
       clearSecret();
       return { stateUpdate: {}, completedStep: 6 };
     }
-    if (!hasUsableSecret()) throw new Error('Client secret unavailable — run step 5 first or use CLI.');
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+    if (!isUserAuth && !hasUsableSecret()) throw new Error('Client secret unavailable — run step 5 first or use CLI.');
 
     const publisherId = state.PUBLISHER_ID;
     const selectedSolutionId = String(answers.SOLUTION_SELECTION || '').trim();
 
     if (selectedSolutionId && selectedSolutionId !== CREATE_NEW) {
+      if (isUserAuth) {
+        throw new Error('Cannot look up solutions from Dataverse with user auth. Select "Create new solution" and enter the details manually, or create the solution in the Maker Portal first.');
+      }
       log.info('Loading selected solution...');
       const solutions = await listSolutions(publisherId);
       const sol = solutions.find((solution) => solution.solutionid === selectedSolutionId);
@@ -114,6 +121,26 @@ export default {
     const friendly = (answers.SOLUTION_DISPLAY_NAME || '').trim();
     if (!friendly) throw new Error('Solution display name required.');
     const unique = friendly.replace(/[\s\-]+/g, '');
+
+    if (isUserAuth) {
+      log.warn('User auth does not support automated solution creation via the Dataverse API.');
+      log.info('Create the solution manually in the Maker Portal:');
+      log.info(`  1. Go to make.powerapps.com → your Dev environment`);
+      log.info(`  2. Solutions → New Solution`);
+      log.info(`  3. Display name: ${friendly}`);
+      log.info(`  4. Publisher: select the publisher from Step 5`);
+      log.info(`  5. Version: 1.0.0.0 → Create`);
+      log.ok(`Solution metadata saved: "${friendly}" (${unique})`);
+      clearSecret();
+      return {
+        stateUpdate: {
+          SOLUTION_ID: '',
+          SOLUTION_UNIQUE_NAME: unique,
+          SOLUTION_DISPLAY_NAME: friendly,
+        },
+        completedStep: 6,
+      };
+    }
 
     log.info(`Creating solution "${friendly}"…`);
     const created = await dvPost('solutions', {

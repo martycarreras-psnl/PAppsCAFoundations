@@ -123,7 +123,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
     profileType: 'user',
     credentialValues,
     powerConfigPath: join(projectDir, 'power.config.json'),
-    requireCredentialMatch: true,
+    requireCredentialMatch: credentialValues !== null,
     requirePowerConfig: true,
     requirePowerConfigTarget: true,
   });
@@ -211,7 +211,8 @@ export default {
     const questions = [];
     const prefix = state.PUBLISHER_PREFIX || '';
     const pac = SHELL.pacPath();
-    const hasSecret = hasUsableSecret();
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+    const hasSecret = !isUserAuth && hasUsableSecret();
     let existingRefs = [];
 
     if (hasSecret) {
@@ -329,7 +330,8 @@ export default {
       };
     }
 
-    if (!hasUsableSecret()) {
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+    if (!isUserAuth && !hasUsableSecret()) {
       throw new Error('Client secret could not be recovered from .env.local or 1Password. Go back to Step 3 (App Registration) and re-enter your credentials.');
     }
 
@@ -361,21 +363,31 @@ export default {
 
     log.info('Checking existing connection references...');
     let existingRefs = [];
-    try {
-      existingRefs = await listConnectionReferences(prefix);
-    } catch (err) {
-      log.warn(`Could not query connection references: ${err.message}`);
+    if (!isUserAuth) {
+      try {
+        existingRefs = await listConnectionReferences(prefix);
+      } catch (err) {
+        log.warn(`Could not query connection references: ${err.message}`);
+      }
     }
 
-    log.info('Creating missing connection references in the selected solution...');
-    for (const apiId of selectedApiIds) {
-      const connector = connectorMap.get(apiId);
-      try {
-        const created = await createConnectionReference(log, connector, prefix, solutionName, existingRefs);
-        existingRefs.push(created);
-      } catch (err) {
-        if (/already exists|database constraint/i.test(err.message)) log.ok(`${connector.name} - connection reference already exists`);
-        else log.warn(`${connector.name} - connection reference failed: ${err.message}`);
+    if (isUserAuth) {
+      log.warn('User auth does not support automated connection reference creation via the Dataverse API.');
+      log.info('Create connection references manually in the Maker Portal:');
+      log.info(`  1. Go to make.powerapps.com → your Dev environment → Solutions → ${solutionName}`);
+      log.info('  2. Add existing → Connection reference → for each connector');
+      log.info('  3. Or create them during pac code add-data-source.');
+    } else {
+      log.info('Creating missing connection references in the selected solution...');
+      for (const apiId of selectedApiIds) {
+        const connector = connectorMap.get(apiId);
+        try {
+          const created = await createConnectionReference(log, connector, prefix, solutionName, existingRefs);
+          existingRefs.push(created);
+        } catch (err) {
+          if (/already exists|database constraint/i.test(err.message)) log.ok(`${connector.name} - connection reference already exists`);
+          else log.warn(`${connector.name} - connection reference failed: ${err.message}`);
+        }
       }
     }
 
@@ -389,7 +401,7 @@ export default {
         throw new Error(`power.config.json was not found in ${projectDir}. Complete Step 7 before registering data sources.`);
       }
 
-      const credentialValues = resolveCredentialValues(state);
+      const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
       const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
       log.ok(`Verified user profile ${verification.profileName}`);
 

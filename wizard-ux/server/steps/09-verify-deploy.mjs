@@ -101,7 +101,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
     profileType: 'user',
     credentialValues,
     powerConfigPath: join(projectDir, 'power.config.json'),
-    requireCredentialMatch: true,
+    requireCredentialMatch: credentialValues !== null,
     requirePowerConfig: true,
     requirePowerConfigTarget: true,
   });
@@ -179,7 +179,8 @@ export default {
     const powerConfigPath = join(projectDir, 'power.config.json');
     const repair = PAC_TARGET.repairPowerConfigDisplayNames(powerConfigPath);
     if (repair.changed) log.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
-    const credentialValues = resolveCredentialValues(state);
+    const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
+    const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
     const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
     log.ok(`Verified user profile ${verification.profileName}`);
 
