@@ -127,7 +127,7 @@ export default {
   meta: {
     number: 4,
     title: 'PAC Auth Profiles',
-    description: 'Persist credentials, create PAC auth profiles, and verify the target environment.',
+    description: 'The PAC CLI needs its own auth profiles to communicate with your Power Platform environment. This step creates those profiles using the credentials from Step 3, writes configuration files, and verifies the connection works.',
     canRunInBrowser: true,
   },
 
@@ -145,6 +145,7 @@ export default {
           id: 'USER_SIGN_IN_METHOD',
           type: 'select',
           label: 'Sign-in method',
+          help: 'This opens a one-time interactive sign-in so the PAC CLI can run commands (pac code init, pac code push, etc.) against your environment. Your browser or a device code will authenticate you — no passwords are stored.',
           defaultValue: 'deviceCode',
           options: [
             { value: 'deviceCode', label: 'Device code — most reliable' },
@@ -170,6 +171,7 @@ export default {
         id: 'AUTH_MODE',
         type: 'select',
         label: 'Credential storage mode',
+        help: 'Controls how the PAC CLI retrieves your Service Principal credentials. 1Password uses op:// references (safe to commit). Local file encrypts the secret on disk (gitignored).',
         defaultValue: defaultAuthMode,
         options: [
           ...(hasOp ? [{ value: '1password', label: '1Password references in .env' }] : []),
