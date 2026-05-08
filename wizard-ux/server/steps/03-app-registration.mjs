@@ -178,7 +178,7 @@ export default {
         label: '1Password vault',
         help: vaults.length > 0
           ? 'Select an existing vault, create a new one, or enter a name manually.'
-          : 'Could not discover vaults (1Password may be locked or offline). Enter a vault name manually or create a new one.',
+          : 'Could not discover vaults (1Password may be locked or offline). If you just authenticated to 1Password, refresh this page to reload the vault list. Otherwise, enter a vault name manually or create a new one.',
         defaultValue: state.OP_VAULT && vaults.some((v) => v.value === state.OP_VAULT)
           ? state.OP_VAULT
           : (vaults[0]?.value || ENTER_MANUALLY),
