@@ -275,7 +275,7 @@ function QuestionContent({ question: q, value, onChange, showError, answers }: P
         )}
       </Field>
 
-      {q.help && <Body2 className={s.help}>{q.help}</Body2>}
+      {q.help && <Body2 className={s.help}>{linkify(q.help)}</Body2>}
     </>
   );
 }

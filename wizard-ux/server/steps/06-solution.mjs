@@ -1,7 +1,29 @@
 // Step 6 — Solution. Pick existing or create new in the publisher.
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = resolve(__dirname, '..', '..', '..');
+const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 const CREATE_NEW = '__create_new__';
 const ENTER_EXISTING = '__enter_existing__';
+
+/** Try to get environment ID via `pac org who`. Returns the Maker Portal solutions URL or a fallback. */
+function getMakerPortalLink() {
+  try {
+    const pac = SHELL.pacPath();
+    const whoOut = SHELL.runSafe(pac, ['org', 'who']);
+    if (whoOut) {
+      const whoInfo = PAC_TARGET.parsePacOrgWho(whoOut);
+      if (whoInfo.environmentId) {
+        return `https://make.powerapps.com/e/${whoInfo.environmentId}/solutions`;
+      }
+    }
+  } catch { /* fall through */ }
+  return 'https://make.powerapps.com';
+}
 
 async function listSolutions(publisherId) {
   let filter = 'ismanaged eq false and isvisible eq true';
@@ -104,21 +126,18 @@ export default {
     });
 
     if (isUserAuth) {
-      const devUrl = (state.PP_ENV_DEV || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-      const makerLink = devUrl
-        ? `https://make.powerapps.com (select environment "${devUrl}")`
-        : 'https://make.powerapps.com';
+      const makerLink = getMakerPortalLink();
       questions.push({
         id: 'SOLUTION_CREATED_MANUALLY',
         type: 'confirm',
         label: 'I have created this solution in the Maker Portal',
-        help: `With user credentials, the wizard cannot create the solution automatically. You must create it manually at ${makerLink} before continuing.`,
+        help: `With user credentials, the wizard cannot create the solution automatically. Create it at ${makerLink} then confirm below.`,
         defaultValue: false,
         showIf: { id: 'SOLUTION_SELECTION', equals: CREATE_NEW },
         why: [
           'Manual solution creation steps:',
           `1. Open ${makerLink}`,
-          `2. Go to Solutions → + New Solution`,
+          `2. Click + New Solution`,
           `3. Enter the Display name from above`,
           `4. Select the publisher you created in Step 5`,
           `5. Save the solution`,

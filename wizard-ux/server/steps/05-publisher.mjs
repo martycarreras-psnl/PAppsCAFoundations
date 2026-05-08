@@ -4,9 +4,27 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const VALIDATE = await import(pathToFileURL(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'validate.mjs')).href);
+const ROOT_DIR = resolve(__dirname, '..', '..', '..');
+const VALIDATE = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'validate.mjs')).href);
+const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 const CREATE_NEW = '__create_new__';
 const ENTER_EXISTING = '__enter_existing__';
+
+/** Try to get environment ID via `pac org who`. Returns the Maker Portal solutions URL or a fallback. */
+function getMakerPortalLink() {
+  try {
+    const pac = SHELL.pacPath();
+    const whoOut = SHELL.runSafe(pac, ['org', 'who']);
+    if (whoOut) {
+      const whoInfo = PAC_TARGET.parsePacOrgWho(whoOut);
+      if (whoInfo.environmentId) {
+        return `https://make.powerapps.com/e/${whoInfo.environmentId}/solutions`;
+      }
+    }
+  } catch { /* fall through */ }
+  return 'https://make.powerapps.com';
+}
 
 async function listPublishers() {
   const data = await dvGet(
@@ -148,21 +166,18 @@ export default {
     });
 
     if (isUserAuth) {
-      const devUrl = (state.PP_ENV_DEV || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-      const makerLink = devUrl
-        ? `https://make.powerapps.com (select environment "${devUrl}")`
-        : 'https://make.powerapps.com';
+      const makerLink = getMakerPortalLink();
       questions.push({
         id: 'PUBLISHER_CREATED_MANUALLY',
         type: 'confirm',
         label: 'I have created this publisher in the Maker Portal',
-        help: `With user credentials, the wizard cannot create the publisher automatically. You must create it manually at ${makerLink} before continuing.`,
+        help: `With user credentials, the wizard cannot create the publisher automatically. Create it at ${makerLink} then confirm below.`,
         defaultValue: false,
         showIf: { id: 'PUBLISHER_SELECTION', equals: CREATE_NEW },
         why: [
           'Manual publisher creation steps:',
           `1. Open ${makerLink}`,
-          '2. Go to Solutions → Publishers',
+          '2. Click Publishers (left nav)',
           '3. Click + New Publisher',
           '4. Enter the Display name and Prefix from above',
           '5. Save the publisher',
