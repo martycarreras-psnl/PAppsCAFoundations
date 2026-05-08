@@ -340,9 +340,18 @@ export default {
       id: 'SOLUTION_URL',
       type: 'text',
       label: 'Solution URL from Maker Portal',
-      help: `Open your solution at ${makerLink}, copy the browser URL, and paste it here. It looks like: https://make.powerapps.com/e/.../solutions/{guid}`,
+      help: `Open your solution at ${makerLink}, copy the browser URL from your browser's address bar, and paste it here.`,
       defaultValue: '',
       showIf: { id: 'SOLUTION_SELECTION', equals: PASTE_URL },
+      why: [
+        'How to get the solution URL:',
+        `1. Open ${makerLink}`,
+        '2. If you need to create a new solution, click + New Solution, pick a publisher, and save it',
+        '3. Click on the solution to open it',
+        '4. Copy the URL from your browser\'s address bar',
+        '5. Paste it here — it looks like:',
+        '   https://make.powerapps.com/e/.../solutions/{guid}',
+      ].join('\n'),
     });
 
     // ── Create new: solution name ──
