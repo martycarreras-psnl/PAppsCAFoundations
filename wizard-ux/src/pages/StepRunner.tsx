@@ -183,8 +183,12 @@ export function StepRunner() {
     setAnswers(init);
     setInitialAnswers(init);
     setShowErrors(false);
-    setRunId(null);
   }, [questionsQ.data?.meta.number, questionDefaultsKey]);
+
+  // Reset runId only when the step number changes (not on question refetch)
+  useEffect(() => {
+    setRunId(null);
+  }, [stepNumber]);
 
   const apply = useMutation({
     mutationFn: (a: Record<string, unknown>) => api.apply(stepNumber, a),

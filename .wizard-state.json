@@ -1,16 +1,10 @@
 {
   "HAS_OP": true,
   "PYTHON_CMD": "python3",
-  "COMPLETED_STEP": 4,
-  "APP_NAME": "Solution Streamliner",
+  "COMPLETED_STEP": 2,
+  "APP_NAME": "Test",
   "PP_ENV_DEV": "https://carremacodeapps.crm.dynamics.com",
   "PP_ENV_TEST": "",
   "PP_ENV_PROD": "",
-  "WIZARD_TARGET_ENV": "dev",
-  "AUTH_PROFILE_TYPE": "user",
-  "PP_TENANT_ID": "",
-  "PP_APP_ID": "",
-  "AUTH_MODE": "1password",
-  "OP_VAULT": "Power Platform Environments",
-  "OP_ITEM": "PowerApps CodeApps - Personal Dev"
+  "WIZARD_TARGET_ENV": "dev"
 }
