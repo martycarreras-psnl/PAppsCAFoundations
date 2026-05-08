@@ -1,0 +1,91 @@
+{
+  "domains": [
+    {
+      "name": "Project Intake",
+      "description": "Business language and boundaries for the app"
+    }
+  ],
+  "tables": [
+    {
+      "schemaName": "yourprefix_ProjectRequest",
+      "displayName": "Project Request",
+      "displayCollectionName": "Project Requests",
+      "logicalSingularName": "yourprefix_projectrequest",
+      "logicalPluralName": "yourprefix_projectrequests",
+      "entitySetName": "yourprefix_projectrequests",
+      "tableLogicalName": "yourprefix_projectrequests",
+      "description": "Tracks incoming requests for work",
+      "ownership": "UserOwned",
+      "ownershipType": "UserOwned",
+      "isActivity": false,
+      "hasActivities": false,
+      "hasNotes": true,
+      "primaryName": {
+        "schemaName": "yourprefix_ProjectRequestName",
+        "displayName": "Name",
+        "description": "Primary name for the request",
+        "maxLength": 100
+      },
+      "columns": [
+        {
+          "schemaName": "yourprefix_requeststatus",
+          "displayName": "Request Status",
+          "logicalName": "yourprefix_requeststatus",
+          "type": "Picklist",
+          "globalOptionSetName": "yourprefix_requeststatus",
+          "requiredLevel": "ApplicationRequired"
+        },
+        {
+          "schemaName": "yourprefix_requestedon",
+          "displayName": "Requested On",
+          "logicalName": "yourprefix_requestedon",
+          "type": "DateTime",
+          "format": "DateOnly",
+          "requiredLevel": "None"
+        }
+      ],
+      "attributes": [
+        {
+          "schemaName": "yourprefix_requeststatus",
+          "displayName": "Request Status",
+          "type": "Picklist",
+          "globalOptionSetName": "yourprefix_requeststatus",
+          "requiredLevel": "ApplicationRequired"
+        },
+        {
+          "schemaName": "yourprefix_requestedon",
+          "displayName": "Requested On",
+          "type": "DateTime",
+          "format": "DateOnly",
+          "requiredLevel": "None"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "type": "ManyToOne",
+      "fromTable": "yourprefix_projectrequests",
+      "toTable": "yourprefix_departments",
+      "referencingEntity": "yourprefix_projectrequests",
+      "referencedEntity": "yourprefix_departments",
+      "schemaName": "yourprefix_ProjectRequest_Department",
+      "lookupSchemaName": "yourprefix_DepartmentId",
+      "lookupDisplayName": "Department"
+    }
+  ],
+  "provisioningPlansJson": [
+    {
+      "path": "dataverse/provision-tables.plan.json",
+      "purpose": "Create or update tables and columns after review"
+    },
+    {
+      "path": "dataverse/provision-relationships.plan.json",
+      "purpose": "Apply relationship changes after table provisioning"
+    },
+    {
+      "path": "dataverse/register-datasources.plan.json",
+      "purpose": "Register Dataverse tables with pac code add-data-source and regenerate the SDK"
+    }
+  ]
+}

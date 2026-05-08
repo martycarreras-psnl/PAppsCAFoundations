@@ -1,27 +1,36 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Secrets
+.env.local
+.env.*.local
 
-node_modules
-dist
-dist-ssr
-*.local
+# Power Platform
+.pac/
+auth.json
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
 
-# Claude Code
-.claude/settings.local.json
+# Solution zips
+solution/*.zip
+
+# Wizard state
+.wizard-state.json
+
+# Temp
+*.tmp
+*.log

@@ -1,25 +1,32 @@
-# Power Apps Template - starter
+# Solution Streamliner
 
-An opinionated **Vite + TypeScript + React** starter template for building Power Apps code apps.
+A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeScript.
 
-Designed for common app scenarios, easy extensibility, and minimal setup.
+## Development
 
----
+```bash
+npm install
+npm run dev:local
+npm run prototype:seed
+npm run dev
+```
 
-## Highlights
-- **Modern tooling** - Vite, TypeScript, and React
-- **Out-of-box styling** - Tailwind, shadcn/ui components, and theming out of the box
-- **Batteries included** - Curated libraries pre-wired for common scenarios
-- **Standard patterns** - Industry standard patterns and practices
-- **Agent friendly** - Optimized for use with coding agents
----
+## Build and Deploy
 
-## Pre-installed libraries
-- [Tailwind CSS](https://tailwindcss.com/) - utility-first CSS framework
-- [shadcn/ui](https://ui.shadcn.com/) - pre-installed UI components
-- [React Router](https://reactrouter.com/) - pages, routing
-- [Zustand](https://zustand.docs.pmnd.rs/) - state management
-- [Tanstack Query](https://tanstack.com/query/latest) - data fetching, state management
-- [Tanstack Table](https://tanstack.com/table/latest) - interactive tables, datagrids
-- [Lucide](https://lucide.dev/) - icons
-  
+```bash
+npm run build
+pac code push
+```
+
+## Power Platform
+
+| Property | Value |
+|----------|-------|
+| Solution | Solution Streamliner |
+| Publisher Prefix | `yourprefix` |
+
+| Environment | URL |
+|-------------|-----|
+| Dev | https://carremacodeapps.crm.dynamics.com |
+
+Connector binding is intentionally deferred until the prototype is stable. Use WizardUX step 8 or `pac code add-data-source` when you are ready for real data.
