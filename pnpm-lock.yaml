@@ -23,6 +23,12 @@ importers:
       '@inquirer/prompts':
         specifier: ^7.0.0
         version: 7.10.1
+      '@pacaf/agent-instructions':
+        specifier: workspace:*
+        version: link:../agent-instructions
+      '@pacaf/scripts':
+        specifier: workspace:*
+        version: link:../scripts
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
@@ -44,6 +50,9 @@ importers:
       '@fluentui/react-icons':
         specifier: ^2.0.260
         version: 2.0.326(react@19.2.6)
+      '@pacaf/wizard':
+        specifier: workspace:*
+        version: link:../wizard
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.100.9(react@19.2.6)

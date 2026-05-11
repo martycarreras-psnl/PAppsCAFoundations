@@ -1,7 +1,7 @@
 // Step 1 — Prerequisites. Read-only checks, no questions.
 import { platform } from 'node:os';
 import { execFileSync, execSync } from 'node:child_process';
-import { pacPath, runSafe } from '../../../wizard/lib/shell.mjs';
+import { pacPath, runSafe } from '@pacaf/wizard/lib/shell.mjs';
 
 function hasCommand(name) {
   try {

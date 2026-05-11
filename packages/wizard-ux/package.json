@@ -34,6 +34,7 @@
     "@fastify/websocket": "^10.0.1",
     "@fluentui/react-components": "^9.56.0",
     "@fluentui/react-icons": "^2.0.260",
+    "@pacaf/wizard": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",

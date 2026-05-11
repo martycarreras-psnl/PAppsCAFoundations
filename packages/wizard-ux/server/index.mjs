@@ -7,7 +7,6 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { createServer as createViteServer } from 'vite';
 
 import stateRoutes from './routes/state.mjs';
 import systemRoutes from './routes/system.mjs';
@@ -22,7 +21,9 @@ const ROOT_DIR = resolve(UX_DIR, '..');
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.WIZARD_UX_PORT || 5174);
-const IS_PROD = process.env.NODE_ENV === 'production';
+// When installed as a published package, dist/ is always shipped and vite is
+// not a runtime dep. Only treat this as "dev mode" when the caller opts in.
+const IS_DEV = process.env.NODE_ENV === 'development' || process.env.WIZARD_UX_DEV === '1';
 
 const CSRF_TOKEN = randomBytes(24).toString('hex');
 
@@ -36,7 +37,7 @@ await app.register(cors, {
     // Otherwise only accept the well-known localhost origins.
     if (!origin) return cb(null, true);
     if (origin === `http://${HOST}:${PORT}` || origin === `http://localhost:${PORT}`) return cb(null, true);
-    if (!IS_PROD && (origin === `http://${HOST}:5175` || origin === 'http://localhost:5175')) return cb(null, true);
+    if (IS_DEV && (origin === `http://${HOST}:5175` || origin === 'http://localhost:5175')) return cb(null, true);
     cb(new Error('Origin not allowed'), false);
   },
   credentials: true,
@@ -75,21 +76,26 @@ await app.register(streamRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(ptyRoutes, { rootDir: ROOT_DIR, csrfToken: CSRF_TOKEN });
 await app.register(onepasswordRoutes, { prefix: '/api/1password' });
 
-// Serve the UI — Vite middleware in dev, static dist/ in prod
-if (IS_PROD) {
-  const distDir = join(UX_DIR, 'dist');
-  if (existsSync(distDir)) {
-    const fastifyStatic = (await import('@fastify/static')).default;
-    await app.register(fastifyStatic, { root: distDir, prefix: '/' });
-    app.setNotFoundHandler((req, reply) => {
-      if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'Not found' });
-      // SPA fallback
-      reply.sendFile('index.html');
-    });
-  } else {
-    app.log.warn('Production build not found in dist/. Run `npm run build` inside wizard-ux.');
+// Serve the UI — prebuilt dist/ by default; vite middleware only in dev mode
+const distDir = join(UX_DIR, 'dist');
+const haveDist = existsSync(distDir);
+
+if (!IS_DEV && haveDist) {
+  const fastifyStatic = (await import('@fastify/static')).default;
+  await app.register(fastifyStatic, { root: distDir, prefix: '/' });
+  app.setNotFoundHandler((req, reply) => {
+    if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'Not found' });
+    // SPA fallback
+    reply.sendFile('index.html');
+  });
+} else if (IS_DEV) {
+  let createViteServer;
+  try {
+    ({ createServer: createViteServer } = await import('vite'));
+  } catch (err) {
+    app.log.error('Dev mode requested (NODE_ENV=development or WIZARD_UX_DEV=1) but `vite` is not installed. Install it as a devDependency or run without WIZARD_UX_DEV.');
+    throw err;
   }
-} else {
   const vite = await createViteServer({
     root: UX_DIR,
     server: { middlewareMode: true, hmr: { port: 5176 } },
@@ -113,6 +119,9 @@ if (IS_PROD) {
       reply.code(500).send(String(e));
     }
   });
+} else {
+  app.log.error(`No prebuilt UI found at ${distDir} and dev mode is not enabled. Reinstall @pacaf/wizard-ux or set WIZARD_UX_DEV=1.`);
+  throw new Error('wizard-ux/dist missing');
 }
 
 await app.listen({ host: HOST, port: PORT });

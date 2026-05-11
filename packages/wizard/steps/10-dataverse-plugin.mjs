@@ -2,7 +2,7 @@
 import { select } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
-import { detectAgent, agentChoices } from '../../scripts/detect-agent.mjs';
+import { detectAgent, agentChoices } from '@pacaf/scripts/detect-agent.mjs';
 
 export default async function stepDataversePlugin() {
   ui.stepHeader(10, TOTAL_STEPS, 'Dataverse-skills Plugin');
