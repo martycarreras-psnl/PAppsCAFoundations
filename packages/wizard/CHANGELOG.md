@@ -1,5 +1,11 @@
 # @pacaf/wizard
 
+## 3.0.1
+
+### Patch Changes
+
+- 2392b00: Use `pnpm publish -r` for release so workspace specifiers (`workspace:*`) get rewritten to actual published versions. Previously `changeset publish` (despite detecting pnpm) shipped the literal `workspace:*` strings, which broke `npm install` of the published packages with `EUNSUPPORTEDPROTOCOL`.
+
 ## 3.0.0
 
 ### Major Changes
