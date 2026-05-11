@@ -26,7 +26,6 @@
     "dev": "node server/index.mjs",
     "build": "vite build",
     "preview": "vite preview --port 5174",
-    "lint": "eslint src server",
     "postinstall": "node scripts/fix-pty-perms.mjs"
   },
   "dependencies": {
