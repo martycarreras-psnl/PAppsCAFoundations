@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
       - name: Print versions
         run: |
@@ -31,7 +31,7 @@ jobs:
           pnpm --version
 
       - name: Install
-        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+        run: pnpm install --frozen-lockfile
 
       - name: Build all packages
         run: pnpm -r --if-present run build

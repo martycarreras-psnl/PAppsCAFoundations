@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           # 'always-auth' makes pnpm publish use NODE_AUTH_TOKEN unconditionally.
           always-auth: true
@@ -44,7 +44,7 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm -r --if-present run build
