@@ -3,7 +3,7 @@ import { execSync, execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, platform, release } from 'node:os';
-import { pacPath as resolvePacPath, runSafe } from '../../../wizard/lib/shell.mjs';
+import { pacPath as resolvePacPath, runSafe } from '@pacaf/wizard/lib/shell.mjs';
 
 function safeRun(cmd) {
   try { return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim(); }
