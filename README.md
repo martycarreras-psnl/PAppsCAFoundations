@@ -45,14 +45,45 @@ The agent will:
 
 You don't need to run anything by hand. If the agent gets stuck, paste the wizard's error output into chat and it will diagnose using the guidance in `.github/instructions/`.
 
-### Step 3. Build features and deploy
+### Step 3. Plan first, then build
 
-Tell the agent what you want to build:
+Don't jump straight into "add a table and a page." Your agent has been pre-loaded with a **planning workflow** — a sequence of instruction files that walk you from a fuzzy business problem to a validated Dataverse model and a working app, in deliberate order:
 
-> **"Add a Dataverse table for tracking equipment loans and a page that lists them."**
-> **"Deploy the app to my dev environment."**
+1. **`00a` Business problem decomposition** — what are we actually solving, for whom, with what outcomes?
+2. **`00b` Scope refinement and solution shaping** — workflows, approvals, exceptions, reporting, governance, automation placement
+3. **`00c` Solution concept to Dataverse plan** — translate refined scope into candidate entities, relationships, lifecycle states
+4. **`00d` Prototype validation** — exercise the UX with mock data before schema hardens
+5. Then schema, components, connectors, deployment
 
-The agent uses the instruction files installed by the wizard to scaffold components, register Dataverse data sources, run `pnpm build`, and call `pac code push` — the same commands you could run yourself if you preferred:
+#### Switch your agent into Plan mode and start the conversation
+
+| Agent | How to enter Plan mode |
+|---|---|
+| **GitHub Copilot Chat** | In the chat panel, switch the mode dropdown from *Ask* / *Edit* to **Agent**, then prefix your first message with `[[PLAN]]` |
+| **Claude Code** | Toggle Plan mode with `⌘+Shift+P` → *Claude: Toggle Plan Mode*, or start your message with `/plan` |
+| **Cursor** | Use **Composer → Plan** before *Apply* |
+| **Other agents** | Tell it explicitly: *"Stay in plan mode. Don't write code yet."* |
+
+Then describe what you want to build — in business terms, not technical ones:
+
+> **"I want to manage equipment loans across our field offices. Multiple regions, approvers, and an audit trail when assets go missing. Help me plan this out properly before we touch any code or schema."**
+
+Your agent will work through `00a → 00b → 00c → 00d`, asking the questions that matter (who approves, what triggers reassignment, what reports the operations lead needs, what happens when an asset is reported lost). It produces:
+
+- A refined scope narrative
+- A draft conceptual model
+- A `dataverse/planning-payload.json` you can validate with `pacaf-validate`
+- A prototype UX that exercises the model with mock data
+
+You review and refine. Only after the plan is stable does the agent move to schema provisioning, real connectors, and deploy.
+
+#### Then exit Plan mode and let the agent build
+
+Once you're happy with the plan, switch out of Plan mode and say:
+
+> **"Looks good. Provision the Dataverse schema, generate the connectors, and deploy to my dev environment."**
+
+The agent runs the underlying commands — the same ones you could run yourself if you wanted:
 
 ```bash
 pnpm dev          # local dev server on :3000
@@ -60,7 +91,9 @@ pnpm build        # produce ./dist/
 pac code push     # upload ./dist/ to your Power Platform environment
 ```
 
-> **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology (environment, solution, publisher prefix, Dataverse, connectors). Your agent already has this loaded.
+> **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology. Your agent already has this loaded.
+>
+> **Curious about the planning workflow?** See [docs/prototype-golden-path.md](docs/prototype-golden-path.md) — the end-to-end recipe your agent is following.
 
 ### Keeping your project up to date
 
