@@ -1,16 +1,20 @@
 # Secrets
+.env
 .env.local
 .env.*.local
 
 # Power Platform
 .pac/
 auth.json
+power.config.json
 
 # Dependencies
 node_modules/
+.pnpm-store/
 
 # Build
 dist/
+**/dist/
 
 # Tests
 coverage/
@@ -31,6 +35,14 @@ solution/*.zip
 # Wizard state
 .wizard-state.json
 
+# Migration archive
+.pacaf-archive/
+
 # Temp
 *.tmp
 *.log
+
+# OneDrive-on-Mac no-sync trick (developer-local)
+*.nosync
+.git.nosync
+

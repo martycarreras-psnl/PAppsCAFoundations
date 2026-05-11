@@ -1,0 +1,6 @@
+{
+  "name": "papps-code-app-starter",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Run `npx @pacaf/wizard-ux@latest` to scaffold this Code App."
+}

@@ -1,0 +1,16 @@
+---
+globs: "src/**,src/hooks/**,src/components/**,src/services/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/08-copilot-studio.instructions.md — do not edit directly -->
+# Microsoft Copilot Studio Agent Integration
+
+"Copilot Studio" is a Power Platform product, not a coding agent.
+
+- Use `ExecuteCopilotAsyncV2` — other methods have known issues
+- Add via `pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>`
+- Use `scripts/discover-copilot-connection.mjs` to find connections
+- Wrap in `useCopilotAgent` hook with TanStack Query
+- Mock for local dev; toggle with `VITE_USE_MOCK`
+
+Full details: `.github/instructions/08-copilot-studio.instructions.md`

@@ -1,24 +1,30 @@
 {
-  "version": "2026.04.27.1",
-  "releasedAt": "2026-04-27",
+  "layout": "thin",
+  "scope": "@pacaf",
+  "packageVersions": {
+    "@pacaf/wizard": "1.0.0",
+    "@pacaf/wizard-ux": "1.0.0",
+    "@pacaf/scripts": "1.0.0",
+    "@pacaf/agent-instructions": "1.0.0",
+    "@pacaf/rebrand": "1.0.0"
+  },
+  "releasedAt": "2026-05-11",
   "capabilities": [
-    "execution-contracts",
-    "encrypted-local-secret-storage",
-    "foundation-sync-script",
-    "schema-plan-template",
-    "schema-plan-generator",
-    "dataverse-data-source-registration",
-    "cross-platform-helper-entrypoints",
-    "cross-platform-auth-entrypoints",
-    "copilot-discovery-helper",
-    "browser-based-setup-wizard"
+    "thin-layout",
+    "scoped-npm-publishing",
+    "fork-rebrand",
+    "instruction-drift-detection",
+    "pnpm-workspace",
+    "browser-setup-wizard",
+    "cli-setup-wizard",
+    "migrate-thin-bin"
   ],
   "notes": [
-    "Use this file to compare a downstream project against the current Foundations bundle.",
-    "Run npm run sync:foundations to pull newer instruction and helper-script bundles into downstream repos.",
-    "Version 2026.03.22.2 completes the reusable Dataverse helper-script layer by generating plan artifacts and registering planned tables through PAC.",
-    "Version 2026.03.22.3 promotes Node-based helper entry points so downstream npm workflows are cross-platform by default.",
-    "Version 2026.03.22.4 adds Node-based auth wrappers so setup:auth and the 1Password PAC wrapper are cross-platform by default.",
-    "Version 2026.04.27.1 adds wizard-ux/ \u2014 a parallel browser-based setup experience (Vite + React 19 + Fluent UI v9 + Fastify) that shares .wizard-state.json with the CLI wizard. Run via npm run wizard:ux after sync."
+    "This repo is now a pnpm monorepo that publishes the @pacaf/* packages.",
+    "Derived repos no longer carry wizard/, wizard-ux/, scripts/, or docs/ trees.",
+    "Run npx @pacaf/wizard-ux@latest in a new repo to scaffold a Code App.",
+    "Run npx pacaf-update in an existing derived repo to refresh scripts and instructions.",
+    "Run npx pacaf-migrate-thin in a legacy 'fat' derived repo to convert it.",
+    "Forkers: see FORKING.md and run packages/rebrand/bin/pacaf-rebrand.mjs to retarget scope/prefix."
   ]
 }

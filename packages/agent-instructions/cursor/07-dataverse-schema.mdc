@@ -1,0 +1,16 @@
+---
+globs: "scripts/**,src/**,solution/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/07-dataverse-schema.instructions.md — do not edit directly -->
+# Dataverse Schema Design
+
+- Every table/column/option set uses the publisher prefix
+- Schema changes go through: validate → generate plan → provision
+- Use `scripts/validate-schema-plan.mjs` before provisioning
+- Use `scripts/generate-dataverse-plan.mjs` for execution plans
+- Use `scripts/register-dataverse-data-sources.mjs` to register tables
+- Option set values start at `{CHOICE_VALUE_PREFIX}0000`
+- Schema mistakes are most expensive after data exists — plan first
+
+Full details: `.github/instructions/07-dataverse-schema.instructions.md`

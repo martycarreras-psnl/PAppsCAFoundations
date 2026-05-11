@@ -1,0 +1,24 @@
+{
+  "name": "@pacaf/rebrand",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Retarget a fork of the Power Apps Code App Foundations monorepo to a different npm scope and bin-prefix.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martycarreras-psnl/PAppsCAFoundations.git",
+    "directory": "packages/rebrand"
+  },
+  "bin": {
+    "pacaf-rebrand": "./bin/pacaf-rebrand.mjs"
+  },
+  "files": [
+    "bin/",
+    "pacaf.config.schema.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -47,7 +47,7 @@ At this point, the model is still provisional.
 Run:
 
 ```bash
-node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json
+pacaf-seed dataverse/planning-payload.json
 ```
 
 This generates:
@@ -109,8 +109,8 @@ Repeat steps 4 to 6 until the workflow and data model feel stable.
 Run:
 
 ```bash
-node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
-node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
+pacaf-validate dataverse/planning-payload.json
+pacaf-generate dataverse/planning-payload.json
 ```
 
 Outputs:
@@ -124,7 +124,7 @@ Outputs:
 After schema provisioning is complete, register the tables with the Code App:
 
 ```bash
-node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
+pacaf-register dataverse/register-datasources.plan.json
 ```
 
 This is the point where `src/generated/**` becomes available.
@@ -159,7 +159,7 @@ node --test scripts/tests/seed-prototype-assets.test.mjs
 Planning payload validation:
 
 ```bash
-node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
+pacaf-validate dataverse/planning-payload.json
 ```
 
 ## Anti-Patterns

@@ -1,0 +1,40 @@
+# Secrets — never commit these
+.env
+.env.local
+.env.*.local
+
+# Local Power Platform state
+.pac/
+auth.json
+power.config.json
+.wizard-state.json
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Solution zips
+solution/*.zip
+
+# Logs and temp
+*.tmp
+*.log
+
+# Migration archive (from pacaf-migrate-thin)
+.pacaf-archive/

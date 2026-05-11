@@ -1,0 +1,15 @@
+---
+globs: "src/generated/**,src/hooks/**,src/services/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/02-connectors.instructions.md — do not edit directly -->
+# Connectors & Data Integration
+
+- Connectors are added via `pac code add-data-source`
+- Never edit `src/generated/**` — wrap in provider adapters under `src/services/`
+- Complete the planning flow before adding connectors
+- Provider pattern: domain contract → mock provider → real provider (adapter over generated service)
+- Connection IDs are environment-specific — use deployment settings files
+- For local dev, use mock providers or `VITE_USE_MOCK=true`
+
+Full details: `.github/instructions/02-connectors.instructions.md`

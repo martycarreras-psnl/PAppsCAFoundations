@@ -2,29 +2,49 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   validate:
+    name: Lint + build + test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable corepack
+        run: |
+          corepack enable
+          corepack prepare --activate
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - run: npm ci
+      - name: Print versions
+        run: |
+          node --version
+          pnpm --version
 
-      - name: Lint
-        run: npm run lint
+      - name: Install
+        run: pnpm install --frozen-lockfile
 
-      - name: Type Check
-        run: npm run typecheck
+      - name: Build all packages
+        run: pnpm -r --if-present run build
 
-      - name: Unit Tests
-        run: npm run test
+      - name: Lint (if any package defines it)
+        run: pnpm -r --if-present run lint
 
-      - name: Build
-        run: npm run build
+      - name: Test (if any package defines it)
+        run: pnpm -r --if-present run test
+
+      - name: Smoke-test bins
+        run: |
+          node packages/agent-instructions/bin/pacaf-instructions.mjs list
+          node packages/rebrand/bin/pacaf-rebrand.mjs
+          node packages/scripts/bin/pacaf-update.mjs --check || true
+
