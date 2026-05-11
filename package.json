@@ -14,7 +14,7 @@
     "test": "pnpm -r --if-present run test",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "changeset publish",
+    "release": "pnpm publish -r --access public --no-git-checks --filter '@pacaf/*'",
     "rebrand": "node packages/rebrand/bin/pacaf-rebrand.mjs"
   },
   "devDependencies": {
