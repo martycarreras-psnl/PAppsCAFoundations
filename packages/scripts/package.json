@@ -1,6 +1,6 @@
 {
   "name": "@pacaf/scripts",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": false,
   "type": "module",
   "description": "Helper scripts for Power Apps Code App projects: schema-plan validation, Dataverse data-source registration, auth setup, and migration tooling.",
