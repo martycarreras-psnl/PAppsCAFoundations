@@ -5,9 +5,9 @@
 [![npm: @pacaf/wizard-ux](https://img.shields.io/npm/v/@pacaf/wizard-ux?label=%40pacaf%2Fwizard-ux)](https://www.npmjs.com/package/@pacaf/wizard-ux)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Build, deploy, and maintain a [Power Apps Code App](https://learn.microsoft.com/en-us/power-platform/power-apps/maker/canvas-apps/code-apps/overview) without ever copying a tooling directory into your repo.**
+**The fastest way to scaffold, deploy, and maintain a [Power Apps Code App](https://learn.microsoft.com/en-us/power-platform/power-apps/maker/canvas-apps/code-apps/overview).**
 
-This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com/org/pacaf) family of npm packages. A typical Code App project that uses these foundations adds **~300 KB of metadata and two devDependencies**, instead of the ~470 MB of `wizard/`, `scripts/`, and `docs/` directories the older "fat template" approach required.
+This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com/org/pacaf) family of npm packages — the setup wizard, helper scripts, and agent guidance that turn an empty repository into a deployable Power Apps Code App. The packages install as devDependencies, so each project you create stays light: only a small amount of metadata and configuration lives in your repo; the tooling lives in npm and updates like any other package.
 
 ---
 
@@ -53,14 +53,14 @@ pac code push     # upload ./dist/ to your Power Platform environment
 
 ### Keeping your project up to date
 
-This is the point of the thin-foundations model — when we ship a new `@pacaf/*` version, you just rerun:
+When new `@pacaf/*` versions ship, refresh your project with:
 
 ```bash
 npx pacaf-update              # refresh @pacaf/scripts, @pacaf/agent-instructions, and instruction files
 npx pacaf-update --check      # preview drift only, write nothing
 ```
 
-No more "I diverged from the template and now syncing is painful." Your tooling lives in npm and updates like any other dependency.
+Your tooling lives in npm and updates like any other dependency.
 
 ---
 
@@ -81,7 +81,7 @@ All five packages are published to public npm under [`@pacaf/*`](https://www.npm
 | CLI | Purpose |
 |---|---|
 | `pacaf-update` | Refresh `@pacaf/scripts` + `@pacaf/agent-instructions` and re-sync instruction files |
-| `pacaf-migrate-thin` | Convert a legacy "fat template" derived repo to the thin layout |
+| `pacaf-migrate-thin` | Convert a derived repo from the in-tree tooling layout to consume `@pacaf/*` packages |
 | `pacaf-instructions` | `sync` / `check` / `list` agent-guidance projections |
 | `pacaf-validate` | Validate a Dataverse `planning-payload.json` against the schema |
 | `pacaf-generate` | Generate a Dataverse plan from a planning artifact |
@@ -120,16 +120,16 @@ Full walkthrough including npm account setup, GitHub Packages PAT configuration,
 
 ---
 
-## 🔄 I have a derived repo from before the `@pacaf/*` packages existed
+## 🔄 I have an existing derived repo with the tooling in-tree
 
-If your repo has `wizard/`, `wizard-ux/`, `scripts/`, and `docs/` directories at the root, it was generated from the old "fat template" layout. Migrate in one command:
+If your repo has `wizard/`, `wizard-ux/`, `scripts/`, and `docs/` directories at the root, it was generated before the tooling moved to npm. Migrate in one command:
 
 ```bash
 npx pacaf-migrate-thin                # interactive
 npx pacaf-migrate-thin --dry-run      # preview only
 ```
 
-This archives the legacy directories to `.pacaf-archive/`, rewrites `package.json` script references from `node scripts/X.mjs` to `pacaf-X`, adds the two devDependencies, and resyncs the instruction files. Full guide: **[MIGRATION.md](MIGRATION.md)**.
+This archives the in-tree directories to `.pacaf-archive/`, rewrites `package.json` script references from `node scripts/X.mjs` to `pacaf-X`, adds the two devDependencies, and resyncs the instruction files. Full guide: **[MIGRATION.md](MIGRATION.md)**.
 
 ---
 
@@ -246,7 +246,7 @@ When the PR merges to `main`:
 | Top-level agent contract | [AGENTS.md](AGENTS.md) |
 | Per-domain instruction files | [.github/instructions/](.github/instructions/) |
 | Forking guide | [FORKING.md](FORKING.md) |
-| Migration from legacy layout | [MIGRATION.md](MIGRATION.md) |
+| Migration guide | [MIGRATION.md](MIGRATION.md) |
 | Troubleshooting | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
