@@ -14,6 +14,9 @@
   "bin": {
     "pacaf-instructions": "./bin/pacaf-instructions.mjs"
   },
+  "scripts": {
+    "build": "node scripts/sync-from-root.mjs"
+  },
   "files": [
     "bin/",
     "instructions/",

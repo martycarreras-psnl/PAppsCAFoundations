@@ -14,7 +14,35 @@ Without this setup, every `pac solution export`, `pac solution import`, and `pac
 
 > **Critical SPN limitation for `pac code` commands:** All `pac code` subcommands (`pac code push`, `pac code add-data-source`, `pac code run`) require a **user** auth profile — the Power Platform BAP checkAccess API rejects service principal tokens for these operations. SPN auth works for everything else (`pac org who`, `pac solution export/import`, `pac auth list`, etc.). **This is a one-time setup:** create a user profile once with `pac auth create --name <profile> --environment <url> --deviceCode`, and all subsequent `pac code` commands work silently — the cached refresh token auto-renews (~90 days). The wizard handles this automatically by creating a repo-scoped user profile when needed.
 
+## Recommended package manager: pnpm
+
+Every Power Apps Code App project carries a `node_modules/` of roughly 50–80 MB of *real* per-project deps when installed via pnpm, versus ~650 MB when installed via npm. The savings come from pnpm's content-addressable store, which hard-links shared dependencies across every Code App project on your machine into a single store on disk.
+
+Setup (one time per developer machine):
+
+```bash
+corepack enable
+corepack prepare pnpm@latest --activate
+
+# Optional but recommended: a single shared store across all projects
+pnpm config set store-dir "$HOME/.local/share/pnpm/store"   # Linux
+pnpm config set store-dir "$HOME/Library/pnpm/store"        # macOS
+pnpm config set store-dir "$LOCALAPPDATA\\pnpm\\store"      # Windows
+```
+
+After that:
+
+```bash
+pnpm install         # in any Code App project (replaces npm install)
+pnpm run dev:local   # all npm-script tasks still work
+pnpm up @pacaf/*     # update foundations packages
+```
+
+The setup wizard auto-detects pnpm and uses it. npm continues to work as a fallback — every `npm run X` script in `package.json` is unchanged.
+
 ## Step 1: Create the Azure App Registration
+
+This is done once per team (or per project, depending on your org's security posture). It creates a Service Principal that both developers and CI/CD pipelines use to authenticate with Power Platform.
 
 This is done once per team (or per project, depending on your org's security posture). It creates a Service Principal that both developers and CI/CD pipelines use to authenticate with Power Platform.
 
