@@ -1,0 +1,16 @@
+---
+globs: "src/components/**,src/pages/**,src/App.tsx"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/03-components.instructions.md — do not edit directly -->
+# Component Architecture & UI Patterns
+
+- Fluent UI v9 exclusively — no alternative CSS frameworks
+- Functional components with TypeScript interfaces for props
+- `makeStyles()` for co-located styles
+- TanStack Query for server state, React context for UI state
+- Keep components under ~200 lines; extract subcomponents when larger
+- React Router for navigation; route-level code splitting with `React.lazy`
+- Every interactive element must be keyboard-accessible with proper ARIA
+
+Full details: `.github/instructions/03-components.instructions.md`

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "pacaf.config.json",
+  "type": "object",
+  "required": ["scope", "binPrefix", "templateRepo", "templateBranch", "templatePath", "docsUrl", "packages"],
+  "properties": {
+    "scope": {
+      "type": "string",
+      "pattern": "^@[a-z0-9][a-z0-9-]*$",
+      "description": "npm scope (with leading @). Example: @pacaf"
+    },
+    "binPrefix": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Prefix for every published bin. Example: pacaf"
+    },
+    "templateRepo": {
+      "type": "string",
+      "description": "GitHub owner/name of the template repo. Example: martycarreras-psnl/PAppsCAFoundations"
+    },
+    "templateBranch": { "type": "string" },
+    "templatePath": {
+      "type": "string",
+      "description": "Path within the template repo that contains the starter (e.g. templates/starter)."
+    },
+    "docsUrl": { "type": "string", "format": "uri" },
+    "registry": { "type": "string", "format": "uri" },
+    "packages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Names of subpackages under packages/ (without scope)."
+    }
+  }
+}

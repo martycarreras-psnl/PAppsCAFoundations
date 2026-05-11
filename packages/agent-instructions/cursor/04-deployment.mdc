@@ -1,0 +1,15 @@
+---
+globs: ".github/workflows/**,power.config.json,vite.config.ts"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/04-deployment.instructions.md — do not edit directly -->
+# Deployment, CI/CD & ALM
+
+- Deploy with `pac code push` — never manual uploads
+- `vite.config.ts` must set `base: './'` for `command === 'build'`
+- Solution export → managed import for environment promotion
+- GitHub Actions with SPN auth (no interactive browser)
+- Deployment settings files for connection reference mapping per environment
+- Never deploy unmanaged solutions to production
+
+Full details: `.github/instructions/04-deployment.instructions.md`

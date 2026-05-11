@@ -1,0 +1,18 @@
+---
+description: "Read when the user's business problem is partially understood and needs to be refined into a complete enterprise solution scope. Use to explore workflows, validations, approvals, automation, Teams/M365 interactions, reporting, governance, and Microsoft Copilot Studio placement."
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/00b-scope-refinement-and-solution-shaping.instructions.md — do not edit directly -->
+# Scope Refinement & Solution Shaping
+
+Challenge for:
+1. Missing exception paths and approval/delegation logic
+2. Missing audit, compliance, and reporting requirements
+3. Missing role boundaries and collaboration touchpoints
+4. Teams/M365 interactions, Power Automate flows, Microsoft Copilot Studio agent placement
+5. Time-based or recurring work
+6. Organizational outputs (documents, summaries, presentations)
+
+Do NOT move to technical implementation until the solution boundary is stable.
+
+Full details: `.github/instructions/00b-scope-refinement-and-solution-shaping.instructions.md`

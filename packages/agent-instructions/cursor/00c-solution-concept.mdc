@@ -1,0 +1,14 @@
+---
+description: "Read when a refined business scope needs to be translated into candidate entities, relationships, ownership patterns, lifecycle states, and Dataverse planning inputs."
+globs: "scripts/**,solution/**"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/00c-solution-concept-to-dataverse-plan.instructions.md — do not edit directly -->
+# Solution Concept → Dataverse Plan
+
+1. Derive candidate entities, relationships, ownership patterns, lifecycle states
+2. Map to Dataverse planning inputs (tables, columns, option sets, relationships)
+3. Hand off into the planning artifact workflow (`dataverse/planning-payload.json`)
+4. Do not improvise schema — stabilize the solution concept first
+
+Full details: `.github/instructions/00c-solution-concept-to-dataverse-plan.instructions.md`

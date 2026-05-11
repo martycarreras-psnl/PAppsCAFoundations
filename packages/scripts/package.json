@@ -1,0 +1,51 @@
+{
+  "name": "@pacaf/scripts",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Helper scripts for Power Apps Code App projects: schema-plan validation, Dataverse data-source registration, auth setup, and migration tooling.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martycarreras-psnl/PAppsCAFoundations.git",
+    "directory": "packages/scripts"
+  },
+  "homepage": "https://martycarreras-psnl.github.io/PAppsCAFoundations",
+  "bin": {
+    "pacaf-validate": "./validate-schema-plan.mjs",
+    "pacaf-generate": "./generate-dataverse-plan.mjs",
+    "pacaf-register": "./register-dataverse-data-sources.mjs",
+    "pacaf-seed": "./seed-prototype-assets.mjs",
+    "pacaf-patch-datasources": "./patch-datasources-info.mjs",
+    "pacaf-discover-connection": "./discover-copilot-connection.mjs",
+    "pacaf-export-solution": "./export-solution.mjs",
+    "pacaf-pac": "./op-pac.mjs",
+    "pacaf-pac-safe": "./pac-safe.mjs",
+    "pacaf-setup-auth": "./setup-auth.mjs",
+    "pacaf-decrypt-secret": "./decrypt-secret.mjs",
+    "pacaf-detect-agent": "./detect-agent.mjs",
+    "pacaf-generate-agent-guidance": "./generate-agent-guidance.mjs",
+    "pacaf-migrate-thin": "./bin/pacaf-migrate-thin.mjs",
+    "pacaf-update": "./bin/pacaf-update.mjs"
+  },
+  "files": [
+    "bin/",
+    "*.mjs",
+    "schema-plan.example.json",
+    "tests/",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test lib/tests"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "power-apps",
+    "code-apps",
+    "power-platform",
+    "dataverse",
+    "pacaf"
+  ]
+}

@@ -1,0 +1,15 @@
+---
+globs: "tests/**,src/**/*.test.tsx,src/**/*.test.ts,playwright.config.ts,vitest.config.ts"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/05-testing.instructions.md — do not edit directly -->
+# Testing Patterns
+
+- Vitest for unit/integration, Playwright for E2E
+- Smoke tests pass from the first scaffold — deployment gate
+- Mock connectors with MSW or provider-pattern mocks
+- Test the provider contract, not generated service internals
+- Every hook gets a test; every page gets at least a render test
+- Run `npm run test` before committing; CI blocks merge on failure
+
+Full details: `.github/instructions/05-testing.instructions.md`

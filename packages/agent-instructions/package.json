@@ -1,0 +1,38 @@
+{
+  "name": "@pacaf/agent-instructions",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Power Apps Code App Foundations agent guidance for GitHub Copilot, Claude, and Cursor. Materializes .github/instructions/, .claude/rules/, .cursor/rules/ into a target repo and detects drift.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martycarreras-psnl/PAppsCAFoundations.git",
+    "directory": "packages/agent-instructions"
+  },
+  "homepage": "https://martycarreras-psnl.github.io/PAppsCAFoundations",
+  "bin": {
+    "pacaf-instructions": "./bin/pacaf-instructions.mjs"
+  },
+  "files": [
+    "bin/",
+    "instructions/",
+    "claude/",
+    "cursor/",
+    "meta/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "power-apps",
+    "code-apps",
+    "github-copilot",
+    "claude",
+    "cursor",
+    "agent",
+    "instructions",
+    "pacaf"
+  ]
+}

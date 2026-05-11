@@ -1,0 +1,17 @@
+{
+  "$schema": "./packages/rebrand/pacaf.config.schema.json",
+  "scope": "@pacaf",
+  "binPrefix": "pacaf",
+  "templateRepo": "martycarreras-psnl/PAppsCAFoundations",
+  "templateBranch": "main",
+  "templatePath": "templates/starter",
+  "docsUrl": "https://martycarreras-psnl.github.io/PAppsCAFoundations",
+  "registry": "https://registry.npmjs.org",
+  "packages": [
+    "wizard",
+    "wizard-ux",
+    "scripts",
+    "agent-instructions",
+    "rebrand"
+  ]
+}

@@ -1,0 +1,23 @@
+---
+paths:
+  - "src/**"
+  - "vite.config.ts"
+  - "tsconfig.json"
+  - "package.json"
+  - "power.config.json"
+---
+<!-- Generated from .github/instructions/01-scaffold.instructions.md — do not edit directly -->
+# Project Scaffolding & Structure
+
+Mandatory tech stack: React 18 + TypeScript + Vite + Fluent UI v9 + TanStack Query + React Router.
+
+Key rules:
+- Solution-first: every Code App lives inside a dedicated Power Platform solution
+- `src/generated/` is **read-only** — produced by `pac code add-data-source`
+- Three-layer architecture: Components → Hooks → Services/Providers → Generated (behind adapters)
+- Components never call generated services directly
+- Port 3000 for local dev (Power Apps SDK requires it)
+- `base: './'` in `vite.config.ts` for production builds
+- No secrets in source
+
+Full details: `.github/instructions/01-scaffold.instructions.md`
