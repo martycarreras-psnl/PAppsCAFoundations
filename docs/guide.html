@@ -617,7 +617,13 @@
         <span class="nav-icon">🧙</span> Wizard Overview
       </button>
       <button class="nav-item" data-target="wizard-steps" onclick="navTo(this)">
-        <span class="nav-icon">📋</span> All 9 Steps
+        <span class="nav-icon">📋</span> All 10 Steps
+      </button>
+      <button class="nav-item" data-target="plan-mode" onclick="navTo(this)">
+        <span class="nav-icon">🧠</span> Plan Mode with Your Agent
+      </button>
+      <button class="nav-item" data-target="pacaf-cli" onclick="navTo(this)">
+        <span class="nav-icon">⚙️</span> pacaf-* CLIs
       </button>
 
       <div class="nav-group-label">Portal Quick Links</div>
@@ -680,11 +686,11 @@
     <!-- Hero -->
     <section class="hero" id="hero-section">
       <h1>Power Apps Code Apps</h1>
-      <p>A complete foundation for building enterprise-grade Code Apps with React, Fluent UI v9, and Power Platform. Use this template, run the wizard, and follow the intended sequence: plan first, prototype second, connect later.</p>
+      <p>The fastest way to scaffold, deploy, and maintain an enterprise-grade Power Apps Code App — built with React, Fluent UI v9, and a planning-first coding-agent workflow. Use this template, run the wizard from VS Code, plan in plan mode, then build and deploy.</p>
       <div class="hero-actions">
         <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations/generate" class="btn btn-primary" target="_blank" rel="noopener">📋 Use This Template</a>
         <a href="#wizard-overview" class="btn btn-outline">🧙 Run the Wizard</a>
-        <a href="#planning-layer" class="btn btn-outline">🧠 Planning Layer</a>
+        <a href="#plan-mode" class="btn btn-outline">🧠 Plan-First with Your Agent</a>
         <a href="#whats-inside" class="btn btn-outline">📁 Explore the Repo</a>
       </div>
     </section>
@@ -729,90 +735,113 @@
     <!-- What's Inside -->
     <section class="section" id="whats-inside">
       <h2 class="section-title">What's Inside</h2>
-      <p class="section-subtitle">The repo contains instruction files, helper scripts, and a setup wizard that work together.</p>
+      <p class="section-subtitle">The Foundations are an npm-published toolchain. The template repo gives you a clean starting point; the heavy lifting lives in <code>@pacaf/*</code> packages and is invoked from your editor by an AI coding agent.</p>
 
+      <div class="card-grid" style="grid-template-columns: repeat(2, minmax(280px, 1fr)); margin-bottom: var(--s5);">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📦</div>
+          <h3>What you install from npm</h3>
+          <p>Five published packages under <strong><code>@pacaf/*</code></strong> drive setup, scaffolding, agent guidance, fork rebranding, and ongoing updates. End users never copy this tooling into their repo — they consume it as devDependencies.</p>
+          <ul style="margin-top:8px; padding-left:20px; line-height:1.7; font-size:13px;">
+            <li><code>@pacaf/wizard-ux</code> — browser wizard (recommended)</li>
+            <li><code>@pacaf/wizard</code> — equivalent CLI wizard</li>
+            <li><code>@pacaf/scripts</code> — 15 <code>pacaf-*</code> helper CLIs</li>
+            <li><code>@pacaf/agent-instructions</code> — coding-agent guidance, synced into your repo</li>
+            <li><code>@pacaf/rebrand</code> — retarget a fork to your own npm scope</li>
+          </ul>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">🌱</div>
+          <h3>What you start with from the template</h3>
+          <p>Clicking <strong>"Use this template"</strong> delivers <code>templates/starter/</code> — a minimal repo so the wizard can fill in everything else. After the wizard runs, your repo contains <code>src/</code>, <code>package.json</code>, <code>vite.config.ts</code>, <code>power.config.json</code>, <code>.github/instructions/</code>, and the rest of a working Code App.</p>
+        </div></div>
+      </div>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">Foundations monorepo (this repo)</h3>
+      <p style="margin-bottom: var(--s3); font-size: 14px; color: var(--neutralSecondary);">If you're going to fork or contribute, this is the layout you'll see. End users do not need to clone this repo.</p>
       <div class="file-tree"><span class="folder">PAppsCAFoundations/</span>
+├── <span class="folder">packages/</span>                              <span class="comment"># Published @pacaf/* npm packages</span>
+│   ├── <span class="folder">wizard/</span>                            <span class="comment"># @pacaf/wizard — 10-step interactive CLI</span>
+│   ├── <span class="folder">wizard-ux/</span>                         <span class="comment"># @pacaf/wizard-ux — browser wizard (Fastify + React + Fluent UI)</span>
+│   ├── <span class="folder">scripts/</span>                           <span class="comment"># @pacaf/scripts — pacaf-* CLIs (validate, register, seed, …)</span>
+│   ├── <span class="folder">agent-instructions/</span>                <span class="comment"># @pacaf/agent-instructions — synced into derived repos</span>
+│   └── <span class="folder">rebrand/</span>                           <span class="comment"># @pacaf/rebrand — retarget a fork to your own scope</span>
+├── <span class="folder">templates/</span>
+│   └── <span class="folder">starter/</span>                           <span class="comment"># What "Use this template" delivers</span>
 ├── <span class="folder">.github/</span>
-│   └── <span class="folder">instructions/</span>                              <span class="comment"># Canonical coding-agent instructions</span>
-│       ├── <span class="file">00-before-you-start.instructions.md</span>    <span class="comment"># Publisher, environments, solution</span>
-│       ├── <span class="file">00-environment-setup.instructions.md</span>   <span class="comment"># App Registration, auth, 1Password</span>
-│       ├── <span class="file">00a-business-problem-decomposition.instructions.md</span> <span class="comment"># Turn freeform business narratives into planning inputs</span>
-│       ├── <span class="file">00b-scope-refinement-and-solution-shaping.instructions.md</span> <span class="comment"># Refine workflows, automation, Teams, reporting, governance</span>
-│       ├── <span class="file">00c-solution-concept-to-dataverse-plan.instructions.md</span> <span class="comment"># Bridge refined scope into Dataverse planning</span>
-│       ├── <span class="file">00d-prototype-validation.instructions.md</span> <span class="comment"># Validate UX with mock data before schema hardens</span>
-│       ├── <span class="file">01-scaffold.instructions.md</span>            <span class="comment"># Project structure, tech stack</span>
-│       ├── <span class="file">02-connectors.instructions.md</span>          <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
-│       ├── <span class="file">03-components.instructions.md</span>          <span class="comment"># React + Fluent UI v9 patterns</span>
-│       ├── <span class="file">04-deployment.instructions.md</span>          <span class="comment"># CI/CD, pac code push, ALM</span>
-│       ├── <span class="file">05-testing.instructions.md</span>             <span class="comment"># Vitest, Playwright, MSW</span>
-│       ├── <span class="file">06-security.instructions.md</span>            <span class="comment"># Auth, secrets, DLP, validation</span>
-│       ├── <span class="file">07-dataverse-schema.instructions.md</span>    <span class="comment"># Tables, columns, option sets</span>
-│       └── <span class="file">08-copilot-studio.instructions.md</span>      <span class="comment"># Copilot Studio agent integration</span>
+│   ├── <span class="folder">instructions/</span>                      <span class="comment"># CANONICAL agent guidance source-of-truth</span>
+│   │   ├── <span class="file">00-before-you-start.instructions.md</span>
+│   │   ├── <span class="file">00-environment-setup.instructions.md</span>
+│   │   ├── <span class="file">00a-business-problem-decomposition.instructions.md</span> <span class="comment"># Planning step 1</span>
+│   │   ├── <span class="file">00b-scope-refinement-and-solution-shaping.instructions.md</span> <span class="comment"># Planning step 2</span>
+│   │   ├── <span class="file">00c-solution-concept-to-dataverse-plan.instructions.md</span> <span class="comment"># Planning step 3</span>
+│   │   ├── <span class="file">00d-prototype-validation.instructions.md</span> <span class="comment"># Planning step 4</span>
+│   │   ├── <span class="file">01-scaffold.instructions.md</span>     <span class="comment"># Project structure & stack</span>
+│   │   ├── <span class="file">02-connectors.instructions.md</span>   <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
+│   │   ├── <span class="file">03-components.instructions.md</span>   <span class="comment"># React + Fluent UI v9 patterns</span>
+│   │   ├── <span class="file">04-deployment.instructions.md</span>   <span class="comment"># CI/CD, pac code push, ALM</span>
+│   │   ├── <span class="file">05-testing.instructions.md</span>      <span class="comment"># Vitest, Playwright, MSW</span>
+│   │   ├── <span class="file">06-security.instructions.md</span>     <span class="comment"># Auth, secrets, DLP</span>
+│   │   ├── <span class="file">07-dataverse-schema.instructions.md</span> <span class="comment"># Tables, columns, option sets</span>
+│   │   ├── <span class="file">08-copilot-studio.instructions.md</span> <span class="comment"># Copilot Studio agent integration</span>
+│   │   └── <span class="file">09-form-field-pattern.instructions.md</span> <span class="comment"># Dataverse metadata-backed form labels</span>
+│   └── <span class="folder">workflows/</span>                         <span class="comment"># ci.yml + release.yml (changesets)</span>
 ├── <span class="folder">docs/</span>
-│   ├── <span class="file">index.html</span>                          <span class="comment"># Marketing landing page (high-level overview)</span>
-│   ├── <span class="file">guide.html</span>                          <span class="comment"># Interactive visual setup guide (this page)</span>
-│   └── <span class="file">prototype-golden-path.md</span>            <span class="comment"># End-to-end delivery from planning to real providers</span>
-├── <span class="folder">scripts/</span>
-│   ├── <span class="file">decrypt-secret.mjs</span>                  <span class="comment"># Decrypt AES-256-GCM secrets from .env.local</span>
-│   ├── <span class="file">discover-copilot-connection.mjs</span>     <span class="comment"># Cross-platform Copilot Studio connection discovery</span>
-│   ├── <span class="file">discover-copilot-connection.sh</span>      <span class="comment"># Resolve Copilot Studio connection IDs</span>
-│   ├── <span class="file">export-solution.mjs</span>                 <span class="comment"># Export unmanaged, refresh solution-source, pack managed</span>
-│   ├── <span class="file">generate-dataverse-plan.mjs</span>         <span class="comment"># Expand planning payloads into execution plans</span>
-│   ├── <span class="file">op-pac.mjs</span>                          <span class="comment"># Cross-platform 1Password wrapper for pac</span>
-│   ├── <span class="file">op-pac.sh</span>                           <span class="comment"># Legacy Bash wrapper for pac</span>
-│   ├── <span class="file">pac-safe.mjs</span>                        <span class="comment"># Safe pac wrapper with version and profile guards</span>
-│   ├── <span class="file">patch-datasources-info.mjs</span>          <span class="comment"># Patch datasources-info.json after changes</span>
-│   ├── <span class="file">pre-commit-hook.sh</span>                  <span class="comment"># Block accidental secret commits</span>
-│   ├── <span class="file">register-dataverse-data-sources.mjs</span> <span class="comment"># Register Dataverse tables via PAC</span>
-│   ├── <span class="file">register-dataverse-data-sources.sh</span>  <span class="comment"># Bash wrapper for table registration</span>
-│   ├── <span class="file">schema-plan.example.json</span>            <span class="comment"># Starter Dataverse planning artifact</span>
-│   ├── <span class="file">seed-prototype-assets.mjs</span>           <span class="comment"># Generate contracts, mock providers, feedback artifacts</span>
-│   ├── <span class="file">setup-auth.mjs</span>                      <span class="comment"># Cross-platform auth setup (1Password or .env.local)</span>
-│   ├── <span class="file">setup-auth.sh</span>                       <span class="comment"># Legacy Bash auth setup</span>
-│   ├── <span class="file">setup-wizard.sh</span>                     <span class="comment"># Bash wrapper to the Node wizard</span>
-│   ├── <span class="file">sync-foundations.mjs</span>                <span class="comment"># Cross-platform template sync entry point</span>
-│   ├── <span class="file">sync-foundations.sh</span>                 <span class="comment"># Pull latest from template repo</span>
-│   ├── <span class="file">validate-schema-plan.mjs</span>            <span class="comment"># Validate planning payloads before provisioning</span>
-│   └── <span class="folder">tests/</span>                              <span class="comment"># Unit tests for scripts</span>
-├── <span class="folder">wizard/</span>                                 <span class="comment"># ← THE MAIN EVENT</span>
-│   ├── <span class="file">index.mjs</span>                           <span class="comment"># Cross-platform Node.js setup wizard</span>
-│   ├── <span class="folder">lib/</span>                                <span class="comment"># Shared helpers (state, UI, shell)</span>
-│   └── <span class="folder">steps/</span>                              <span class="comment"># 9 step modules</span>
-├── <span class="folder">solution/</span>                               <span class="comment"># Power Platform solution artifacts</span>
-├── <span class="file">.env</span>                                    <span class="comment"># 1Password references (safe to commit)</span>
-├── <span class="file">.env.template</span>                           <span class="comment"># Template for non-1Password teams</span>
-├── <span class="file">.foundations-version.json</span>               <span class="comment"># Bundle/version metadata for downstream syncs</span>
-├── <span class="file">.gitignore</span>
-└── <span class="file">README.md</span></div>
+│   ├── <span class="file">index.html</span>                          <span class="comment"># Marketing landing page</span>
+│   ├── <span class="file">guide.html</span>                          <span class="comment"># Setup guide (this page)</span>
+│   ├── <span class="file">glossary.md</span>                         <span class="comment"># Power Platform terminology primer</span>
+│   └── <span class="file">prototype-golden-path.md</span>            <span class="comment"># End-to-end delivery recipe</span>
+├── <span class="file">pacaf.config.json</span>                       <span class="comment"># Branding source-of-truth (scope, binPrefix, templateRepo)</span>
+├── <span class="file">pnpm-workspace.yaml</span>                     <span class="comment"># Workspace discovery</span>
+├── <span class="file">package.json</span>                            <span class="comment"># Root: build, test, release, rebrand</span>
+├── <span class="file">AGENTS.md</span>                               <span class="comment"># Top-level agent contract</span>
+├── <span class="file">README.md</span>
+├── <span class="file">FORKING.md</span>                              <span class="comment"># Fork-and-rebrand guide</span>
+├── <span class="file">MIGRATION.md</span>                            <span class="comment"># Migrate older derived repos onto @pacaf/*</span>
+└── <span class="file">TROUBLESHOOTING.md</span></div>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">Your derived repo after the wizard runs</h3>
+      <p style="margin-bottom: var(--s3); font-size: 14px; color: var(--neutralSecondary);">The wizard writes a Code App scaffold into your repo. Tooling stays in npm; only the project code and synced instruction files live in your repo.</p>
+      <div class="file-tree"><span class="folder">my-app/</span>
+├── <span class="folder">src/</span>                                   <span class="comment"># React + TypeScript app code</span>
+├── <span class="folder">.github/</span>
+│   ├── <span class="folder">instructions/</span>                      <span class="comment"># Synced from @pacaf/agent-instructions — do not edit by hand</span>
+│   └── <span class="file">copilot-instructions.md</span>             <span class="comment"># Pointer for your coding agent</span>
+├── <span class="folder">.claude/rules/</span>                         <span class="comment"># Claude Code projections</span>
+├── <span class="folder">.cursor/rules/</span>                         <span class="comment"># Cursor projections</span>
+├── <span class="file">AGENTS.md</span> / <span class="file">CLAUDE.md</span>                  <span class="comment"># Synced agent contracts</span>
+├── <span class="file">power.config.json</span>                       <span class="comment"># Power Platform binding (apiId, connectionId, etc.)</span>
+├── <span class="file">vite.config.ts</span>                          <span class="comment"># base: './' for production iframe asset paths</span>
+├── <span class="file">package.json</span>                            <span class="comment"># @pacaf/scripts + @pacaf/agent-instructions as devDeps</span>
+├── <span class="file">.env.template</span>                           <span class="comment"># Environment scaffold</span>
+├── <span class="file">.foundations-version.json</span>               <span class="comment"># Records which @pacaf/* versions are in use</span>
+└── <span class="file">.gitignore</span></div>
 
       <div class="card-grid">
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📋</div>
-          <h3>14 Instruction Files — 4 Agents</h3>
+          <h3>16 Instruction Files — 4 Agents</h3>
           <p>Native guidance for <strong>GitHub Copilot</strong>, <strong>Claude Code</strong>, <strong>Cursor</strong>, and <strong>Codex</strong>. Each agent reads the same rules in its own format. The canonical source lives in <code>.github/instructions/</code>; Claude, Cursor, and Codex projections are generated from it.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#efe7fd; color:var(--purple);">🧠</div>
           <h3>Narrative-First Planning</h3>
-          <p>Optional, but high leverage. If the app idea is still taking shape, this planning layer helps your coding agent decompose the business narrative, challenge gaps, and refine scope before schema and connectors harden.</p>
+          <p>Optional but high-leverage. Instruction files <code>00a → 00d</code> walk your coding agent through business decomposition, scope refinement, conceptual modeling, and prototype validation <em>before</em> schema and connectors harden.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
-          <h3>Setup Wizard</h3>
-          <p>One script, 9 steps, zero guesswork. Creates publisher and solution via API, sets up auth, scaffolds your app, adds a dedicated connector-binding pass, and deploys from the terminal.</p>
+          <h3>Setup Wizard (CLI &amp; Browser)</h3>
+          <p>One npx command, 10 steps. <code>npx @pacaf/wizard-ux@latest</code> opens a Fluent UI browser experience on <code>127.0.0.1:5174</code>. <code>npx @pacaf/wizard@latest</code> is the equivalent terminal flow for SSH or headless setups.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔐</div>
-          <h3>Auth Scripts</h3>
-          <p>1Password integration or .env.local fallback. Client secrets are encrypted at rest with AES-256-GCM. Service Principal auth means no browser popups — locally or in CI/CD.</p>
+          <h3>Auth &amp; Secrets</h3>
+          <p>1Password integration or <code>.env.local</code> fallback. Client secrets are encrypted at rest with AES-256-GCM. Service Principal auth means no browser popups locally or in CI.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#e8f0fe; color:#1a73e8;">🔄</div>
-          <h3>Sync Foundations</h3>
-          <p>Pull the latest instruction files, wizard updates, and security patches from the template repo with <code>npm run sync:foundations</code>. Your project code is never touched.</p>
-          <div class="callout callout-warning" style="margin-top:8px;font-size:13px">
-            <strong>Before scaffolding?</strong> If you haven't run Step 7 yet, there's no root <code>package.json</code> and <code>npm run</code> won't work. Use <code>bash scripts/sync-foundations.sh</code> or <code>node scripts/sync-foundations.mjs</code> directly instead.
-          </div>
+          <h3>Stay Up to Date</h3>
+          <p>Refresh tooling and synced instruction files with <code>npx pacaf-update</code>. Preview drift with <code>npx pacaf-update --check</code>. Your project code is never touched — only synced foundations files and devDependency versions.</p>
         </div></div>
       </div>
 
@@ -820,13 +849,13 @@
         <span class="callout-icon">🔗</span>
         <div>
           <strong>How agent guidance stays in sync</strong>
-          <p style="margin-top:8px;">Every coding agent needs its instructions in a different format, but the underlying rules must be identical. Foundations solves this with a <strong>single canonical source → multiple generated projections</strong> model:</p>
+          <p style="margin-top:8px;">Every coding agent expects its guidance in a different format, but the underlying rules must stay identical. Foundations uses a <strong>single canonical source → multiple generated projections</strong> model:</p>
           <ol style="margin-top:8px; padding-left:20px;">
-            <li><strong>Canonical source</strong> — <code>.github/instructions/*.instructions.md</code> (Copilot-native format) plus the hand-authored root <code>AGENTS.md</code>.</li>
-            <li><strong>Generated projections</strong> — A manifest (<code>agent-guidance.config.json</code>) maps each canonical file to its Claude (<code>.claude/rules/</code>), Cursor (<code>.cursor/rules/</code>), and Codex (nested <code>AGENTS.md</code>) equivalents.</li>
-            <li><strong>Drift prevention</strong> — <code>npm run guidance:check</code> fails if any projected file is missing or unmarked. <code>npm run guidance:generate</code> regenerates all projections.</li>
+            <li><strong>Canonical source</strong> — <code>.github/instructions/*.instructions.md</code> (Copilot-native) plus the hand-authored root <code>AGENTS.md</code>.</li>
+            <li><strong>Generated projections</strong> — A manifest (<code>agent-guidance.config.json</code>) maps each canonical file to its Claude (<code>.claude/rules/</code>), Cursor (<code>.cursor/rules/</code>), and Codex (nested <code>AGENTS.md</code>) equivalents. The <code>@pacaf/agent-instructions</code> package ships the canonical files plus all projections.</li>
+            <li><strong>Sync into your repo</strong> — <code>npx pacaf-instructions sync</code> materializes all 16 instruction files plus projections into your derived repo. <code>npx pacaf-update</code> wraps this together with a refresh of <code>@pacaf/scripts</code>.</li>
           </ol>
-          <p style="margin-top:8px;"><strong>The rule:</strong> edit the canonical <code>.github/instructions/</code> files, then run <code>npm run guidance:generate</code>. Never edit projected files directly — they carry a "do not edit" marker and will be overwritten.</p>
+          <p style="margin-top:8px;"><strong>In your derived repo:</strong> never edit files in <code>.github/instructions/</code>, <code>.claude/rules/</code>, or <code>.cursor/rules/</code> directly — they will be overwritten by the next sync. Open an issue or PR on the foundations repo instead.</p>
         </div>
       </div>
     </section>
@@ -969,34 +998,40 @@
         <div>
           <strong>Step 1 — Get the code</strong> (pick one):
           <ul style="margin:8px 0 4px 0; padding-left:20px; line-height:1.8;">
-            <li><strong>Recommended:</strong> Click <strong>"Use this template"</strong> on GitHub → create your repo → <code>git clone https://github.com/your-org/my-app.git</code></li>
-            <li><strong>Quick explore:</strong> <code>npx degit martycarreras-psnl/PAppsCAFoundations my-app</code></li>
+            <li>Click <strong>"Use this template" → Create a new repository</strong> on GitHub</li>
+            <li>Clone your new repo locally and open it in <strong>VS Code</strong> with a coding-agent extension enabled (GitHub Copilot Chat, Claude Code, Cursor, etc.)</li>
           </ul>
-          <strong>Step 2 — Run the wizard</strong> — pick the experience you prefer:
-          <p style="margin-top:8px;"><strong>Terminal wizard</strong> (the original):</p>
-          <pre style="margin-top:4px; display:inline-block;">cd my-app/wizard &amp;&amp; npm install &amp;&amp; node index.mjs</pre>
-          <p style="margin-top:12px;">✨ <strong>Browser wizard</strong> (new) — same flow, beautiful Fluent UI experience at <code>http://127.0.0.1:5174</code>:</p>
-          <pre style="margin-top:4px; display:inline-block;">cd my-app &amp;&amp; npm run wizard:ux</pre>
-          <p style="margin-top:8px; font-size:13px; color:var(--neutral-secondary, #605e5c);">Both wizards share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff in the browser version.</p>
-          <p style="margin-top:12px;"><strong>Works on Windows, macOS, and Linux.</strong><br>The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
-          <p style="margin-top:8px;"><strong>Want a stronger business fit?</strong> After the wizard gives you a working foundation, use the narrative-first planning instructions and prototype checkpoint before finalizing Dataverse schema, connectors, approvals, or agent behavior.</p>
           <p style="margin-top:4px; font-size:13px; color:#d83b01;">⚠ Do not <code>git clone</code> the template repo directly — that leaves <code>origin</code> pointing to PAppsCAFoundations instead of your own repo.</p>
+
+          <p style="margin-top:16px;"><strong>Step 2 — Ask your agent to run the wizard</strong></p>
+          <p style="margin-top:6px;">In the chat panel, say:</p>
+          <blockquote style="margin:8px 0 4px 0; padding:8px 12px; border-left:3px solid var(--themePrimary); background:var(--themeLighterAlt); font-style:italic;">"Set up this Code App using the PACAF wizard."</blockquote>
+          <p style="margin-top:8px;">Your agent will launch one of these (you can also run them yourself):</p>
+          <p style="margin-top:8px;"><strong>Browser wizard</strong> (recommended) — Fluent UI experience at <code>http://127.0.0.1:5174</code>:</p>
+          <pre style="margin-top:4px; display:inline-block;">npx @pacaf/wizard-ux@latest</pre>
+          <p style="margin-top:12px;"><strong>Terminal wizard</strong> — same 10 steps, headless or SSH friendly:</p>
+          <pre style="margin-top:4px; display:inline-block;">npx @pacaf/wizard@latest</pre>
+          <p style="margin-top:8px; font-size:13px; color:var(--neutral-secondary, #605e5c);">Both wizards share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff in the browser version.</p>
+          <p style="margin-top:12px;"><strong>Works on Windows, macOS, and Linux.</strong> The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
+
+          <p style="margin-top:16px;"><strong>Step 3 — Plan before you build</strong></p>
+          <p style="margin-top:6px;">Once the wizard finishes you have a working starter. Don't jump straight to building features. Switch your agent into <strong>plan mode</strong> and describe the business problem you're solving — your agent will walk through instruction files <code>00a → 00d</code> before touching schema, connectors, or production code. See <a href="#plan-mode">Plan Mode with Your Agent</a> below.</p>
         </div>
       </div>
 
       <figure style="margin: 32px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,32,80,0.14); border: 1px solid #e1e1e1;">
         <img
           src="assets/wizard-steps.png"
-          alt="Browser wizard home page showing the nine-step grid: Prerequisites, Project &amp; Environment, App Registration, PAC Auth Profiles, Publisher, Solution, Scaffold the Code App, Bind Connectors, and Verify &amp; Deploy."
+          alt="Browser wizard home page showing the 10-step grid: Prerequisites, Project &amp; Environment, App Registration, PAC Auth Profiles, Publisher, Solution, Scaffold the Code App, Bind Connectors, Verify &amp; Deploy, and Dataverse-skills plugin install."
           loading="lazy"
           style="display:block; width:100%; height:auto;"
         />
         <figcaption style="padding: 12px 16px; font-size: 13px; color: var(--neutral-secondary, #605e5c); background: #fafafa; border-top: 1px solid #eee;">
-          The browser wizard at <code>http://127.0.0.1:5174</code> — nine self-contained, re-runnable steps. Smart paste means you can drop a Maker Portal connection URL straight in and the wizard pulls the connector apiId and the connection GUID out for you.
+          The browser wizard at <code>http://127.0.0.1:5174</code> — 10 self-contained, re-runnable steps. Smart paste means you can drop a Maker Portal connection URL straight in and the wizard pulls the connector apiId and the connection GUID out for you.
         </figcaption>
       </figure>
 
-      <div class="card-grid" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="card-grid" style="grid-template-columns: repeat(5, 1fr);">
         <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
           <div style="font-size:28px; margin-bottom:8px;">🔍</div>
           <h3 style="font-size:13px;">Steps 1–2</h3>
@@ -1017,12 +1052,17 @@
           <h3 style="font-size:13px;">Steps 7–9</h3>
           <p>Scaffold, bind connectors, build &amp; deploy</p>
         </div></div>
+        <div class="card"><div class="card-body" style="text-align:center; padding:20px 12px;">
+          <div style="font-size:28px; margin-bottom:8px;">🧠</div>
+          <h3 style="font-size:13px;">Step 10</h3>
+          <p>Install Dataverse-skills plugin for your agent</p>
+        </div></div>
       </div>
     </section>
 
-    <!-- All 9 Steps -->
+    <!-- All 10 Steps -->
     <section class="section" id="wizard-steps">
-      <h2 class="section-title">All 9 Wizard Steps</h2>
+      <h2 class="section-title">All 10 Wizard Steps</h2>
       <p class="section-subtitle">Expand each step to see what happens and what you'll need.</p>
 
       <div class="accordion">
@@ -1273,11 +1313,11 @@
 
             <h4>Connector &amp; Data Source Setup</h4>
             <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later once the planning payload and prototype are stable enough to bind real systems.</p>
-            <pre style="margin-top:4px; display:inline-block;"><em># Terminal wizard:</em>
-node wizard/index.mjs --from 8
+            <pre style="margin-top:4px; display:inline-block;"><em># Browser wizard — navigate to Step 8 (Bind Connectors):</em>
+npx @pacaf/wizard-ux@latest
 
-<em># Browser wizard — navigate to Step 8 (Bind Connectors):</em>
-npm run wizard:ux</pre>
+<em># Or the terminal wizard, jumping straight to the connector-binding step:</em>
+npx @pacaf/wizard@latest --from 8</pre>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
@@ -1359,12 +1399,160 @@ npm run wizard:ux</pre>
 npm run dev:local    ← prototype with mock providers
 npm run prototype:seed ← refresh prototype assets after editing the planning payload
 npm run dev          ← connected mode once real providers exist
-node wizard/index.mjs --from 8 ← bind real connectors when ready
+npx @pacaf/wizard@latest --from 8 ← bind real connectors when ready
 npm run deploy       ← deploy changes after the app has been registered</pre>
           </div></div>
         </div>
 
+        <!-- Step 10 -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion(this)">
+            <span class="accordion-chevron">▶</span>
+            <span class="accordion-step">10</span>
+            <span class="accordion-title">Install the Dataverse-skills Plugin for Your Agent</span>
+            <span class="accordion-tag tag-guided">You Decide</span>
+          </button>
+          <div class="accordion-body"><div class="accordion-content">
+            <p>The final wizard step prepares your coding agent for the heavy Dataverse work that lies ahead. The Dataverse-skills plugin teaches your agent to provision Dataverse schema, import data, manage solutions, and administer environments through the MCP server, Python SDK, and PAC CLI — replacing hand-written <code>bash</code>/<code>curl</code> scripts with tested, idempotent, agent-native operations.</p>
+            <p>The wizard:</p>
+            <ol>
+              <li>Detects which coding agent you're using (Copilot, Claude Code, Cursor, or Codex)</li>
+              <li>Shows the install command appropriate for that agent</li>
+              <li>Reminds you to install <strong>Python 3</strong> and the <strong>PowerPlatform-Dataverse-Client</strong> SDK (<code>pip install PowerPlatform-Dataverse-Client pandas</code>) if not already present</li>
+            </ol>
+            <div class="callout callout-info">
+              <span class="callout-icon">🔌</span>
+              <div>
+                <strong>Install commands:</strong>
+                <ul style="margin-top:8px; padding-left:20px; line-height:1.8;">
+                  <li><strong>GitHub Copilot:</strong> <code>/plugin install dataverse@awesome-copilot</code></li>
+                  <li><strong>Claude Code:</strong> <code>/plugin install dataverse@claude-plugins-official</code></li>
+                  <li><strong>Cursor / Other:</strong> See the <a href="https://github.com/microsoft/Dataverse-skills" target="_blank" rel="noopener">Dataverse-skills README</a> for manual MCP configuration</li>
+                </ul>
+              </div>
+            </div>
+            <p>After installation, prompt your agent with <em>"Connect to Dataverse"</em> — the <code>dv-connect</code> skill walks through tool checks, authentication, and MCP server registration. When it finishes, <code>pac auth list</code> shows your active environment and your agent can drive Dataverse-skills tasks for schema, data, queries, solutions, and admin operations.</p>
+            <div class="callout callout-success">
+              <span class="callout-icon">✅</span>
+              <div>Now hop over to the <a href="#plan-mode">Plan Mode</a> section — your agent is fully equipped to drive both planning and Dataverse provisioning end-to-end.</div>
+            </div>
+          </div></div>
+        </div>
+
       </div><!-- /accordion -->
+    </section>
+
+    <!-- Plan Mode -->
+    <section class="section" id="plan-mode">
+      <h2 class="section-title">🧠 Plan Mode with Your Coding Agent</h2>
+      <p class="section-subtitle">After the wizard finishes, don't jump to "add a table and a page." Switch your agent into <strong>plan mode</strong> and let it walk through the planning instruction files <code>00a → 00d</code> before any schema or production code is written.</p>
+
+      <div class="callout callout-info">
+        <span class="callout-icon">🧠</span>
+        <div>
+          <strong>Why plan mode matters.</strong>
+          The wizard makes the foundation operational quickly. Plan mode makes the <em>business fit</em> right. Together they help avoid premature schema decisions, guessed connectors, weak approval models, and late-stage rework. For non-trivial apps, this is the recommended sequence — not optional.
+        </div>
+      </div>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">How to enter plan mode</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Coding agent</th><th>How to enter plan mode</th></tr></thead>
+        <tbody>
+          <tr><td><strong>GitHub Copilot Chat</strong></td><td>In the chat panel, switch the mode dropdown from <em>Ask</em> / <em>Edit</em> to <strong>Agent</strong>, then prefix your first message with <code>[[PLAN]]</code></td></tr>
+          <tr><td><strong>Claude Code</strong></td><td>Toggle Plan mode with <code>⌘+Shift+P</code> → <em>Claude: Toggle Plan Mode</em>, or start your message with <code>/plan</code></td></tr>
+          <tr><td><strong>Cursor</strong></td><td>Use <strong>Composer → Plan</strong> before <em>Apply</em></td></tr>
+          <tr><td><strong>Other agents</strong></td><td>Tell it explicitly: <em>"Stay in plan mode. Don't write code yet."</em></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">What to say first</h3>
+      <p>Describe what you want to build <strong>in business terms, not technical ones</strong>:</p>
+      <blockquote style="margin: var(--s3) 0; padding: var(--s3); border-left: 3px solid var(--themePrimary); background: var(--themeLighterAlt); font-style: italic;">
+        "I want to manage equipment loans across our field offices. Multiple regions, approvers, and an audit trail when assets go missing. Help me plan this out properly before we touch any code or schema."
+      </blockquote>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">What the planning workflow produces</h3>
+      <div class="card-grid">
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">1</div>
+          <h3>Decompose the narrative</h3>
+          <p>Your agent identifies goals, actors, workflows, outputs, constraints, and unknowns from your description, then asks only the most useful follow-up questions.</p>
+          <p style="margin-top:12px;"><code>00a-business-problem-decomposition.instructions.md</code></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#fff4ce; color:#835c00;">2</div>
+          <h3>Refine the scope</h3>
+          <p>Your agent challenges for exception paths, validations, approvals, automation, Teams, M365 outputs, reporting, governance, and Copilot Studio placement.</p>
+          <p style="margin-top:12px;"><code>00b-scope-refinement-and-solution-shaping.instructions.md</code></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#dff6dd; color:var(--green);">3</div>
+          <h3>Convert to a technical plan</h3>
+          <p>Once scope is stable, your agent derives candidate entities, relationships, ownership patterns, and lifecycle states, then writes a <code>dataverse/planning-payload.json</code> you can validate with <code>npx pacaf-validate</code>.</p>
+          <p style="margin-top:12px;"><code>00c-solution-concept-to-dataverse-plan.instructions.md</code></p>
+        </div></div>
+        <div class="card"><div class="card-body">
+          <div class="card-icon" style="background:#ede6ff; color:#4f2d7f;">4</div>
+          <h3>Prototype before schema</h3>
+          <p>Your agent generates domain contracts and mock providers from the planning payload, builds the UX in prototype mode, and captures what that prototype changes in the eventual schema.</p>
+          <p style="margin-top:12px;"><code>00d-prototype-validation.instructions.md</code></p>
+        </div></div>
+      </div>
+
+      <h3 style="margin-top: var(--s5); margin-bottom: var(--s3); color: var(--themeDark);">When you're happy, exit plan mode and build</h3>
+      <p>Switch your agent out of plan mode and say:</p>
+      <blockquote style="margin: var(--s3) 0; padding: var(--s3); border-left: 3px solid var(--green); background: #dff6dd; font-style: italic;">
+        "Looks good. Provision the Dataverse schema, generate the connectors, and deploy to my dev environment."
+      </blockquote>
+      <p>Your agent will then drive schema provisioning (often via the <a href="#ref-dataverse-plugin">Dataverse-skills plugin</a>), rerun the wizard's connector-binding step, and run <code>pnpm build</code> + <code>pac code push</code>.</p>
+
+      <div class="callout callout-info" style="margin-top:var(--s4);">
+        <span class="callout-icon">📖</span>
+        <div>
+          <strong>Want the full end-to-end recipe?</strong> See <a href="prototype-golden-path.md">prototype-golden-path.md</a> for the canonical sequence from business decomposition through real-provider binding.
+        </div>
+      </div>
+    </section>
+
+    <!-- pacaf-* CLIs -->
+    <section class="section" id="pacaf-cli">
+      <h2 class="section-title">⚙️ pacaf-* CLIs</h2>
+      <p class="section-subtitle">All helper scripts ship in the <code>@pacaf/scripts</code> package and are invokable via <code>npx</code>. Your derived repo adds them as a devDependency so your <code>package.json</code> scripts can use the bare <code>pacaf-*</code> names.</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>CLI</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>pacaf-update</code></td><td>Refresh <code>@pacaf/scripts</code> + <code>@pacaf/agent-instructions</code> and re-sync instruction files</td></tr>
+          <tr><td><code>pacaf-instructions</code></td><td><code>sync</code> / <code>check</code> / <code>list</code> agent-guidance projections</td></tr>
+          <tr><td><code>pacaf-migrate-thin</code></td><td>Convert an older derived repo with in-tree tooling to consume <code>@pacaf/*</code> packages</td></tr>
+          <tr><td><code>pacaf-validate</code></td><td>Validate a Dataverse <code>planning-payload.json</code> against the schema</td></tr>
+          <tr><td><code>pacaf-generate</code></td><td>Expand a planning payload into a Dataverse execution plan</td></tr>
+          <tr><td><code>pacaf-register</code></td><td>Register a Dataverse data source as a Code App connector</td></tr>
+          <tr><td><code>pacaf-seed</code></td><td>Seed prototype assets (mock providers, hooks, components, feedback artifact)</td></tr>
+          <tr><td><code>pacaf-discover-connection</code></td><td>Discover existing Power Platform connections by API ID</td></tr>
+          <tr><td><code>pacaf-export-solution</code></td><td>Export a Power Platform solution as <code>.zip</code></td></tr>
+          <tr><td><code>pacaf-pac</code> / <code>pacaf-pac-safe</code></td><td>Wrappers around <code>pac</code> with retry + error normalization</td></tr>
+          <tr><td><code>pacaf-setup-auth</code></td><td>Idempotent PAC auth profile bootstrap (1Password or <code>.env.local</code>)</td></tr>
+          <tr><td><code>pacaf-patch-datasources</code></td><td>Patch <code>power.config.json</code> data source info after edits</td></tr>
+          <tr><td><code>pacaf-detect-agent</code></td><td>Detect which coding agent is in use (Copilot / Claude / Cursor / Codex)</td></tr>
+          <tr><td><code>pacaf-generate-agent-guidance</code></td><td>Regenerate Claude/Cursor/Codex projections from the canonical instructions</td></tr>
+          <tr><td><code>pacaf-decrypt-secret</code></td><td>Decrypt a secret encrypted by the wizard's AES-256-GCM flow</td></tr>
+          <tr><td><code>pacaf-rebrand</code></td><td>(Forks only) Retarget a fork to your own scope and bin prefix</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout-info" style="margin-top: var(--s4);">
+        <span class="callout-icon">💡</span>
+        <div>
+          <strong>Invocation patterns:</strong>
+          <ul style="margin-top:8px; padding-left:20px; line-height:1.8;">
+            <li>In a fresh repo before installing: <code>npx pacaf-update</code></li>
+            <li>In a project that already has <code>@pacaf/scripts</code> as a devDep: <code>pnpm exec pacaf-update</code> or <code>npm run update</code> if scripts are wired</li>
+            <li>For the wizards specifically: <code>npx @pacaf/wizard-ux@latest</code> / <code>npx @pacaf/wizard@latest</code></li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <!-- Creating Connections -->
@@ -1403,11 +1591,11 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
 
       <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
       <p>Preferred path: rerun the wizard when you are ready to connect real data.</p>
-      <pre style="margin-bottom:8px;"><em># Terminal wizard:</em>
-node wizard/index.mjs --from 8
+      <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
+npx @pacaf/wizard-ux@latest
 
-<em># Or use the browser wizard — navigate to Step 8:</em>
-npm run wizard:ux</pre>
+<em># Or the terminal wizard:</em>
+npx @pacaf/wizard@latest --from 8</pre>
       <p>The wizard will create the solution-level connection references, try to discover existing environment connections with <code>pac connection list</code>, and let you select one when matches are found.</p>
 
       <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
@@ -1600,11 +1788,11 @@ export default defineConfig(({ command }) =&gt; ({
 
       <h4>Adding a Data Source</h4>
       <p>Recommended order: prototype first, then rerun the wizard from the dedicated connector step once the planning payload is stable.</p>
-      <pre style="margin-bottom:8px;"><em># Terminal wizard:</em>
-node wizard/index.mjs --from 8
+      <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
+npx @pacaf/wizard-ux@latest
 
-<em># Or use the browser wizard — navigate to Step 8:</em>
-npm run wizard:ux</pre>
+<em># Or the terminal wizard:</em>
+npx @pacaf/wizard@latest --from 8</pre>
       <pre><em># Dataverse (no connection ID needed):</em>
 pac code add-data-source -a dataverse -t myprefix_project
 
@@ -1978,11 +2166,11 @@ pac code push</pre>
       </div>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Connectors &amp; Connection References</h3>
-      <p>The wizard auto-creates <strong>connection references</strong> in your solution so they travel across environments. This now happens in an explicit later connector-binding pass, not during the initial scaffold.</p>
+      <p>The wizard auto-creates <strong>connection references</strong> in your solution so they travel across environments. This happens in an explicit later connector-binding pass, not during the initial scaffold.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Action</th><th>How</th></tr></thead>
         <tbody>
-          <tr><td>Add connectors via wizard</td><td><code>node wizard/index.mjs --from 8</code> (runs the dedicated connector-binding step)</td></tr>
+          <tr><td>Add connectors via wizard</td><td><code>npx @pacaf/wizard-ux@latest</code> → Step 8, or <code>npx @pacaf/wizard@latest --from 8</code></td></tr>
           <tr><td>Add Dataverse table manually</td><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td></tr>
           <tr><td>Add other connector manually</td><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td></tr>
           <tr><td>Map references after import</td><td>Power Apps Maker Portal &rarr; Solutions &rarr; Connection References</td></tr>
@@ -1996,17 +2184,29 @@ pac code push</pre>
       <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. The wizard compensates for this by discovering existing environment connections with <code>pac connection list</code> and letting you select one when possible. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
-      <p style="margin-bottom: var(--s2); font-size: 14px;">Both the terminal wizard and the browser wizard (<code>npm run wizard:ux</code>) share <code>.wizard-state.json</code>, so you can switch between them freely. The browser wizard lets you jump directly to any step from the step navigator.</p>
+      <p style="margin-bottom: var(--s2); font-size: 14px;">Both wizards share <code>.wizard-state.json</code>, so you can switch between them freely. The browser wizard lets you jump directly to any step from the step navigator.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
-          <tr><td><code>node wizard/index.mjs</code></td><td>Resume from where you left off</td></tr>
-          <tr><td><code>node wizard/index.mjs --from 7</code></td><td>Re-run from scaffold onward, including the later connector and deploy steps</td></tr>
-          <tr><td><code>node wizard/index.mjs --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
-          <tr><td><code>node wizard/index.mjs --reset</code></td><td>Start completely fresh</td></tr>
-          <tr><td><code>npm run wizard:ux</code></td><td>Open the browser wizard — jump to any step from the step navigator</td></tr>
+          <tr><td><code>npx @pacaf/wizard@latest</code></td><td>Resume the terminal wizard from where you left off</td></tr>
+          <tr><td><code>npx @pacaf/wizard@latest --from 7</code></td><td>Re-run from the scaffold step onward (including connector binding and deploy)</td></tr>
+          <tr><td><code>npx @pacaf/wizard@latest --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
+          <tr><td><code>npx @pacaf/wizard@latest --reset</code></td><td>Start completely fresh</td></tr>
+          <tr><td><code>npx @pacaf/wizard-ux@latest</code></td><td>Open the browser wizard — jump to any step from the step navigator</td></tr>
         </tbody>
       </table></div>
+
+      <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Keeping Foundations Up to Date</h3>
+      <p style="margin-bottom: var(--s2); font-size: 14px;">When new <code>@pacaf/*</code> versions ship, refresh tooling and synced instruction files in your derived repo:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>npx pacaf-update</code></td><td>Bump <code>@pacaf/scripts</code> + <code>@pacaf/agent-instructions</code> and re-sync instruction files into <code>.github/instructions/</code>, <code>.claude/rules/</code>, <code>.cursor/rules/</code>, etc.</td></tr>
+          <tr><td><code>npx pacaf-update --check</code></td><td>Preview drift only — show what would change without writing</td></tr>
+          <tr><td><code>npx pacaf-instructions sync</code></td><td>Re-sync only the instruction files (skip dependency bumps)</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);">Your application code is never touched. Only synced foundations files and the two devDependency versions in your <code>package.json</code> change.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Setting Up CI/CD</h3>
       <p>See <code>.github/instructions/04-deployment.instructions.md</code> for full details. You'll need:</p>
