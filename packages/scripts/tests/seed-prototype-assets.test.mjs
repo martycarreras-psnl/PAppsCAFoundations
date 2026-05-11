@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
-const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..');
+const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..', '..');
 const scriptPath = join(repoRoot, 'scripts', 'seed-prototype-assets.mjs');
 
 function createTempProject() {

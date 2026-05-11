@@ -12,7 +12,7 @@ import {
   writeStarterFiles,
 } from '../../wizard/lib/scaffold-foundations.mjs';
 
-const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..');
+const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), '..', '..', '..');
 
 function createTempProject() {
   return mkdtempSync(join(tmpdir(), 'prototype-scaffold-'));

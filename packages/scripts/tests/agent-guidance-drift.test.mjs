@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 
-const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..', '..');
+const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..', '..', '..');
 
 function read(rel) {
   return readFileSync(join(ROOT, rel), 'utf-8');
