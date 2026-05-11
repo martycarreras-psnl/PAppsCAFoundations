@@ -13,35 +13,46 @@ This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com
 
 ## 🚀 I just want to build a Code App
 
-You need **three things** before you start:
+You'll do everything from inside **VS Code with a coding agent enabled** (GitHub Copilot Chat in Agent mode, Claude Code, Cursor, or similar). The agent reads the guidance shipped by `@pacaf/agent-instructions` and drives the wizard, the deploy, and day-two changes for you.
 
-1. A [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (dev / sandbox is fine)
-2. [Node.js 20+](https://nodejs.org/) and the [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) installed
-3. A GitHub account
+### Prerequisites
 
-Then:
+1. [VS Code](https://code.visualstudio.com/) with a coding-agent extension enabled and signed in
+2. A [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine)
+3. [Node.js 20+](https://nodejs.org/) and the [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) installed locally
+4. A GitHub account
 
 ### Step 1. Create your repo from this template
 
-Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PAppsCAFoundations/generate)** at the top of this page. You'll get a clean repo containing a starter README, `.gitignore`, and `.env.template` — nothing else. Clone it locally.
+Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PAppsCAFoundations/generate)** at the top of this page. You'll get a clean repo containing a starter README, `.gitignore`, `.env.template`, and a `.github/copilot-instructions.md` pointer that tells your agent where to load the foundations guidance from. Clone the new repo and open it in VS Code.
 
-### Step 2. Run the wizard
+### Step 2. Ask your agent to run the wizard
 
-In your new repo, run **one** of these:
+Open the agent chat panel in VS Code and say something like:
 
-```bash
-# Browser-based wizard (recommended — opens a UI at http://127.0.0.1:5174)
-npx @pacaf/wizard-ux@latest
+> **"Set up this Code App using the PACAF wizard."**
 
-# Or, the equivalent terminal wizard
-npx @pacaf/wizard@latest
-```
+The agent will:
 
-The wizard walks you through 10 steps: prerequisite checks, App Registration, auth, solution creation, code scaffolding, data source registration, and your first deploy. It writes `src/`, `package.json`, `vite.config.ts`, `power.config.json`, `.github/instructions/`, and everything else you need — straight into your repo.
+1. Detect that this is a starter repo (it sees `.env.template` and the empty `src/` tree).
+2. Launch the wizard for you — preferring the browser-based UX:
+   ```bash
+   npx @pacaf/wizard-ux@latest
+   ```
+   This opens a wizard at `http://127.0.0.1:5174` in your browser. (If you prefer to stay in the terminal, ask the agent for the CLI version: `npx @pacaf/wizard@latest`.)
+3. Walk you through the 10 wizard steps — prerequisite checks, App Registration, auth, solution creation, code scaffolding, data source registration, first smoke test — answering questions in plain English while you pick values in the UI for the steps that need your decisions (publisher prefix, environment URL, solution name, etc.).
+4. Commit the scaffolded files (`src/`, `package.json`, `vite.config.ts`, `power.config.json`, `.github/instructions/`, …) once the wizard finishes.
 
-### Step 3. Develop, then deploy
+You don't need to run anything by hand. If the agent gets stuck, paste the wizard's error output into chat and it will diagnose using the guidance in `.github/instructions/`.
 
-When the wizard finishes, you have a working app. Iterate locally and deploy whenever you're ready:
+### Step 3. Build features and deploy
+
+Tell the agent what you want to build:
+
+> **"Add a Dataverse table for tracking equipment loans and a page that lists them."**
+> **"Deploy the app to my dev environment."**
+
+The agent uses the instruction files installed by the wizard to scaffold components, register Dataverse data sources, run `pnpm build`, and call `pac code push` — the same commands you could run yourself if you preferred:
 
 ```bash
 pnpm dev          # local dev server on :3000
@@ -49,11 +60,15 @@ pnpm build        # produce ./dist/
 pac code push     # upload ./dist/ to your Power Platform environment
 ```
 
-> **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology (environment, solution, publisher prefix, Dataverse, connectors).
+> **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology (environment, solution, publisher prefix, Dataverse, connectors). Your agent already has this loaded.
 
 ### Keeping your project up to date
 
-When new `@pacaf/*` versions ship, refresh your project with:
+When new `@pacaf/*` versions ship, ask your agent:
+
+> **"Update the PACAF tooling and refresh the agent instructions."**
+
+It runs:
 
 ```bash
 npx pacaf-update              # refresh @pacaf/scripts, @pacaf/agent-instructions, and instruction files
