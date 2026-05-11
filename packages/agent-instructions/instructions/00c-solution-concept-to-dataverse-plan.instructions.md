@@ -139,10 +139,10 @@ After the prototype findings have been folded back into the planning payload, ha
 Use:
 
 1. `scripts/schema-plan.example.json` as the starter artifact shape
-2. `node scripts/validate-schema-plan.mjs dataverse/planning-payload.json` to validate the plan
-3. `node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json` to generate normalized execution plans
+2. `pacaf-validate dataverse/planning-payload.json` to validate the plan
+3. `pacaf-generate dataverse/planning-payload.json` to generate normalized execution plans
 4. **Provision schema** — If the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin is installed, use `dv-metadata` to provision tables, columns, relationships, and option sets from the generated plan. The plugin handles idempotency, metadata propagation delays, and error recovery. If the plugin is not installed, use the bash/Web API patterns in `07-dataverse-schema.instructions.md`.
-5. `node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json` — run only after schema is provisioned and published. This generates the TypeScript service layer in `src/generated/`.
+5. `pacaf-register dataverse/register-datasources.plan.json` — run only after schema is provisioned and published. This generates the TypeScript service layer in `src/generated/`.
 
 For provisioning rules, naming rules, option set rules, and execution order, continue with `07-dataverse-schema.instructions.md`.
 

@@ -70,9 +70,9 @@ The plan file is the handoff between planning and execution. It should define:
 Foundations now provides a reusable script chain for this handoff:
 
 ```bash
-node scripts/validate-schema-plan.mjs dataverse/planning-payload.json
-node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json
-node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json
+pacaf-validate dataverse/planning-payload.json
+pacaf-generate dataverse/planning-payload.json
+pacaf-register dataverse/register-datasources.plan.json
 ```
 
 - `validate-schema-plan.mjs` checks the planning artifact before any provisioning work starts
@@ -722,12 +722,12 @@ npm install @microsoft/power-apps@^1.0.3
 
 The agent uses the planning artifact (`dataverse/planning-payload.json`) to drive `dv-metadata` for schema provisioning, then returns to this repo's data-source registration:
 
-1. Validate: `node scripts/validate-schema-plan.mjs dataverse/planning-payload.json`
-2. Generate plans: `node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json`
+1. Validate: `pacaf-validate dataverse/planning-payload.json`
+2. Generate plans: `pacaf-generate dataverse/planning-payload.json`
 3. Provision via `dv-metadata`: Create global option sets, tables, columns, relationships (the plugin handles idempotency and propagation delays)
 4. Create security role via `dv-security` or `dv-metadata`
 5. Publish: The plugin calls `PublishAllXml` automatically after metadata changes
-6. Register data sources: `node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json`
+6. Register data sources: `pacaf-register dataverse/register-datasources.plan.json`
 7. Install SDK: `npm install @microsoft/power-apps@^1.0.3`
 
 **Without the plugin (fallback):**

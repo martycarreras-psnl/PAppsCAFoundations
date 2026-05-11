@@ -405,10 +405,10 @@ Your solution should be exported and stored in source control alongside your Cod
 
 ```bash
 # Export from dev, bump version, rebuild solution-source/
-node scripts/export-solution.mjs --name YourSolutionName
+pacaf-export-solution --name YourSolutionName
 
 # If you also need a managed zip (not needed if using Power Platform Pipelines)
-node scripts/export-solution.mjs --name YourSolutionName --include-managed
+pacaf-export-solution --name YourSolutionName --include-managed
 ```
 
 This script is the preferred entry point because it keeps the repo state consistent:
@@ -471,7 +471,7 @@ npm run build
 pac code push
 
 # Step 2: Export the full solution from dev (SPN profile) — auto-bumps version
-node scripts/export-solution.mjs --name YourSolutionName
+pacaf-export-solution --name YourSolutionName
 
 # Step 3: Commit the refreshed solution source
 git add solution-source/
@@ -675,7 +675,7 @@ pac solution version --strategy solution --value 2.0.0.0 --solutionPath ./soluti
 
 To skip the auto-bump (e.g., re-export without incrementing):
 ```bash
-node scripts/export-solution.mjs --name YourSolutionName --skip-version-bump
+pacaf-export-solution --name YourSolutionName --skip-version-bump
 ```
 
 | Change Type | Segment | Who Bumps | Example |

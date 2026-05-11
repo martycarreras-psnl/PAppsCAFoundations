@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { runSafe, IS_WIN } from './shell.mjs';
+import { runSafe, runSafeLive, IS_WIN } from './shell.mjs';
+import { loadPacafConfig, scopedPackageName, binName } from './pacaf-config.mjs';
 
 const noopLogger = {
   line() {},
@@ -18,26 +19,71 @@ export const REQUIRED_RUNTIME_PACKAGES = {
   concurrently: '^9.1.0',
 };
 
-export const REQUIRED_DEV_PACKAGES = {
-  typescript: '5.7.3',
-  '@types/react': '^18.3.12',
-  '@types/react-dom': '^18.3.1',
-  vite: '^5.4.0',
-  '@vitejs/plugin-react': '^4.3.0',
-  vitest: '^2.1.0',
-  '@testing-library/react': '^16.1.0',
-  jsdom: '^25.0.0',
-  '@playwright/test': '^1.49.0',
-  eslint: '^9.16.0',
-  'typescript-eslint': '^8.18.0',
-  '@eslint/js': '^9.16.0',
-  'eslint-plugin-react-hooks': '^5.1.0',
-  prettier: '^3.4.0',
-};
+// Devs deps are computed dynamically so forks can rebrand the @pacaf scope.
+export function buildRequiredDevPackages(config = loadPacafConfig()) {
+  return {
+    [scopedPackageName('scripts', config)]: '^1.0.0',
+    [scopedPackageName('agent-instructions', config)]: '^1.0.0',
+    typescript: '5.7.3',
+    '@types/react': '^18.3.12',
+    '@types/react-dom': '^18.3.1',
+    vite: '^5.4.0',
+    '@vitejs/plugin-react': '^4.3.0',
+    vitest: '^2.1.0',
+    '@testing-library/react': '^16.1.0',
+    jsdom: '^25.0.0',
+    '@playwright/test': '^1.49.0',
+    eslint: '^9.16.0',
+    'typescript-eslint': '^8.18.0',
+    '@eslint/js': '^9.16.0',
+    'eslint-plugin-react-hooks': '^5.1.0',
+    prettier: '^3.4.0',
+  };
+}
+
+// Backwards compat — many call sites still import REQUIRED_DEV_PACKAGES.
+export const REQUIRED_DEV_PACKAGES = buildRequiredDevPackages();
 
 const REMOVED_DEV_PACKAGES = [
   '@testing-library/jest-dom',
 ];
+
+// Standard scripts written by the wizard. All references to legacy
+// in-repo helper scripts (node scripts/foo.mjs) are now <prefix>-* bins
+// provided by the scripts package.
+function buildRequiredScripts(config = loadPacafConfig()) {
+  const crossPlatformDevLocal = IS_WIN
+    ? 'set VITE_USE_MOCK=true && vite --port 3000'
+    : 'VITE_USE_MOCK=true vite --port 3000';
+
+  const b = (suffix) => binName(suffix, config);
+
+  return {
+    dev: 'concurrently "vite --port 3000" "pac code run"',
+    'dev:local': crossPlatformDevLocal,
+    'prototype:seed': `${b('seed')} dataverse/planning-payload.json`,
+    typecheck: 'tsc --noEmit',
+    prebuild: b('patch-datasources'),
+    build: 'npm run typecheck && vite build',
+    preview: 'vite preview',
+    lint: 'eslint src/ --max-warnings 0',
+    format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
+    test: 'vitest run',
+    'test:watch': 'vitest',
+    'test:smoke': 'vitest run --reporter=verbose src/App.test.tsx',
+    'test:e2e': 'playwright test',
+    'setup:auth': b('setup-auth'),
+    pac: b('pac'),
+    'solution:export': `${b('export-solution')} --name YourSolutionName --target dev`,
+    'solution:export:unmanaged': `${b('export-solution')} --name YourSolutionName --target dev --unmanaged-only`,
+    deploy: `npm run build && ${b('pac-safe')} --target dev --profile-type spn --mutating code push`,
+    'validate:schema-plan': `${b('validate')} dataverse/planning-payload.json`,
+    'generate:dataverse-plan': `${b('generate')} dataverse/planning-payload.json`,
+    'register:dataverse': `${b('register')} dataverse/register-datasources.plan.json`,
+    'sync:foundations': b('update'),
+    'sync:foundations:check': `${b('update')} --check`,
+  };
+}
 
 export function packageSpecs(packages) {
   return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
@@ -103,30 +149,7 @@ export function createMinimalProject(dir, appName) {
     type: 'module',
     dependencies: REQUIRED_RUNTIME_PACKAGES,
     devDependencies: REQUIRED_DEV_PACKAGES,
-    scripts: {
-      dev: 'concurrently "vite --port 3000" "pac code run"',
-      'dev:local': crossPlatformDevLocal,
-      'prototype:seed': 'node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json',
-      typecheck: 'tsc --noEmit',
-      prebuild: 'node scripts/patch-datasources-info.mjs',
-      build: 'npm run typecheck && vite build',
-      preview: 'vite preview',
-      lint: 'eslint src/ --max-warnings 0',
-      format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
-      test: 'vitest run',
-      'test:watch': 'vitest',
-      'test:smoke': 'vitest run --reporter=verbose src/App.test.tsx',
-      'test:e2e': 'playwright test',
-      'setup:auth': 'node scripts/setup-auth.mjs',
-      pac: 'node scripts/op-pac.mjs',
-      'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --target dev',
-      'solution:export:unmanaged': 'node scripts/export-solution.mjs --name YourSolutionName --target dev --unmanaged-only',
-      deploy: 'npm run build && node scripts/pac-safe.mjs --target dev --profile-type spn --mutating code push',
-      'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
-      'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
-      'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
-      'sync:foundations': 'node scripts/sync-foundations.mjs',
-    },
+    scripts: buildRequiredScripts(),
   }, null, 2) + '\n');
 }
 
@@ -281,40 +304,11 @@ export function mergePackageJsonScripts(dir, logger = noopLogger) {
     }
   }
 
-  const crossPlatformDevLocal = IS_WIN
-    ? 'set VITE_USE_MOCK=true && vite --port 3000'
-    : 'VITE_USE_MOCK=true vite --port 3000';
-
-  const requiredScripts = {
-    dev: 'concurrently "vite --port 3000" "pac code run"',
-    'dev:local': crossPlatformDevLocal,
-    'prototype:seed': 'node scripts/seed-prototype-assets.mjs dataverse/planning-payload.json',
-    typecheck: 'tsc --noEmit',
-    prebuild: 'node scripts/patch-datasources-info.mjs',
-    build: 'npm run typecheck && vite build',
-    preview: 'vite preview',
-    lint: 'eslint src/ --max-warnings 0',
-    format: 'prettier --write "src/**/*.{ts,tsx,json,css}"',
-    test: 'vitest run',
-    'test:watch': 'vitest',
-    'test:smoke': 'vitest run --reporter=verbose src/App.test.tsx',
-    'test:e2e': 'playwright test',
-    'setup:auth': 'node scripts/setup-auth.mjs',
-    pac: 'node scripts/op-pac.mjs',
-    'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --target dev',
-    'solution:export:unmanaged': 'node scripts/export-solution.mjs --name YourSolutionName --target dev --unmanaged-only',
-    deploy: 'npm run build && node scripts/pac-safe.mjs --target dev --profile-type spn --mutating code push',
-    'validate:schema-plan': 'node scripts/validate-schema-plan.mjs dataverse/planning-payload.json',
-    'generate:dataverse-plan': 'node scripts/generate-dataverse-plan.mjs dataverse/planning-payload.json',
-    'register:dataverse': 'node scripts/register-dataverse-data-sources.mjs dataverse/register-datasources.plan.json',
-    'sync:foundations': 'node scripts/sync-foundations.mjs',
-  };
-
-  pkg.scripts = { ...(pkg.scripts || {}), ...requiredScripts };
+  pkg.scripts = { ...(pkg.scripts || {}), ...buildRequiredScripts() };
   if (!pkg.type) pkg.type = 'module';
 
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-  logger.ok('package.json scripts merged (prebuild, deploy, dev, etc.)');
+  logger.ok('package.json scripts merged (uses pacaf-* bins from @pacaf/scripts)');
 }
 
 export function writeStarterFiles(dir, appName, logger = noopLogger) {
@@ -629,102 +623,90 @@ jobs:
 }
 
 export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
-  logger.line('Copying instruction files...');
-  const instrDir = join(rootDir, '.github', 'instructions');
-  const destInstrDir = join(projectDir, '.github', 'instructions');
-  if (existsSync(instrDir)) {
-    for (const f of readdirSync(instrDir).filter((n) => n.endsWith('.md'))) {
-      try {
-        copyFileSync(join(instrDir, f), join(destInstrDir, f));
-      } catch {
-        // Skip files that cannot be copied so scaffolding can continue.
-      }
-    }
-    logger.ok('Instruction files copied');
+  // Thin layout: instead of copying instruction files, helper scripts, and
+  // agent guidance from the foundations repo, we delegate to the published
+  // <scope>/agent-instructions package. This is invoked once during scaffold
+  // and re-runnable later via `<binPrefix>-update`.
+  //
+  // The wizard at this point has already created the project's package.json
+  // with <scope>/agent-instructions as a devDependency, so it is installed.
+
+  const config = loadPacafConfig();
+  const instructionsPkg = scopedPackageName('agent-instructions', config);
+  const instructionsBin = binName('instructions', config);
+  const seedBin = binName('seed', config);
+  const updateBin = binName('update', config);
+
+  logger.line(`Materializing agent guidance via ${instructionsPkg}...`);
+
+  // Prefer the locally installed bin if present (we just ran install);
+  // otherwise fall back to a fresh npx fetch from the registry.
+  const localBin = join(projectDir, 'node_modules', '.bin', IS_WIN ? `${instructionsBin}.cmd` : instructionsBin);
+  let ok = false;
+  if (existsSync(localBin)) {
+    ok = runSafeLive(localBin, ['sync', '--target', projectDir], { cwd: projectDir });
+  }
+  if (!ok) {
+    const npxBin = IS_WIN ? 'npx.cmd' : 'npx';
+    ok = runSafeLive(npxBin, ['--yes', instructionsPkg, 'sync', '--target', projectDir], { cwd: projectDir });
+  }
+
+  if (ok) {
+    logger.ok('Agent guidance installed (.github/instructions/, .claude/rules/, .cursor/rules/, AGENTS.md, CLAUDE.md)');
   } else {
-    logger.warn('No instruction files found in foundations repo');
+    logger.warn(`Failed to run ${instructionsBin} sync.`);
+    logger.warn('Run it manually after the wizard finishes:');
+    logger.line(`  cd ${projectDir}`);
+    logger.line(`  npx ${instructionsPkg} sync`);
   }
 
-  const scriptsDir = join(rootDir, 'scripts');
-  if (existsSync(scriptsDir)) {
-    mkdirSync(join(projectDir, 'scripts'), { recursive: true });
-    for (const f of ['setup-auth.sh', 'setup-auth.mjs', 'op-pac.sh', 'op-pac.mjs', 'export-solution.mjs', 'decrypt-secret.mjs', 'pre-commit-hook.sh', 'sync-foundations.sh', 'sync-foundations.mjs', 'discover-copilot-connection.sh', 'discover-copilot-connection.mjs', 'schema-plan.example.json', 'validate-schema-plan.mjs', 'generate-dataverse-plan.mjs', 'register-dataverse-data-sources.sh', 'register-dataverse-data-sources.mjs', 'patch-datasources-info.mjs', 'seed-prototype-assets.mjs', 'generate-agent-guidance.mjs']) {
-      const src = join(scriptsDir, f);
-      if (existsSync(src)) copyFileSync(src, join(projectDir, 'scripts', f));
-    }
-
-    const schemaPlanExample = join(scriptsDir, 'schema-plan.example.json');
-    const planningPayload = join(projectDir, 'dataverse', 'planning-payload.json');
-    if (existsSync(schemaPlanExample) && !existsSync(planningPayload)) {
+  // Seed dataverse/planning-payload.json from the scripts package schema-plan example
+  // if the user has no planning payload yet.
+  const planningPayload = join(projectDir, 'dataverse', 'planning-payload.json');
+  if (!existsSync(planningPayload)) {
+    const scriptsPkgDir = join(projectDir, 'node_modules', ...scopedPackageName('scripts', config).split('/'));
+    const schemaPlanExample = join(scriptsPkgDir, 'schema-plan.example.json');
+    if (existsSync(schemaPlanExample)) {
+      mkdirSync(join(projectDir, 'dataverse'), { recursive: true });
       copyFileSync(schemaPlanExample, planningPayload);
-      logger.ok('dataverse/planning-payload.json seeded from schema plan example');
+      logger.ok(`dataverse/planning-payload.json seeded from ${scopedPackageName('scripts', config)} schema-plan example`);
     }
+  }
 
-    const seedResult = runSafe(process.execPath, ['scripts/seed-prototype-assets.mjs', 'dataverse/planning-payload.json'], { cwd: projectDir });
-    if (seedResult !== null) {
-      logger.ok('Prototype assets seeded from dataverse/planning-payload.json');
+  // Seed prototype assets from the planning payload.
+  if (existsSync(planningPayload)) {
+    const localSeedBin = join(projectDir, 'node_modules', '.bin', IS_WIN ? `${seedBin}.cmd` : seedBin);
+    let seedOk = false;
+    if (existsSync(localSeedBin)) {
+      seedOk = runSafe(localSeedBin, ['dataverse/planning-payload.json'], { cwd: projectDir }) !== null;
+    }
+    if (seedOk) {
+      logger.ok('Prototype assets seeded');
     } else {
-      logger.warn('Prototype asset seeding failed. You can rerun it later with:');
-      logger.line(`  cd ${projectDir}`);
-      logger.line('  npm run prototype:seed');
-    }
-
-    logger.ok('Helper scripts copied');
-  }
-
-  const versionFile = join(rootDir, '.foundations-version.json');
-  if (existsSync(versionFile)) {
-    copyFileSync(versionFile, join(projectDir, '.foundations-version.json'));
-    logger.ok('.foundations-version.json copied');
-  }
-
-  const agentsFile = join(rootDir, 'AGENTS.md');
-  if (existsSync(agentsFile)) {
-    copyFileSync(agentsFile, join(projectDir, 'AGENTS.md'));
-    logger.ok('AGENTS.md copied');
-  }
-
-  // ── Copy agent-native guidance artifacts ──
-  const claudeFile = join(rootDir, 'CLAUDE.md');
-  if (existsSync(claudeFile)) {
-    copyFileSync(claudeFile, join(projectDir, 'CLAUDE.md'));
-    logger.ok('CLAUDE.md copied');
-  }
-
-  const agentGuidanceConfig = join(rootDir, 'agent-guidance.config.json');
-  if (existsSync(agentGuidanceConfig)) {
-    copyFileSync(agentGuidanceConfig, join(projectDir, 'agent-guidance.config.json'));
-    logger.ok('agent-guidance.config.json copied');
-  }
-
-  for (const agentDir of ['.claude/rules', '.cursor/rules']) {
-    const srcDir = join(rootDir, agentDir);
-    if (existsSync(srcDir)) {
-      const destDir = join(projectDir, agentDir);
-      mkdirSync(destDir, { recursive: true });
-      for (const f of readdirSync(srcDir)) {
-        try { copyFileSync(join(srcDir, f), join(destDir, f)); } catch { /* skip */ }
-      }
-      logger.ok(`${agentDir}/ copied`);
+      logger.warn('Prototype asset seeding skipped (run `npm run prototype:seed` later).');
     }
   }
 
-  // Copy nested Codex AGENTS.md into src/ subdirectories
-  for (const sub of ['src', 'src/components', 'src/pages', 'src/hooks', 'src/services']) {
-    const srcAgents = join(rootDir, sub, 'AGENTS.md');
-    if (existsSync(srcAgents)) {
-      const dest = join(projectDir, sub, 'AGENTS.md');
-      mkdirSync(dirname(dest), { recursive: true });
-      copyFileSync(srcAgents, dest);
-    }
+  // .env.template (no secrets) — only thing worth carrying through from the foundations repo.
+  const envTemplate = join(rootDir, '.env.template');
+  if (existsSync(envTemplate)) {
+    copyFileSync(envTemplate, join(projectDir, '.env.template'));
+    logger.ok('.env.template copied');
   }
-  logger.ok('Agent-native guidance artifacts copied (Claude, Cursor, Codex)');
 
-  for (const f of ['.env.local', '.env', '.env.template']) {
-    const src = join(rootDir, f);
-    if (existsSync(src)) {
-      copyFileSync(src, join(projectDir, f));
-      logger.ok(`${f} copied`);
-    }
+  // Record the active branding in the project so subsequent invocations of
+  // <binPrefix>-update know which scope to pull from.
+  try {
+    writeFileSync(
+      join(projectDir, 'pacaf.client.json'),
+      JSON.stringify({ scope: config.scope, binPrefix: config.binPrefix, docsUrl: config.docsUrl }, null, 2) + '\n',
+    );
+    logger.ok(`pacaf.client.json written (scope=${config.scope})`);
+  } catch (e) {
+    logger.warn(`Could not write pacaf.client.json: ${e.message}`);
   }
+
+  // Suggest the user run the update bin next time.
+  logger.line('');
+  logger.line(`To update later: npx ${updateBin}`);
 }

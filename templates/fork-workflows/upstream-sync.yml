@@ -1,0 +1,38 @@
+# Upstream sync workflow for forks of PAppsCAFoundations.
+
+name: Sync from upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/martycarreras-psnl/PAppsCAFoundations.git
+
+      - name: Fetch upstream
+        run: git fetch upstream main
+
+      - name: Create rebase PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/sync-upstream
+          title: 'chore: sync from upstream'
+          body: |
+            Automated sync from upstream PAppsCAFoundations.
+
+            Re-run `node packages/rebrand/bin/pacaf-rebrand.mjs --scope @<your-scope> --bin-prefix <your-prefix>`
+            after merging if upstream added new packages or changed branding-sensitive defaults.
+          commit-message: 'chore: sync upstream changes'

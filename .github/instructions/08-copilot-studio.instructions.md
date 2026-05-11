@@ -65,7 +65,7 @@ The Copilot Studio connector requires a connection in the target environment, ju
 Use the scripted discovery helper first:
 
 ```bash
-node scripts/discover-copilot-connection.mjs
+pacaf-discover-connection
 ```
 
 Prefer the `.mjs` entry point for cross-platform execution on macOS, Linux, and Windows. The `.sh` variant remains available for Bash-heavy environments.

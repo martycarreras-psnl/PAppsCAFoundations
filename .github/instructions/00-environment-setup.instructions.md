@@ -236,11 +236,11 @@ Add npm scripts that use it:
 ```json
 {
   "scripts": {
-    "pac": "node scripts/op-pac.mjs",
-    "deploy": "npm run build && node scripts/op-pac.mjs code push",
-      "solution:export": "node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev",
-      "solution:export:unmanaged": "node scripts/export-solution.mjs --name YourSolutionName --auth-profile Dev --unmanaged-only",
-    "solution:import": "node scripts/op-pac.mjs solution import --path ./solution/solution-managed.zip"
+    "pac": "pacaf-pac",
+    "deploy": "npm run build && pacaf-pac code push",
+      "solution:export": "pacaf-export-solution --name YourSolutionName --auth-profile Dev",
+      "solution:export:unmanaged": "pacaf-export-solution --name YourSolutionName --auth-profile Dev --unmanaged-only",
+    "solution:import": "pacaf-pac solution import --path ./solution/solution-managed.zip"
   }
 }
 ```
@@ -412,8 +412,8 @@ Make it executable and add to `package.json`:
 ```json
 {
   "scripts": {
-    "setup:auth": "node scripts/setup-auth.mjs",
-    "pac": "node scripts/op-pac.mjs"
+    "setup:auth": "pacaf-setup-auth",
+    "pac": "pacaf-pac"
   }
 }
 ```

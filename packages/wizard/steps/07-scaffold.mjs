@@ -120,18 +120,31 @@ export default async function stepScaffold() {
   // ── npm install ──
   ui.line('');
   ui.line('Installing dependencies...');
-  const npmBin = IS_WIN ? 'npm.cmd' : 'npm';
-  runSafeLive(npmBin, ['install'], { cwd: projectDir }) && ui.ok('Base dependencies installed');
+
+  // Prefer pnpm if available (much smaller per-project node_modules via the
+  // content-addressable store). Fall back to npm.
+  const usePnpm = hasCommand('pnpm');
+  const installBin = usePnpm ? (IS_WIN ? 'pnpm.cmd' : 'pnpm') : (IS_WIN ? 'npm.cmd' : 'npm');
+
+  if (usePnpm) {
+    ui.line('Detected pnpm — using it for faster installs and shared dependency cache.');
+  } else {
+    ui.line('Tip: install pnpm (`corepack enable && corepack prepare pnpm@latest --activate`) for ~10x less disk usage per project.');
+  }
+
+  runSafeLive(installBin, ['install'], { cwd: projectDir }) && ui.ok('Base dependencies installed');
 
   ui.line('Installing required packages...');
   const prodPkgs = packageSpecs(REQUIRED_RUNTIME_PACKAGES);
-  runSafeLive(npmBin, ['install', ...prodPkgs], { cwd: projectDir })
+  const installArgs = usePnpm ? ['add', ...prodPkgs] : ['install', ...prodPkgs];
+  runSafeLive(installBin, installArgs, { cwd: projectDir })
     ? ui.ok('React + Fluent UI + TanStack Query + SDK installed')
     : ui.warn('Some packages failed to install');
 
   const devPkgs = packageSpecs(REQUIRED_DEV_PACKAGES);
-  runSafeLive(npmBin, ['install', '-D', ...devPkgs], { cwd: projectDir })
-    ? ui.ok('Dev dependencies installed')
+  const devInstallArgs = usePnpm ? ['add', '-D', ...devPkgs] : ['install', '-D', ...devPkgs];
+  runSafeLive(installBin, devInstallArgs, { cwd: projectDir })
+    ? ui.ok('Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)')
     : ui.warn('Some dev packages failed to install');
 
   // ── Config files ──
