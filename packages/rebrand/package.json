@@ -1,6 +1,6 @@
 {
   "name": "@pacaf/rebrand",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": false,
   "type": "module",
   "description": "Retarget a fork of the Power Apps Code App Foundations monorepo to a different npm scope and bin-prefix.",
