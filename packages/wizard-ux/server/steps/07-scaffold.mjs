@@ -23,8 +23,8 @@ function runCommand(log, command, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${command}`);
     const child = process.platform === 'win32'
-      ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', command], { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] })
-      : spawn('sh', ['-c', command], { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+      ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', command], { cwd: opts.cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] })
+      : spawn('sh', ['-c', command], { cwd: opts.cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
@@ -40,7 +40,7 @@ function runCommand(log, command, opts = {}) {
 function runFile(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
@@ -68,7 +68,7 @@ function hasCommand(name) {
 
 function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
-    rootDir: ROOT_DIR,
+    rootDir: state.PROJECT_DIR || process.cwd(),
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
     source: state.AUTH_MODE || 'auto',
   });
@@ -77,7 +77,7 @@ function resolveCredentialValues(state) {
 function verifyPacTarget({ pac, projectDir, state, credentialValues, profileType, requirePowerConfig, requirePowerConfigTarget }) {
   return PAC_TARGET.selectAndVerifyPacProfile({
     pac,
-    rootDir: ROOT_DIR,
+    rootDir: projectDir || process.cwd(),
     wizardState: {
       WIZARD_TARGET_ENV: state.WIZARD_TARGET_ENV || 'dev',
       PP_ENV_DEV: state.PP_ENV_DEV || '',
@@ -148,7 +148,7 @@ export default {
   },
 
   questions(state) {
-    const rootDefault = state.PROJECT_DIR || ROOT_DIR;
+    const rootDefault = state.PROJECT_DIR || process.cwd();
     const existingOrigin = SHELL.run('git remote get-url origin', { cwd: rootDefault }) || '';
     const needsRemote = !existingOrigin || /PAppsCAFoundations/i.test(existingOrigin);
     return [
@@ -194,7 +194,7 @@ export default {
 
   async apply(answers, state, log) {
     const appName = state.APP_NAME || 'Power Apps Code App';
-    const projectDir = resolve(String(answers.PROJECT_DIR || ROOT_DIR).trim());
+    const projectDir = resolve(String(answers.PROJECT_DIR || process.cwd()).trim());
     const foundationLogger = makeFoundationLogger(log);
 
     if (existsSync(projectDir) && readdirSync(projectDir).length > 0 && answers.CONTINUE_NONEMPTY !== true) {
@@ -208,7 +208,7 @@ export default {
     log.info('Downloading starter template...');
     const templateArgs = ['--yes', 'degit', 'microsoft/PowerAppsCodeApps/templates/starter', projectDir];
     if (dirNotEmpty) templateArgs.push('--force');
-    const templateOk = await runFile(log, toolCommand('npx'), templateArgs, { cwd: ROOT_DIR });
+    const templateOk = await runFile(log, toolCommand('npx'), templateArgs, { cwd: projectDir });
     if (!templateOk) {
       log.warn('Template download failed. Creating minimal project structure instead.');
       SCAFFOLD.createMinimalProject(projectDir, appName);

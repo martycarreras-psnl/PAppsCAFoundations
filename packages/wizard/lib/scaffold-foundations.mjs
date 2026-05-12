@@ -22,8 +22,8 @@ export const REQUIRED_RUNTIME_PACKAGES = {
 // Devs deps are computed dynamically so forks can rebrand the @pacaf scope.
 export function buildRequiredDevPackages(config = loadPacafConfig()) {
   return {
-    [scopedPackageName('scripts', config)]: '^1.0.0',
-    [scopedPackageName('agent-instructions', config)]: '^1.0.0',
+    [scopedPackageName('scripts', config)]: '^3.0.0',
+    [scopedPackageName('agent-instructions', config)]: '^3.0.0',
     typescript: '5.7.3',
     '@types/react': '^18.3.12',
     '@types/react-dom': '^18.3.1',
