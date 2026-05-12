@@ -5,10 +5,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const SCAFFOLD = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'scaffold-foundations.mjs')).href);
-const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
-const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const SCAFFOLD = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'scaffold-foundations.mjs')).href);
+const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
 function makeFoundationLogger(log) {
   return {
@@ -256,7 +256,7 @@ export default {
     log.ok('Folder structure created');
 
     SCAFFOLD.writeStarterFiles(projectDir, appName, foundationLogger);
-    SCAFFOLD.copyFoundationFiles(ROOT_DIR, projectDir, foundationLogger);
+    SCAFFOLD.copyFoundationFiles(PACKAGE_DIR, projectDir, foundationLogger);
 
     const pac = SHELL.pacPath();
     if (pac) {

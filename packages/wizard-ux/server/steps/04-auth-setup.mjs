@@ -7,10 +7,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getSecret, hasUsableSecret, recoverSecret, setSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
-const CRYPTO = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
-const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+// PACKAGE_DIR locates sibling @pacaf/wizard lib files (must stay __dirname-relative).
+// PROJECT_DIR is the user's working directory (profile names, env files, git hooks, cwd).
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const PROJECT_DIR = process.cwd();
+const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const CRYPTO = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
 function hasCommand(name) {
   try {
@@ -41,7 +44,7 @@ function formatPacAuthCreateError(profileName, url, output = '') {
 }
 
 function createPacProfile(log, pac, targetKey, url, appId, secret, tenantId) {
-  const profileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'spn', url });
+  const profileName = PAC_TARGET.buildPacProfileName({ rootDir: PROJECT_DIR, targetKey, profileType: 'spn', url });
   const result = SHELL.runSafeCapture(pac, [
     'auth', 'create', '--name', profileName, '--environment', url,
     '--applicationId', appId, '--clientSecret', secret, '--tenant', tenantId,
@@ -70,10 +73,10 @@ function createProfiles(log, pac, credentialValues, state) {
 }
 
 function installPreCommitHook(log) {
-  const hookDir = join(ROOT_DIR, '.git', 'hooks');
+  const hookDir = join(PROJECT_DIR, '.git', 'hooks');
   const hookPath = join(hookDir, 'pre-commit');
-  const hookSource = join(ROOT_DIR, 'scripts', 'pre-commit-hook.sh');
-  if (!existsSync(join(ROOT_DIR, '.git')) || !existsSync(hookSource)) return;
+  const hookSource = join(PROJECT_DIR, 'scripts', 'pre-commit-hook.sh');
+  if (!existsSync(join(PROJECT_DIR, '.git')) || !existsSync(hookSource)) return;
   if (existsSync(hookPath)) {
     const existing = readFileSync(hookPath, 'utf-8');
     if (!existing.includes('papps-secret-guard')) return;
@@ -91,7 +94,7 @@ function installPreCommitHook(log) {
 function runLivePac(log, pac, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(pac, args)}`);
-    const child = SHELL.spawnSafe(pac, args, { cwd: ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(pac, args, { cwd: PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let settled = false;
     const timeout = opts.timeoutMs
       ? setTimeout(() => {
@@ -233,7 +236,7 @@ export default {
     // ── User credentials flow ──
     if (authProfileType === 'user') {
       const method = answers.USER_SIGN_IN_METHOD === 'browser' ? 'browser' : 'deviceCode';
-      const userProfileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'user', url: devUrl });
+      const userProfileName = PAC_TARGET.buildPacProfileName({ rootDir: PROJECT_DIR, targetKey, profileType: 'user', url: devUrl });
 
       log.info('Creating user auth profile via interactive sign-in...');
       const userArgs = ['auth', 'create', '--name', userProfileName, '--environment', devUrl];
@@ -266,7 +269,7 @@ export default {
           prodUrl ? `PP_ENV_PROD=op://${vault}/${itemName}/env-prod` : '',
           '',
         ].filter((line) => line !== '').join('\n');
-        writeFileSync(join(ROOT_DIR, '.env'), `${envContent}\n`, 'utf-8');
+        writeFileSync(join(PROJECT_DIR, '.env'), `${envContent}\n`, 'utf-8');
         log.ok('Wrote .env with 1Password references');
       } else {
         const envContent = [
@@ -278,7 +281,7 @@ export default {
           prodUrl ? `PP_ENV_PROD=${prodUrl}` : '',
           '',
         ].filter((line) => line !== '').join('\n');
-        writeFileSync(join(ROOT_DIR, '.env'), `${envContent}\n`, 'utf-8');
+        writeFileSync(join(PROJECT_DIR, '.env'), `${envContent}\n`, 'utf-8');
         log.ok('Wrote .env with environment URLs');
       }
 
@@ -287,12 +290,12 @@ export default {
       // Verify the user profile
       const verification = PAC_TARGET.selectAndVerifyPacProfile({
         pac,
-        rootDir: ROOT_DIR,
+        rootDir: PROJECT_DIR,
         wizardState: { WIZARD_TARGET_ENV: targetKey, PP_ENV_DEV: devUrl, PP_ENV_TEST: testUrl, PP_ENV_PROD: prodUrl },
         targetKey,
         profileType: 'user',
         credentialValues: null,
-        powerConfigPath: join(ROOT_DIR, 'power.config.json'),
+        powerConfigPath: join(PROJECT_DIR, 'power.config.json'),
         requireCredentialMatch: false,
         requirePowerConfig: false,
         requirePowerConfigTarget: false,
@@ -335,10 +338,10 @@ export default {
         prodUrl ? `PP_ENV_PROD=op://${vault}/${itemName}/env-prod` : '',
         '',
       ].filter((line) => line !== '').join('\n');
-      writeFileSync(join(ROOT_DIR, '.env'), `${envContent}\n`, 'utf-8');
+      writeFileSync(join(PROJECT_DIR, '.env'), `${envContent}\n`, 'utf-8');
       log.ok('Wrote .env with 1Password references');
     } else {
-      const gitignorePath = join(ROOT_DIR, '.gitignore');
+      const gitignorePath = join(PROJECT_DIR, '.gitignore');
       if (existsSync(gitignorePath)) {
         const gitignore = readFileSync(gitignorePath, 'utf-8');
         if (!gitignore.includes('.env.local')) appendFileSync(gitignorePath, '\n.env.local\n');
@@ -357,15 +360,15 @@ export default {
         prodUrl ? `PP_ENV_PROD=${prodUrl}` : '',
         '',
       ].filter((line) => line !== '').join('\n');
-      writeFileSync(join(ROOT_DIR, '.env.local'), `${envLocalContent}\n`, 'utf-8');
+      writeFileSync(join(PROJECT_DIR, '.env.local'), `${envLocalContent}\n`, 'utf-8');
       if (platform() !== 'win32') {
-        try { chmodSync(join(ROOT_DIR, '.env.local'), 0o600); } catch { /* best effort */ }
+        try { chmodSync(join(PROJECT_DIR, '.env.local'), 0o600); } catch { /* best effort */ }
       }
       log.ok('Wrote .env.local');
     }
 
     const opBin = hasCommand('op') ? 'op' : null;
-    const credentialValues = PAC_TARGET.resolveCredentialValues({ rootDir: ROOT_DIR, opBin, source: authMode });
+    const credentialValues = PAC_TARGET.resolveCredentialValues({ rootDir: PROJECT_DIR, opBin, source: authMode });
     createProfiles(log, pac, credentialValues, state);
     installPreCommitHook(log);
 
@@ -381,7 +384,7 @@ export default {
       prodUrl ? `PP_ENV_PROD=${prodUrl}` : '',
       '',
     ].filter((line) => line !== '').join('\n');
-    writeFileSync(join(ROOT_DIR, '.env.template'), `${envTemplate}\n`, 'utf-8');
+    writeFileSync(join(PROJECT_DIR, '.env.template'), `${envTemplate}\n`, 'utf-8');
     log.ok('Wrote .env.template');
 
     const wizardState = {
@@ -392,12 +395,12 @@ export default {
     };
     const verification = PAC_TARGET.selectAndVerifyPacProfile({
       pac,
-      rootDir: ROOT_DIR,
+      rootDir: PROJECT_DIR,
       wizardState,
       targetKey,
       profileType: 'spn',
       credentialValues,
-      powerConfigPath: join(ROOT_DIR, 'power.config.json'),
+      powerConfigPath: join(PROJECT_DIR, 'power.config.json'),
       requireCredentialMatch: true,
       requirePowerConfig: false,
       requirePowerConfigTarget: false,
@@ -406,7 +409,7 @@ export default {
     log.info(verification.whoInfo.raw.split('\n').map((line) => `  ${line}`).join('\n'));
 
     if (answers.CREATE_USER_PROFILE === true) {
-      const userProfileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'user', url: devUrl });
+      const userProfileName = PAC_TARGET.buildPacProfileName({ rootDir: PROJECT_DIR, targetKey, profileType: 'user', url: devUrl });
       const method = answers.USER_SIGN_IN_METHOD === 'browser' ? 'browser' : 'deviceCode';
       log.warn('PAC code commands require a user auth profile. Starting user sign-in now.');
       const userArgs = ['auth', 'create', '--name', userProfileName, '--environment', devUrl];
@@ -414,7 +417,7 @@ export default {
       const userOk = await runLivePac(log, pac, userArgs, { timeoutMs: method === 'browser' ? 180000 : 0 });
       if (userOk) {
         log.ok(`User profile ${userProfileName} created`);
-        const spnProfileName = PAC_TARGET.buildPacProfileName({ rootDir: ROOT_DIR, targetKey, profileType: 'spn', url: devUrl });
+        const spnProfileName = PAC_TARGET.buildPacProfileName({ rootDir: PROJECT_DIR, targetKey, profileType: 'spn', url: devUrl });
         SHELL.runSafeCapture(pac, ['auth', 'select', '--name', spnProfileName]);
         log.ok('Switched back to SPN profile for the next setup steps');
       } else {

@@ -6,10 +6,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const VALIDATE = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'validate.mjs')).href);
-const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
-const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const VALIDATE = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'validate.mjs')).href);
+const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
 const CREATE_NEW = '__create_new__';
 const PASTE_URL = '__paste_url__';

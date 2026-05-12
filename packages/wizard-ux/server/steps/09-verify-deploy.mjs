@@ -5,9 +5,12 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
-const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+// PACKAGE_DIR locates sibling @pacaf/wizard lib files (must stay __dirname-relative).
+// PROJECT_DIR is the user's working directory (profile names, command cwd).
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const PROJECT_DIR = process.cwd();
+const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
 function hasCommand(name) {
   try {
@@ -22,8 +25,8 @@ function runCommand(log, command, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${command}`);
     const child = process.platform === 'win32'
-      ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', command], { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] })
-      : spawn('sh', ['-c', command], { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+      ? spawn(process.env.COMSPEC || 'cmd.exe', ['/d', '/s', '/c', command], { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] })
+      : spawn('sh', ['-c', command], { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
@@ -39,7 +42,7 @@ function runCommand(log, command, opts = {}) {
 function runFile(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
@@ -55,7 +58,7 @@ function runFile(log, file, args, opts = {}) {
 function runFileCapture(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf-8');
@@ -81,7 +84,7 @@ const PAC_HTTP_ERROR_RE = /HTTP error status:\s*[45]\d\d/i;
 
 function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
-    rootDir: ROOT_DIR,
+    rootDir: PROJECT_DIR,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
     source: state.AUTH_MODE || 'auto',
   });
@@ -90,7 +93,7 @@ function resolveCredentialValues(state) {
 function verifyUserProfile(pac, projectDir, state, credentialValues) {
   return PAC_TARGET.selectAndVerifyPacProfile({
     pac,
-    rootDir: ROOT_DIR,
+    rootDir: PROJECT_DIR,
     wizardState: {
       WIZARD_TARGET_ENV: state.WIZARD_TARGET_ENV || 'dev',
       PP_ENV_DEV: state.PP_ENV_DEV || '',
@@ -153,7 +156,7 @@ export default {
   },
 
   async apply(answers, state, log) {
-    const projectDir = resolve(String(state.PROJECT_DIR || ROOT_DIR));
+    const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
     if (!existsSync(join(projectDir, 'package.json'))) throw new Error(`No package.json found in ${projectDir}. Run Step 7 first.`);
 
     log.info('Building project...');

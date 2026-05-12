@@ -6,11 +6,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const VALIDATE = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'validate.mjs')).href);
-const CONNECTIONS = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'connection-discovery.mjs')).href);
-const SHELL = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'shell.mjs')).href);
-const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+// PACKAGE_DIR locates sibling @pacaf/wizard lib files (must stay __dirname-relative).
+// PROJECT_DIR is the user's working directory (profile names, command cwd).
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const PROJECT_DIR = process.cwd();
+const VALIDATE = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'validate.mjs')).href);
+const CONNECTIONS = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'connection-discovery.mjs')).href);
+const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
+const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
 const CREATE_MANUAL = '__manual__';
 const SKIP_CONNECTION = '__skip__';
@@ -103,7 +106,7 @@ function connectionOptions(connections, savedConnectionId = '') {
 
 function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
-    rootDir: ROOT_DIR,
+    rootDir: PROJECT_DIR,
     opBin: process.env.OP_BIN || (hasCommand('op') ? 'op' : null),
     source: state.AUTH_MODE || 'auto',
   });
@@ -112,7 +115,7 @@ function resolveCredentialValues(state) {
 function verifyUserProfile(pac, projectDir, state, credentialValues) {
   return PAC_TARGET.selectAndVerifyPacProfile({
     pac,
-    rootDir: ROOT_DIR,
+    rootDir: PROJECT_DIR,
     wizardState: {
       WIZARD_TARGET_ENV: state.WIZARD_TARGET_ENV || 'dev',
       PP_ENV_DEV: state.PP_ENV_DEV || '',
@@ -132,7 +135,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 function runFileCapture(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || ROOT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf-8');
@@ -396,7 +399,7 @@ export default {
       const pac = SHELL.pacPath();
       if (!pac) throw new Error('PAC CLI was not found. Install PAC CLI before registering data sources.');
 
-      const projectDir = resolve(String(state.PROJECT_DIR || ROOT_DIR));
+      const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
       if (!existsSync(join(projectDir, 'power.config.json'))) {
         throw new Error(`power.config.json was not found in ${projectDir}. Complete Step 7 before registering data sources.`);
       }

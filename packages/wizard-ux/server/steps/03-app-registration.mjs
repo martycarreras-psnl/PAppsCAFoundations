@@ -7,8 +7,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { setSecret, hasUsableSecret } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = resolve(__dirname, '..', '..', '..');
-const VALIDATE = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'validate.mjs')).href);
+// PACKAGE_DIR locates sibling @pacaf/wizard lib files (must stay __dirname-relative).
+// PROJECT_DIR is the user's working directory (where .env, .env.local, etc. live).
+const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
+const PROJECT_DIR = process.cwd();
+const VALIDATE = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'validate.mjs')).href);
 
 function hasCommand(name) {
   try {
@@ -21,7 +24,7 @@ function hasCommand(name) {
 
 function runSafe(file, args) {
   try {
-    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: ROOT_DIR }).trim();
+    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: PROJECT_DIR }).trim();
   } catch {
     return null;
   }
@@ -29,7 +32,7 @@ function runSafe(file, args) {
 
 function runSafeWithTimeout(file, args, timeoutMs = 2000) {
   try {
-    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: ROOT_DIR, timeout: timeoutMs }).trim();
+    return execFileSync(file, args, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: PROJECT_DIR, timeout: timeoutMs }).trim();
   } catch {
     return null;
   }
@@ -428,8 +431,8 @@ export default {
 
     // Persist encrypted secret to .env.local so it survives server restarts
     try {
-      const CRYPTO = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
-      const envLocalPath = join(ROOT_DIR, '.env.local');
+      const CRYPTO = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
+      const envLocalPath = join(PROJECT_DIR, '.env.local');
       let envContent = existsSync(envLocalPath) ? readFileSync(envLocalPath, 'utf-8') : '';
       const encrypted = CRYPTO.encrypt(clientSecret);
       if (envContent.match(/^PP_CLIENT_SECRET=.*$/m)) {
