@@ -155,16 +155,6 @@ jobs:
             }
 
             const data = await response.json();
-            console.log('API response shape:', JSON.stringify(Object.keys(data)));
-            console.log('Choices length:', data.choices?.length);
-            if (data.choices?.[0]) {
-              console.log('First choice keys:', JSON.stringify(Object.keys(data.choices[0])));
-              console.log('Message keys:', data.choices[0].message ? JSON.stringify(Object.keys(data.choices[0].message)) : 'no message');
-              console.log('Content preview:', data.choices[0].message?.content?.substring(0, 200) || '(empty)');
-            }
-            if (data.error) {
-              console.log('API error:', JSON.stringify(data.error));
-            }
             const triageText = data.choices?.[0]?.message?.content;
 
             if (!triageText) {
