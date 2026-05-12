@@ -718,9 +718,10 @@ describe('App — smoke tests', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
   });
 
-  it('shows prototype or connected mode badge', () => {
+  it('shows the celebratory launch screen', () => {
     render(<App />);
-    expect(screen.getByText(/Prototype Mode|Connected Mode/)).toBeTruthy();
+    // The launch screen always contains the golden-path loop text
+    expect(screen.getByText(/is live!/i)).toBeTruthy();
   });
 });
 `);
@@ -736,9 +737,9 @@ test.describe('App — E2E smoke', () => {
     await expect(page.locator('h1')).toBeVisible();
   });
 
-  test('shows prototype or connected mode badge', async ({ page }) => {
+  test('shows the celebratory launch screen', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/Prototype Mode|Connected Mode/)).toBeVisible();
+    await expect(page.getByText(/is live!/i)).toBeVisible();
   });
 });
 `);
