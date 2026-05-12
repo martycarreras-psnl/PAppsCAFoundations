@@ -17,7 +17,11 @@ import onepasswordRoutes from './routes/onepassword.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UX_DIR = resolve(__dirname, '..');
-const ROOT_DIR = resolve(UX_DIR, '..');
+// ROOT_DIR must be the user's project directory (where .wizard-state.json is written
+// and from which pac/npm commands run). Under `npx`, __dirname resolves into the npx
+// cache — using it as the working directory would share state across all projects on
+// the machine. process.cwd() is always the directory the user launched the wizard from.
+const ROOT_DIR = process.cwd();
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.WIZARD_UX_PORT || 5174);
