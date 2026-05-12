@@ -121,13 +121,13 @@ jobs:
               return;
             }
 
-            // Azure AI Inference endpoint for serverless deployments
-            const url = `${endpoint}/models/chat/completions?api-version=2024-05-01-preview`;
+            // Azure AI Foundry — project-scoped inference endpoint
+            const url = `${endpoint}/api/projects/carrema-east-project/models/chat/completions?api-version=2024-05-01-preview`;
 
             const response = await fetch(url, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${apiKey}`,
+                'api-key': apiKey,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
