@@ -155,7 +155,10 @@ jobs:
             }
 
             const data = await response.json();
-            const triageText = data.choices?.[0]?.message?.content;
+            // Kimi-K2.6 is a reasoning model — it may put its response in
+            // reasoning_content instead of content depending on the prompt
+            const triageText = data.choices?.[0]?.message?.content
+                            || data.choices?.[0]?.message?.reasoning_content;
 
             if (!triageText) {
               core.warning('No triage content returned from model');
