@@ -53,58 +53,104 @@ function extractSolutionIdFromUrl(url) {
 }
 
 /**
- * Use `pac env fetch` to get solution + publisher by solution ID.
- * Works with both user auth and SPN — uses whatever PAC profile is active.
- * Returns { solutionid, uniquename, friendlyname, version, publisherid, prefix, publisherFriendlyName, publisherUniqueName }
+ * Parse PAC CLI column-aligned tabular output into an array of row objects.
+ * Finds the header line (containing known column keywords), determines column
+ * boundaries from header token positions, and slices each subsequent data line
+ * by those boundaries. Handles multi-word values (e.g. "Climb Tracker") and
+ * aliased columns (e.g. "pub.customizationprefix").
+ */
+function parsePacTabularRows(output, headerHints) {
+  const allLines = output.split(/\r?\n/);
+  const hints = headerHints || ['uniquename', 'solutionid', 'friendlyname'];
+
+  // Find the header line — first line containing at least one of the hints.
+  let headerIdx = -1;
+  for (let i = 0; i < allLines.length; i++) {
+    const lower = allLines[i].toLowerCase();
+    if (hints.some((h) => lower.includes(h))) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx < 0) return [];
+
+  const headerLine = allLines[headerIdx];
+
+  // Extract column names and their start positions from the header.
+  const cols = [];
+  const re = /\S+/g;
+  let m;
+  while ((m = re.exec(headerLine)) !== null) {
+    cols.push({ name: m[0].toLowerCase(), start: m.index });
+  }
+
+  // Parse each data line after the header.
+  const rows = [];
+  for (let i = headerIdx + 1; i < allLines.length; i++) {
+    const line = allLines[i];
+    if (!line.trim()) continue;
+    if (/^(Connected|Microsoft|Version:|Online|Feedback)/i.test(line.trim())) continue;
+    const row = {};
+    for (let c = 0; c < cols.length; c++) {
+      const start = cols[c].start;
+      const end = c < cols.length - 1 ? cols[c + 1].start : line.length;
+      row[cols[c].name] = (start < line.length ? line.slice(start, end) : '').trim();
+    }
+    if (Object.values(row).some((v) => v)) rows.push(row);
+  }
+  return rows;
+}
+
+/**
+ * Fetch solution + publisher by solution ID using a single joined FetchXML.
+ * Uses <link-entity> to include publisher columns directly, avoiding the
+ * two-query approach that broke when publisherid rendered as a display name.
  */
 function fetchSolutionViaPac(solutionId) {
   const pac = SHELL.pacPath();
   if (!pac) return null;
-  // Use separate queries: one for solution, one for publisher (avoids tabular parse issues)
-  const solXml = `<fetch><entity name="solution"><attribute name="uniquename"/><attribute name="friendlyname"/><attribute name="version"/><attribute name="solutionid"/><attribute name="publisherid"/><filter><condition attribute="solutionid" operator="eq" value="${solutionId}"/></filter></entity></fetch>`;
-  const solOutput = pacEnvFetchXml(pac, solXml);
-  if (!solOutput) return null;
 
-  // Parse the tabular output for the solution
-  const solId = extractGuid(solOutput, solutionId) || solutionId;
-  const version = extractPattern(solOutput, /(\d+\.\d+\.\d+\.\d+)/);
+  const xml = [
+    '<fetch>',
+    '  <entity name="solution">',
+    '    <attribute name="uniquename"/>',
+    '    <attribute name="friendlyname"/>',
+    '    <attribute name="version"/>',
+    '    <attribute name="solutionid"/>',
+    '    <link-entity name="publisher" from="publisherid" to="publisherid" link-type="inner" alias="pub">',
+    '      <attribute name="customizationprefix"/>',
+    '      <attribute name="uniquename"/>',
+    '      <attribute name="friendlyname"/>',
+    '      <attribute name="publisherid"/>',
+    '      <attribute name="customizationoptionvalueprefix"/>',
+    '    </link-entity>',
+    '    <filter>',
+    `      <condition attribute="solutionid" operator="eq" value="${solutionId}"/>`,
+    '    </filter>',
+    '  </entity>',
+    '</fetch>',
+  ].join('\n');
 
-  // The publisherid in the solution output is a GUID (the lookup value)
-  const guids = [...solOutput.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)]
-    .map((m) => m[0].toLowerCase());
-  // publisherid is the GUID that is NOT the solutionid
-  const pubGuid = guids.find((g) => g !== solId) || '';
+  const output = pacEnvFetchXml(pac, xml);
+  if (!output) return null;
 
-  // Extract unique name: it's a single PascalCase/camelCase token (no spaces, not a GUID, not a version)
-  const tokens = extractDataTokens(solOutput);
-  const uniquename = tokens.find((t) => !isGuid(t) && !/^\d+\.\d+/.test(t) && t.length > 1) || '';
+  const rows = parsePacTabularRows(output, [
+    'uniquename', 'friendlyname', 'solutionid', 'pub.customizationprefix',
+  ]);
+  if (rows.length === 0) return null;
 
-  // For friendlyname, we need to be smarter. The text between known tokens.
-  // Approach: remove GUIDs, version, uniquename, and "Connected..." lines → what's left is the friendly name
-  const friendlyname = extractFriendlyName(solOutput, [solId, pubGuid, version, uniquename]);
+  const row = rows[0];
 
-  // Now fetch the publisher details using the pubGuid
-  let prefix = '';
-  let publisherFriendlyName = '';
-  let publisherUniqueName = '';
-  let choiceValuePrefix = '';
-
-  if (pubGuid) {
-    const pubXml = `<fetch><entity name="publisher"><attribute name="customizationprefix"/><attribute name="friendlyname"/><attribute name="uniquename"/><attribute name="publisherid"/><attribute name="customizationoptionvalueprefix"/><filter><condition attribute="publisherid" operator="eq" value="${pubGuid}"/></filter></entity></fetch>`;
-    const pubOutput = pacEnvFetchXml(pac, pubXml);
-    if (pubOutput) {
-      const pubTokens = extractDataTokens(pubOutput);
-      // customizationprefix is a short lowercase string
-      prefix = pubTokens.find((t) => /^[a-z]{2,8}$/.test(t) && !['and', 'for', 'the'].includes(t)) || '';
-      // customizationoptionvalueprefix is a numeric string
-      choiceValuePrefix = pubTokens.find((t) => /^\d{3,6}$/.test(t)) || '';
-      // publisher uniquename is a single token (not GUID, not prefix, not choiceValuePrefix)
-      publisherUniqueName = pubTokens.find((t) =>
-        !isGuid(t) && t !== prefix && t !== choiceValuePrefix && t.length > 1 && !/^\d+$/.test(t),
-      ) || '';
-      publisherFriendlyName = extractFriendlyName(pubOutput, [pubGuid, prefix, publisherUniqueName, choiceValuePrefix]);
-    }
-  }
+  // Column names come back lowercased. Aliased columns use "pub.<attr>".
+  const solId = (row['solutionid'] || solutionId).toLowerCase();
+  const uniquename = row['uniquename'] || '';
+  const friendlyname = row['friendlyname'] || '';
+  const version = row['version'] || '';
+  const prefix = row['pub.customizationprefix'] || '';
+  const pubGuid = row['pub.publisherid'] || '';
+  const publisherUniqueName = row['pub.uniquename'] || '';
+  const publisherFriendlyName = row['pub.friendlyname'] || '';
+  const choiceValuePrefix = row['pub.customizationoptionvalueprefix'] || '';
 
   return {
     solutionid: solId,
@@ -120,130 +166,59 @@ function fetchSolutionViaPac(solutionId) {
 }
 
 /**
- * List unmanaged solutions via `pac env fetch`. Returns basic solution list.
- * Each entry has { solutionid, label }.
+ * List unmanaged solutions via a single `pac env fetch` with a publisher join.
+ * Returns [{ value: solutionid, label: "Display Name (prefix_)" }].
+ * Uses parsePacTabularRows to handle multi-word names correctly and avoids
+ * the N+1 per-solution fetch loop.
  */
 function listSolutionSummariesViaPac() {
   const pac = SHELL.pacPath();
   if (!pac) return [];
-  const xml = `<fetch><entity name="solution"><attribute name="uniquename"/><attribute name="friendlyname"/><attribute name="solutionid"/><link-entity name="publisher" from="publisherid" to="publisherid" link-type="inner" alias="pub"><attribute name="customizationprefix"/></link-entity><filter><condition attribute="ismanaged" operator="eq" value="0"/><condition attribute="isvisible" operator="eq" value="1"/></filter><order attribute="friendlyname"/></entity></fetch>`;
+
+  const xml = [
+    '<fetch>',
+    '  <entity name="solution">',
+    '    <attribute name="uniquename"/>',
+    '    <attribute name="friendlyname"/>',
+    '    <attribute name="solutionid"/>',
+    '    <link-entity name="publisher" from="publisherid" to="publisherid" link-type="inner" alias="pub">',
+    '      <attribute name="customizationprefix"/>',
+    '      <attribute name="friendlyname"/>',
+    '    </link-entity>',
+    '    <filter>',
+    '      <condition attribute="ismanaged" operator="eq" value="0"/>',
+    '      <condition attribute="isvisible" operator="eq" value="1"/>',
+    '    </filter>',
+    '    <order attribute="friendlyname"/>',
+    '  </entity>',
+    '</fetch>',
+  ].join('\n');
+
   const output = pacEnvFetchXml(pac, xml, { timeout: 15000 });
   if (!output) return [];
 
-  // Parse each data row. The output has: uniquename, friendlyname, solutionid, pub.customizationprefix
-  // Each row has a GUID. Group by GUID.
-  const guids = [...output.matchAll(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi)]
-    .map((m) => m[1].toLowerCase());
-  const uniqueGuids = [...new Set(guids)];
+  const rows = parsePacTabularRows(output, [
+    'uniquename', 'friendlyname', 'solutionid', 'pub.customizationprefix',
+  ]);
 
-  // Filter out well-known system solution GUIDs
+  // Filter out system solutions.
   const systemGuids = new Set([
     'fd140aaf-4df4-11dd-bd17-0019b9312238', // Default Solution
     '00000001-0000-0000-0001-00000000009b', // Common Data Services
   ]);
+  const systemNames = ['default', 'common data services default solution'];
 
-  // For each solution GUID, we need the display label.
-  // Since parsing multi-row tabular output is fragile, use a simple approach:
-  // split output into segments by GUID, extract the text around each.
-  const lines = output.split(/\r?\n/).filter((l) =>
-    l.trim() &&
-    !l.startsWith('Connected') &&
-    !l.startsWith('Microsoft') &&
-    !l.startsWith('Version:') &&
-    !l.startsWith('Online') &&
-    !l.startsWith('Feedback'),
-  );
-
-  // The header line contains column names. Skip it.
-  const headerKeywords = ['uniquename', 'friendlyname', 'solutionid'];
-  const dataLines = lines.filter((l) => !headerKeywords.some((kw) => l.toLowerCase().includes(kw)));
-  const fullData = dataLines.join(' ');
-
-  const results = [];
-  for (const guid of uniqueGuids) {
-    if (systemGuids.has(guid)) continue;
-
-    // Find the text around this GUID to extract a label
-    const idx = fullData.indexOf(guid);
-    if (idx < 0) continue;
-
-    // Look for a short lowercase prefix near the GUID (the pub.customizationprefix)
-    const nearby = fullData.slice(Math.max(0, idx - 200), idx + 200);
-    const prefixMatch = nearby.match(/\b([a-z]{2,8})\b/);
-    const prefix = prefixMatch ? prefixMatch[1] : '?';
-
-    // The friendlyname is harder to extract from the concatenated data.
-    // We'll use the GUID as the value and fetch full details on selection.
-    results.push({ value: guid, label: `Solution ${guid.slice(0, 8)}… (${prefix}_)` });
-  }
-
-  // If we got results but labels are poor, try fetching details for each
-  // (only if there are few solutions)
-  if (results.length > 0 && results.length <= 20) {
-    for (const r of results) {
-      const details = fetchSolutionViaPac(r.value);
-      if (details) {
-        const name = details.friendlyname || details.uniquename || r.value;
-        r.label = `${name} (${details.prefix || '?'}_)`;
-      }
-    }
-  }
-
-  return results.filter((r) => r.label && !r.label.includes('Default Solution') && !r.label.includes('Common Data'));
-}
-
-// ─── Parse utilities ─────────────────────────────────────────────────
-
-function isGuid(s) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-}
-
-function extractGuid(text, hint) {
-  const guids = [...text.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi)]
-    .map((m) => m[0].toLowerCase());
-  if (hint) return guids.find((g) => g === hint.toLowerCase()) || guids[0] || '';
-  return guids[0] || '';
-}
-
-function extractPattern(text, re) {
-  const m = text.match(re);
-  return m ? m[1] : '';
-}
-
-/** Extract data tokens from PAC CLI output (skip header/banner lines). */
-function extractDataTokens(output) {
-  const lines = output.split(/\r?\n/).filter((l) =>
-    l.trim() &&
-    !l.startsWith('Connected') &&
-    !l.startsWith('Microsoft') &&
-    !l.startsWith('Version:') &&
-    !l.startsWith('Online') &&
-    !l.startsWith('Feedback'),
-  );
-  const headerKeywords = ['uniquename', 'friendlyname', 'solutionid', 'publisherid', 'customizationprefix', 'version'];
-  const dataLines = lines.filter((l) => !headerKeywords.some((kw) => l.toLowerCase().includes(kw)));
-  return dataLines.join(' ').split(/\s+/).filter(Boolean);
-}
-
-/** Extract the friendly name from PAC output by removing known tokens. */
-function extractFriendlyName(output, knownTokens) {
-  const lines = output.split(/\r?\n/).filter((l) =>
-    l.trim() &&
-    !l.startsWith('Connected') &&
-    !l.startsWith('Microsoft') &&
-    !l.startsWith('Version:') &&
-    !l.startsWith('Online') &&
-    !l.startsWith('Feedback'),
-  );
-  const headerKeywords = ['uniquename', 'friendlyname', 'solutionid', 'publisherid', 'customizationprefix', 'version', 'customizationoptionvalueprefix'];
-  const dataLines = lines.filter((l) => !headerKeywords.some((kw) => l.toLowerCase().includes(kw)));
-  let text = dataLines.join(' ');
-  // Remove known tokens (GUIDs, version, uniquename, prefix)
-  for (const token of knownTokens) {
-    if (token) text = text.replace(new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '');
-  }
-  // Clean up multiple spaces and trim
-  return text.replace(/\s+/g, ' ').trim();
+  return rows
+    .filter((r) => {
+      const id = (r['solutionid'] || '').toLowerCase();
+      const name = (r['friendlyname'] || '').toLowerCase();
+      return id && !systemGuids.has(id) && !systemNames.includes(name);
+    })
+    .map((r) => {
+      const name = r['friendlyname'] || r['uniquename'] || r['solutionid'];
+      const prefix = r['pub.customizationprefix'] || '?';
+      return { value: r['solutionid'].toLowerCase(), label: `${name} (${prefix}_)` };
+    });
 }
 
 // ─── Dataverse API helpers (SPN) ─────────────────────────────────────
