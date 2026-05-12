@@ -122,7 +122,7 @@ jobs:
             }
 
             // Azure AI Inference endpoint for serverless deployments
-            const url = `${endpoint}/models/chat/completions?api-version=2024-12-01-preview`;
+            const url = `${endpoint}/models/chat/completions?api-version=2024-05-01-preview`;
 
             const response = await fetch(url, {
               method: 'POST',
