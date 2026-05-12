@@ -49,3 +49,66 @@ jobs:
           node packages/rebrand/bin/pacaf-rebrand.mjs
           node packages/scripts/bin/pacaf-update.mjs --check || true
 
+  changeset-required:
+    # Block PRs that change publishable source under packages/* but don't include
+    # a changeset entry. See .github/instructions/10-publishing.instructions.md.
+    # Only runs on pull_request — push events to main are already past the gate.
+    name: Changeset required for package changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enable corepack
+        run: |
+          corepack enable
+          corepack prepare --activate
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Detect publishable changes vs base
+        id: detect
+        run: |
+          BASE_REF="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          # Files matching publish surface. Keep this list in sync with
+          # .github/instructions/10-publishing.instructions.md.
+          CHANGED=$(git diff --name-only "$BASE_REF...HEAD" -- \
+            'packages/*/src/**' \
+            'packages/*/server/**' \
+            'packages/*/bin/**' \
+            'packages/*/lib/**' \
+            'packages/*/package.json' \
+            ':(exclude)packages/*/**/*.test.ts' \
+            ':(exclude)packages/*/**/*.test.mjs' \
+            ':(exclude)packages/*/**/*.md' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No publishable source changes detected."
+            echo "needs_changeset=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishable changes detected:"
+            echo "$CHANGED"
+            echo "needs_changeset=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify a changeset entry exists for this PR
+        if: steps.detect.outputs.needs_changeset == 'true'
+        run: |
+          # `changeset status --since=<base>` exits non-zero with a helpful
+          # message when no new changeset files are present compared to base.
+          pnpm exec changeset status --since="origin/${{ github.base_ref }}" || {
+            echo ""
+            echo "::error::This PR changes source under packages/* but does not include a changeset entry."
+            echo "::error::Run 'npx changeset' (or write a file under .changeset/) and commit it."
+            echo "::error::See .github/instructions/10-publishing.instructions.md for details."
+            exit 1
+          }
+

@@ -192,6 +192,18 @@
         "cursor": { "file": ".cursor/rules/09-form-field-pattern.mdc", "globs": "src/**" },
         "codex": { "file": "src/AGENTS.md", "mode": "combined" }
       }
+    },
+    {
+      "id": "10-publishing",
+      "canonical": "10-publishing.instructions.md",
+      "role": "process",
+      "scope": { "applyTo": "packages/**,.changeset/**,.github/workflows/release.yml" },
+      "description": "Read when modifying any code under packages/ that is published to npm. Enforces the rule that every fix lands with a changeset entry so the release workflow actually ships it. Closes the 'fixed in main but not on npm' gap documented in issues #19 and #20.",
+      "projections": {
+        "claude": { "file": ".claude/rules/publishing.md", "mode": "summary", "paths": ["packages/**", ".changeset/**", ".github/workflows/release.yml"] },
+        "cursor": { "file": ".cursor/rules/10-publishing.mdc", "globs": "packages/**,.changeset/**,.github/workflows/release.yml" },
+        "codex": null
+      }
     }
   ]
 }

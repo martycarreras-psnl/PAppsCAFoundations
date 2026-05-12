@@ -1,0 +1,46 @@
+---
+globs: "packages/**,.changeset/**,.github/workflows/release.yml"
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/10-publishing.instructions.md — do not edit directly -->
+# Publishing Discipline — Every Fix Must Ship
+
+Releases use **changesets** + the `release.yml` workflow. A fix merged to `main` without a `.changeset/*.md` entry will never reach npm — users on `npx @pacaf/<pkg>@latest` keep hitting the bug.
+
+## The rule
+
+When you touch publishable source (`packages/*/src/**`, `packages/*/server/**`, `packages/*/bin/**`, `packages/*/lib/**`), add a changeset entry **in the same PR**. CI's `changeset-required` job blocks merges without one.
+
+Exempt: package-level `*.md`, `*.test.*`, and files outside the publish surface.
+
+## How
+
+```bash
+npx changeset            # interactive
+```
+
+Or write directly:
+
+```bash
+cat > .changeset/fix-issue-NNN.md <<'EOF'
+---
+'@pacaf/wizard-ux': patch
+---
+
+User-facing summary. Closes #NNN.
+EOF
+```
+
+Use `patch` for bug fixes, `minor` for features, `major` only after discussion.
+
+## After merge
+
+1. Confirm the workflow opened/updated the "Version Packages" PR.
+2. Merging that PR is what actually publishes — verify with `npm view @pacaf/<pkg> version`.
+3. Comment on the original issue with the published version number.
+
+## Fix-not-published recovery (see #19)
+
+If a fix exists in `main` but not on npm, create a back-dated changeset now, commit it, and merge. The release workflow re-opens the "Version Packages" PR with it included.
+
+Never publish manually — the workflow is the only authorized publisher.

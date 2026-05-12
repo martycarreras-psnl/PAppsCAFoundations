@@ -66,6 +66,22 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 - After editing canonical instruction files, run `npm run guidance:generate` to update agent-native projections, then `npm run guidance:check` to verify no drift.
 - Do not edit `.claude/rules/`, `.cursor/rules/`, or nested `AGENTS.md` files directly — they are generated.
 
+## Publishing
+
+Every bug fix or feature that touches a published package under `packages/` **must** include a [changeset](https://github.com/changesets/changesets) entry in the same PR. Without one, the fix lands in `main` but the release workflow will not publish a new version, and users on `npx @pacaf/<pkg>@latest` will not receive the fix.
+
+Add a changeset with:
+
+```bash
+npx changeset
+```
+
+Pick `patch` for bug fixes, `minor` for backward-compatible features. Reference the issue number (`#NNN`) in the summary so the generated changelog cross-links.
+
+CI enforces this rule via the `changeset-required` job in `.github/workflows/ci.yml`. Trivial changes (docs inside a package, tests, non-publish-surface files) are exempt — see [.github/instructions/10-publishing.instructions.md](.github/instructions/10-publishing.instructions.md) for the full policy.
+
+After your PR is merged, the release workflow opens (or updates) a "Version Packages" PR that aggregates pending changesets. Merging that PR is what actually publishes to npm.
+
 ## Pull Request Checklist
 
 - [ ] Tests pass: `node --test scripts/tests/*.test.mjs`
@@ -73,6 +89,7 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 - [ ] No secrets or credentials in the diff
 - [ ] Commit messages follow conventional format
 - [ ] PR description explains the why, not just the what
+- [ ] If the change touches a published package's source, a `.changeset/*.md` entry is included
 
 ## Reporting Issues
 
