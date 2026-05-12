@@ -121,8 +121,8 @@ jobs:
               return;
             }
 
-            // Azure AI Foundry — project-scoped inference endpoint
-            const url = `${endpoint}/api/projects/carrema-east-project/models/chat/completions?api-version=2024-05-01-preview`;
+            // Kimi-K2.6 uses OpenAI-compatible endpoint format
+            const url = `${endpoint}/openai/v1/chat/completions`;
 
             const response = await fetch(url, {
               method: 'POST',
@@ -131,6 +131,7 @@ jobs:
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
+                model: 'Kimi-K2.6',
                 messages: [
                   { role: 'system', content: systemPrompt },
                   { role: 'user', content: userPrompt }
