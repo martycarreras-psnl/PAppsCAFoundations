@@ -253,6 +253,27 @@ export function StepRunner() {
     [answers, initialAnswers],
   );
 
+  // Persist in-progress answer changes (debounced) so a page refresh doesn't lose them.
+  // The wizard already merges PUT bodies into state; the real apply still happens on "Save & run".
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!questionsQ.data) return;
+    if (!hasUnsavedChanges) return;
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => {
+      const changed: Record<string, unknown> = {};
+      for (const k of Object.keys(answers)) {
+        if (JSON.stringify(answers[k]) !== JSON.stringify(initialAnswers[k])) {
+          changed[k] = answers[k];
+        }
+      }
+      if (Object.keys(changed).length > 0) {
+        api.saveState(changed).catch(() => { /* best effort */ });
+      }
+    }, 600);
+    return () => { if (persistTimer.current) clearTimeout(persistTimer.current); };
+  }, [answers, initialAnswers, hasUnsavedChanges, questionsQ.data]);
+
   const validationErrors = useMemo(() => {
     if (!meta?.canRunInBrowser) return [];
     const errs: string[] = [];

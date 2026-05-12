@@ -22,7 +22,7 @@ function getMakerPortalLink() {
     if (whoOut) {
       const whoInfo = PAC_TARGET.parsePacOrgWho(whoOut);
       if (whoInfo.environmentId) {
-        return `https://make.powerapps.com/e/${whoInfo.environmentId}/solutions`;
+        return `https://make.powerapps.com/environments/${whoInfo.environmentId}/solutions`;
       }
     }
   } catch { /* fall through */ }
@@ -350,7 +350,7 @@ export default {
         '3. Click on the solution to open it',
         '4. Copy the URL from your browser\'s address bar',
         '5. Paste it here — it looks like:',
-        '   https://make.powerapps.com/e/.../solutions/{guid}',
+        '   https://make.powerapps.com/environments/.../solutions/{guid}',
       ].join('\n'),
     });
 

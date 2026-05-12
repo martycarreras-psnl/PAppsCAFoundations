@@ -65,7 +65,7 @@ function listOpItems(vaultName) {
 }
 
 // Exported for the API route to call
-export { listOpItems };
+export { listOpItems, listOpVaults };
 
 function createOpVault(log, name) {
   const result = runSafe('op', ['vault', 'create', name, '--format=json']);
@@ -145,10 +145,6 @@ export default {
     const hasOp = hasCommand('op') || state.HAS_OP === true;
     const currentAuthType = state.AUTH_PROFILE_TYPE || 'user';
 
-    // ── 1Password vault/item discovery ──
-    const vaults = hasOp ? listOpVaults() : [];
-    const defaultVault = state.OP_VAULT || vaults[0]?.value || '';
-
     return [
       {
         id: 'AUTH_PROFILE_TYPE',
@@ -170,23 +166,24 @@ export default {
         help: hasOp
           ? 'Store environment URLs and credentials as 1Password references. Secrets never touch disk.'
           : '1Password CLI was not detected. Leave this off unless op is available in your shell.',
-        defaultValue: hasOp && state.AUTH_MODE === '1password',
+        defaultValue: state.USE_1PASSWORD === true || (hasOp && state.AUTH_MODE === '1password'),
       },
       {
         id: 'OP_VAULT',
         type: 'select',
         label: '1Password vault',
-        help: vaults.length > 0
-          ? 'Select an existing vault, create a new one, or enter a name manually.'
-          : 'Could not discover vaults (1Password may be locked or offline). If you just authenticated to 1Password, refresh this page to reload the vault list. Otherwise, enter a vault name manually or create a new one.',
-        defaultValue: state.OP_VAULT && vaults.some((v) => v.value === state.OP_VAULT)
-          ? state.OP_VAULT
-          : (vaults[0]?.value || ENTER_MANUALLY),
+        help: 'Select an existing vault, create a new one, or enter a name manually. Vaults load when 1Password is enabled — if the list is empty, ensure the op CLI is signed in (`op signin`) and toggle 1Password off and on to retry.',
+        defaultValue: state.OP_VAULT || ENTER_MANUALLY,
         options: [
-          ...vaults,
           { value: ENTER_MANUALLY, label: 'Enter vault name manually' },
           { value: CREATE_NEW_VAULT, label: '+ Create new vault' },
         ],
+        dynamicOptions: {
+          endpoint: '/api/1password/vaults',
+          param: 'enabled',
+          dependsOn: 'USE_1PASSWORD',
+          responseKey: 'vaults',
+        },
         hideIf: { id: 'USE_1PASSWORD', equals: false },
       },
       {

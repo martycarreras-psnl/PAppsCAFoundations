@@ -7,6 +7,11 @@ const STEP3_PATH = resolve(__dirname, '..', 'steps', '03-app-registration.mjs');
 const step3 = await import(pathToFileURL(STEP3_PATH).href);
 
 export default async function onepasswordRoutes(fastify, opts) {
+  fastify.get('/vaults', async () => {
+    const vaults = step3.listOpVaults();
+    return { vaults };
+  });
+
   fastify.get('/items', async (req) => {
     const vault = String(req.query.vault || '').trim();
     if (!vault) return { items: [] };

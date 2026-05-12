@@ -42,6 +42,8 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 
 export const api = {
   state: () => req<StateSnapshot>('GET', '/api/state'),
+  saveState: (partial: Record<string, unknown>) =>
+    req<{ state: Record<string, unknown> }>('PUT', '/api/state', partial),
   resetState: () => req<{ ok: true }>('POST', '/api/state/reset', {}),
   jumpTo: (step: number) => req<{ state: Record<string, unknown> }>('POST', '/api/state/jump', { step }),
   system: () => req<SystemInfo>('GET', '/api/system'),

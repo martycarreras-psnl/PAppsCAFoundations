@@ -141,9 +141,11 @@ function QuestionContent({ question: q, value, onChange, showError, answers }: P
 
   useEffect(() => {
     if (!dyn) return;
-    // Skip sentinel values (create new / enter manually)
-    if (!depValue || depValue.startsWith('__')) {
+    // Skip when dependency is empty, falsy (false/"false"/"0"), or a sentinel (create new / enter manually)
+    const isFalsy = !depValue || depValue === 'false' || depValue === '0';
+    if (isFalsy || depValue.startsWith('__')) {
       setDynamicOpts([]);
+      prevDepRef.current = depValue;
       return;
     }
     if (depValue === prevDepRef.current && dynamicOpts.length > 0) return;
