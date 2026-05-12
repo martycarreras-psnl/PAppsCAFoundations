@@ -10,10 +10,11 @@ They are a reference set, not a tutorial.
 
 If you are a human opening this folder for the first time, do this instead:
 
-1. Go back to [../../README.md](../../README.md) and run the wizard (`cd wizard && node index.mjs`)
-2. If you want a visual walkthrough, open [../../docs/guide.html](../../docs/guide.html)
-3. If you want the end-to-end methodology, read [../../docs/prototype-golden-path.md](../../docs/prototype-golden-path.md)
-4. If a term is unfamiliar, check [../../docs/glossary.md](../../docs/glossary.md)
+1. Go back to [../../README.md](../../README.md) and run the wizard (`npx @pacaf/wizard-ux@latest`)
+2. If this is a fresh machine, follow the [Prerequisite Setup Guide](../../docs/prerequisite-setup.md) first
+3. If you want a visual walkthrough, open [../../docs/guide.html](../../docs/guide.html)
+4. If you want the end-to-end methodology, read [../../docs/prototype-golden-path.md](../../docs/prototype-golden-path.md)
+5. If a term is unfamiliar, check [../../docs/glossary.md](../../docs/glossary.md)
 
 Trying to read all 14 instruction files front-to-back will not make you productive faster. It will slow you down. Copilot is the intended audience.
 
