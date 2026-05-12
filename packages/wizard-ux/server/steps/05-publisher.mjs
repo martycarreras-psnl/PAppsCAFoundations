@@ -450,7 +450,8 @@ export default {
 
     // ── Paste URL → extract GUID → fetch via PAC ──
     if (selection === PASTE_URL) {
-      const url = String(answers.SOLUTION_URL || '').trim();
+      // Strip trailing punctuation that users may accidentally include when pasting from a document.
+      const url = String(answers.SOLUTION_URL || '').trim().replace(/[.,;:!?]+$/, '');
       const solutionId = extractSolutionIdFromUrl(url);
       if (!solutionId) throw new Error('Could not find a solution GUID in that URL. Paste the full Maker Portal solution URL (…/solutions/{guid}).');
 
