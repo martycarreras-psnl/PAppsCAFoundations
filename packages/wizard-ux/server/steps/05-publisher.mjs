@@ -307,6 +307,10 @@ export default {
       }
     }
 
+    // Sort solutions A→Z by display name (case-insensitive) so the list is
+    // predictable regardless of creation order or environment size. Closes #30.
+    solutions.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+
     const makerLink = getMakerPortalLink();
 
     const defaultSelection = state.SOLUTION_ID && solutions.some((s) => s.value === state.SOLUTION_ID)
