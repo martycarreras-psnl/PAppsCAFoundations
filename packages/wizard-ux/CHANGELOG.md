@@ -1,5 +1,32 @@
 # @pacaf/wizard-ux
 
+## 3.0.3
+
+### Patch Changes
+
+- a6bdab6: Fix Maker Portal `/e/` shorthand URL (Step 5) and Step 3 1Password vault/item
+  dropdown UX (load without refresh, persist toggle/vault/item across refresh).
+  Closes #17, #18, and ships those fixes that were merged in `24b9423` but missed
+  the `3.0.2` cut — see #19.
+- 94dc210: Switch Step 5 `pac env fetch` calls from `--xml` (inline FetchXML) to
+  `--xmlFile` (temp file) to avoid `System.Xml.XmlException` on macOS PAC CLI
+  2.2.1+ where inline XML attribute quotes get corrupted. Closes #23.
+- 8fb8c06: Rewrite Step 5 `pac env fetch` parsing to use a single joined FetchXML query
+  with `<link-entity>` and a proper column-position-based tabular output parser.
+  Fixes publisher prefix always showing `(?_)` and eliminates the N+1
+  per-solution fetch loop that caused ~50 s load times. Closes #24.
+- 5865299: Fix Step 7 scaffold: PROJECT_DIR now defaults to process.cwd() (the user's
+  workspace) instead of the npx cache path, and @pacaf/scripts +
+  @pacaf/agent-instructions version specifiers changed from ^1.0.0 (never
+  published) to ^3.0.0. Closes #25.
+- 8233f43: Strip trailing punctuation (comma, period, semicolon, etc.) from URLs rendered
+  as links in `QuestionCard` help/why text, and from pasted Solution URLs before
+  GUID extraction. Fixes the broken `/solutions/{guid},` link in Step 5.
+  Closes #22.
+- Updated dependencies [5354bad]
+- Updated dependencies [5865299]
+  - @pacaf/wizard@3.1.0
+
 ## 3.0.2
 
 ### Patch Changes

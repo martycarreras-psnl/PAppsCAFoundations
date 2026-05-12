@@ -1,5 +1,24 @@
 # @pacaf/wizard
 
+## 3.1.0
+
+### Minor Changes
+
+- 5354bad: Redesign the starter Code App (App.tsx) as a celebratory launch experience.
+  The screen now opens with a bouncy 🎉 animation, personalises the title with
+  the app name, and presents two clear next-step paths — idea-first and
+  data-first — each with a styled agent prompt the user can copy straight into
+  their coding agent. The golden-path loop (Plan → Prototype → Connect →
+  Deploy → Iterate) is surfaced prominently so every user sees the delivery
+  model on first launch. Closes #27.
+
+### Patch Changes
+
+- 5865299: Fix Step 7 scaffold: PROJECT_DIR now defaults to process.cwd() (the user's
+  workspace) instead of the npx cache path, and @pacaf/scripts +
+  @pacaf/agent-instructions version specifiers changed from ^1.0.0 (never
+  published) to ^3.0.0. Closes #25.
+
 ## 3.0.1
 
 ### Patch Changes
