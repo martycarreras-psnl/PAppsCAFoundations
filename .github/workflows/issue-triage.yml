@@ -3,6 +3,8 @@ name: Issue Triage
 on:
   issues:
     types: [opened]
+  issue_comment:
+    types: [created]
 
 permissions:
   issues: write
@@ -11,6 +13,10 @@ permissions:
 jobs:
   triage:
     name: AI Triage
+    # For issue_comment events: only run when a maintainer types /triage
+    if: |
+      github.event_name == 'issues' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/triage'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
