@@ -1,5 +1,7 @@
 // Step 5 — Solution & Publisher (solution-first, publisher auto-resolved).
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
+import { writeFileSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
 
@@ -11,6 +13,21 @@ const PAC_TARGET = await import(pathToFileURL(resolve(ROOT_DIR, 'wizard', 'lib',
 
 const CREATE_NEW = '__create_new__';
 const PASTE_URL = '__paste_url__';
+
+/**
+ * Run `pac env fetch` using --xmlFile instead of --xml to avoid XmlException
+ * on macOS PAC CLI 2.2.1+ where inline FetchXML attribute quotes get corrupted.
+ * Writes the XML to a temp file, runs the command, and cleans up.
+ */
+function pacEnvFetchXml(pac, fetchXml, opts) {
+  const tmp = join(tmpdir(), `pac-fetch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`);
+  try {
+    writeFileSync(tmp, fetchXml, 'utf-8');
+    return SHELL.runSafe(pac, ['env', 'fetch', '--xmlFile', tmp], opts);
+  } finally {
+    try { unlinkSync(tmp); } catch { /* best effort cleanup */ }
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -45,7 +62,7 @@ function fetchSolutionViaPac(solutionId) {
   if (!pac) return null;
   // Use separate queries: one for solution, one for publisher (avoids tabular parse issues)
   const solXml = `<fetch><entity name="solution"><attribute name="uniquename"/><attribute name="friendlyname"/><attribute name="version"/><attribute name="solutionid"/><attribute name="publisherid"/><filter><condition attribute="solutionid" operator="eq" value="${solutionId}"/></filter></entity></fetch>`;
-  const solOutput = SHELL.runSafe(pac, ['env', 'fetch', '--xml', solXml]);
+  const solOutput = pacEnvFetchXml(pac, solXml);
   if (!solOutput) return null;
 
   // Parse the tabular output for the solution
@@ -74,7 +91,7 @@ function fetchSolutionViaPac(solutionId) {
 
   if (pubGuid) {
     const pubXml = `<fetch><entity name="publisher"><attribute name="customizationprefix"/><attribute name="friendlyname"/><attribute name="uniquename"/><attribute name="publisherid"/><attribute name="customizationoptionvalueprefix"/><filter><condition attribute="publisherid" operator="eq" value="${pubGuid}"/></filter></entity></fetch>`;
-    const pubOutput = SHELL.runSafe(pac, ['env', 'fetch', '--xml', pubXml]);
+    const pubOutput = pacEnvFetchXml(pac, pubXml);
     if (pubOutput) {
       const pubTokens = extractDataTokens(pubOutput);
       // customizationprefix is a short lowercase string
@@ -110,7 +127,7 @@ function listSolutionSummariesViaPac() {
   const pac = SHELL.pacPath();
   if (!pac) return [];
   const xml = `<fetch><entity name="solution"><attribute name="uniquename"/><attribute name="friendlyname"/><attribute name="solutionid"/><link-entity name="publisher" from="publisherid" to="publisherid" link-type="inner" alias="pub"><attribute name="customizationprefix"/></link-entity><filter><condition attribute="ismanaged" operator="eq" value="0"/><condition attribute="isvisible" operator="eq" value="1"/></filter><order attribute="friendlyname"/></entity></fetch>`;
-  const output = SHELL.runSafe(pac, ['env', 'fetch', '--xml', xml], { timeout: 15000 });
+  const output = pacEnvFetchXml(pac, xml, { timeout: 15000 });
   if (!output) return [];
 
   // Parse each data row. The output has: uniquename, friendlyname, solutionid, pub.customizationprefix
