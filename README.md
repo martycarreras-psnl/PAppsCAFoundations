@@ -19,8 +19,10 @@ You'll do everything from inside **VS Code with a coding agent enabled** (GitHub
 
 1. [VS Code](https://code.visualstudio.com/) with a coding-agent extension enabled and signed in
 2. A [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine)
-3. [Node.js 20+](https://nodejs.org/) and the [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) installed locally
+3. [Node.js 20+](https://nodejs.org/), [Git](https://git-scm.com/), [.NET SDK 8+](https://dotnet.microsoft.com/download), and the [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) installed locally
 4. A GitHub account
+
+> **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy-pasteable commands and verification checks. Takes about 10 minutes.
 
 ### Step 1. Create your repo from this template
 
