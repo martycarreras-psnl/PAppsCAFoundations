@@ -90,27 +90,51 @@ export default {
     }
 
     // Python 3 (used by Dataverse-skills plugin)
+    // On Windows, `python3` may resolve to the Microsoft Store App Execution Alias stub
+    // (%LOCALAPPDATA%\Microsoft\WindowsApps\python3.exe) which exits non-zero and prints
+    // "Python was not found; run without arguments to install from the Microsoft Store..."
+    // We treat any command whose --version output doesn't start with "Python 3" as absent
+    // and fall through to the next candidate. Priority order:
+    //   python3 → python → py -3   (py launcher is Windows-only)
+    function tryPythonCmd(cmd) {
+      const raw = tryRun(`${cmd} --version`) || '';
+      // Store stub returns empty (non-zero exit trapped by tryRun) or the "not found" message
+      if (!raw.startsWith('Python 3')) return null;
+      return raw.replace('Python ', '').trim();
+    }
+
     let pythonCmd = null;
-    if (hasCommand('python3')) pythonCmd = 'python3';
-    else if (hasCommand('python')) pythonCmd = 'python';
+    let pythonVersion = null;
+
+    const candidates = ['python3', 'python'];
+    if (platform() === 'win32') candidates.push('py');
+
+    for (const candidate of candidates) {
+      if (!hasCommand(candidate)) continue;
+      const ver = candidate === 'py' ? tryRun('py -3 --version')?.replace('Python ', '').trim() || null
+                                     : tryPythonCmd(candidate);
+      if (ver) {
+        pythonCmd = candidate === 'py' ? 'py' : candidate;
+        pythonVersion = ver;
+        break;
+      }
+    }
 
     if (pythonCmd) {
-      const pyVer = tryRun(`${pythonCmd} --version`)?.replace('Python ', '') || '';
-      const pyMajor = parseInt(pyVer, 10);
-      if (pyMajor >= 3) {
-        checks.push({ name: 'Python', ok: true, value: pyVer, hint: null });
-        log.ok(`Python ${pyVer}`);
-      } else {
-        checks.push({ name: 'Python', ok: false, value: pyVer, hint: 'Python 3+ required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
-        log.warn(`Python ${pyVer} — Python 3+ required for Dataverse-skills plugin`);
-        log.info('  → Install Python 3: https://www.python.org/downloads/');
-        log.info('  → Then re-run this step to verify');
-        pythonCmd = null;
-      }
+      checks.push({ name: 'Python', ok: true, value: pythonVersion, hint: null });
+      log.ok(`Python ${pythonVersion}${pythonCmd === 'py' ? ' (via py launcher)' : ''}`);
     } else {
-      checks.push({ name: 'Python', ok: false, value: null, hint: 'Required for Dataverse-skills plugin (https://www.python.org/downloads/)' });
+      const winHint = platform() === 'win32'
+        ? ' On Windows, ensure "Add python.exe to PATH" was checked during install, or disable the Microsoft Store python3 alias in Settings → Apps → Advanced app settings → App execution aliases.'
+        : '';
+      checks.push({ name: 'Python', ok: false, value: null, hint: `Required for Dataverse-skills plugin (https://www.python.org/downloads/).${winHint}` });
       log.warn('Python 3 — not found (required for Dataverse-skills plugin)');
-      log.info('  → Install Python 3: https://www.python.org/downloads/');
+      if (platform() === 'win32') {
+        log.info('  → Install Python 3 from https://www.python.org/downloads/ — check "Add python.exe to PATH"');
+        log.info('  → Or disable the Store stub: Settings → Apps → Advanced app settings → App execution aliases → turn off python3.exe');
+      } else {
+        log.info('  → Install Python 3: https://www.python.org/downloads/');
+      }
       log.info('  → Then re-run this step to verify');
     }
 
