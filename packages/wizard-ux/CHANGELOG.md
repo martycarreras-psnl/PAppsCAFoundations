@@ -1,5 +1,13 @@
 # @pacaf/wizard-ux
 
+## 3.0.5
+
+### Patch Changes
+
+- 31a0473: Sort solution dropdown A→Z by display name (case-insensitive) so the list
+  is predictable regardless of solution creation order or environment size.
+  Closes #30.
+
 ## 3.0.4
 
 ### Patch Changes
