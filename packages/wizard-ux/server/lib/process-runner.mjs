@@ -4,6 +4,11 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { randomBytes } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SCRUB = await import(pathToFileURL(resolve(__dirname, '..', '..', '..', 'wizard', 'lib', 'scrub.mjs')).href);
 
 const runs = new Map(); // runId -> Run
 
@@ -21,13 +26,17 @@ class Run extends EventEmitter {
   }
 
   push(stream, text) {
-    const evt = { stream, text, ts: Date.now() };
+    // Defense-in-depth: scrub any secret-shaped values from text before it
+    // hits the SSE log buffer. The buffer is streamed to the browser and
+    // rendered in the UI; never let a real secret land there.
+    const safe = SCRUB.scrubSecrets(text);
+    const evt = { stream, text: safe, ts: Date.now() };
     this.lines.push(evt);
     if (this.lines.length > 1000) this.lines.shift();
     this.emit('line', evt);
     // Detect device code prompts from pac auth create
-    const codeMatch = text.match(/enter the code\s+([A-Z0-9]{6,12})/i);
-    const urlMatch = text.match(/(https:\/\/microsoft\.com\/devicelogin)/i);
+    const codeMatch = safe.match(/enter the code\s+([A-Z0-9]{6,12})/i);
+    const urlMatch = safe.match(/(https:\/\/microsoft\.com\/devicelogin)/i);
     if (codeMatch) {
       this.deviceCode = { code: codeMatch[1], url: 'https://microsoft.com/devicelogin', ts: Date.now() };
       this.emit('deviceCode', this.deviceCode);
@@ -61,7 +70,9 @@ export function spawnInRun(run, file, args, opts = {}) {
   return new Promise((resolveP) => {
     run.status = 'running';
     run.startedAt = Date.now();
-    run.push('stdout', `$ ${file} ${args.join(' ')}\n`);
+    // Display args with sensitive flag values redacted (e.g. --clientSecret ****)
+    const displayArgs = SCRUB.scrubArgs(args);
+    run.push('stdout', `$ ${file} ${displayArgs.join(' ')}\n`);
     const child = spawn(file, args, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
     run.child = child;
     child.stdout.setEncoding('utf-8');

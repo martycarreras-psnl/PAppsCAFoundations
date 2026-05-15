@@ -1,10 +1,9 @@
 // Step 3 - Authentication. Browser-native auth method selection with optional 1Password sync.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, resolve, join } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { setSecret, hasUsableSecret } from '../lib/dataverse-bridge.mjs';
+import { setSecret, hasUsableSecret, persistSecretToCache } from '../lib/dataverse-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // PACKAGE_DIR locates sibling @pacaf/wizard lib files (must stay __dirname-relative).
@@ -429,21 +428,16 @@ export default {
 
     setSecret(clientSecret);
 
-    // Persist encrypted secret to .env.local so it survives server restarts
+    // Persist the encrypted secret to a per-machine OS-temp cache (NOT .env.local)
+    // so it survives wizard server restarts without ever placing the value
+    // inside the project folder. The project folder may be cloud-synced
+    // (OneDrive/Dropbox/iCloud), and content scanners pattern-match
+    // "PP_CLIENT_SECRET=" lines regardless of whether the value is encrypted.
     try {
-      const CRYPTO = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'crypto.mjs')).href);
-      const envLocalPath = join(PROJECT_DIR, '.env.local');
-      let envContent = existsSync(envLocalPath) ? readFileSync(envLocalPath, 'utf-8') : '';
-      const encrypted = CRYPTO.encrypt(clientSecret);
-      if (envContent.match(/^PP_CLIENT_SECRET=.*$/m)) {
-        envContent = envContent.replace(/^PP_CLIENT_SECRET=.*$/m, `PP_CLIENT_SECRET=${encrypted}`);
-      } else {
-        envContent += `${envContent.endsWith('\n') || !envContent ? '' : '\n'}PP_CLIENT_SECRET=${encrypted}\n`;
-      }
-      writeFileSync(envLocalPath, envContent, 'utf-8');
-      log.ok('Secret encrypted and saved to .env.local');
+      persistSecretToCache(clientSecret);
+      log.ok('Secret cached securely outside the project folder');
     } catch (err) {
-      log.warn(`Could not persist secret to .env.local: ${err.message}`);
+      log.warn(`Could not cache secret across restarts: ${err.message}`);
     }
 
     log.ok('Credential values captured');

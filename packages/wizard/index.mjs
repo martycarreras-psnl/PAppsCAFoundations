@@ -11,6 +11,7 @@ import * as ui from './lib/ui.mjs';
 import {
   loadState, getCompletedStep, setCompletedStep, resetState, stateGet, stateSet, TOTAL_STEPS,
 } from './lib/state.mjs';
+import { detectCloudSync, cloudSyncWarning } from './lib/cloud-sync-detect.mjs';
 
 import stepPrerequisites from './steps/01-prerequisites.mjs';
 import stepProjectAndEnv from './steps/02-project-and-env.mjs';
@@ -48,6 +49,26 @@ async function main() {
 
   loadState();
   ui.banner();
+
+  // Cloud-sync detection: warn loudly if the project is inside OneDrive/Dropbox/iCloud.
+  // .env.local is encrypted and gitignored, but cloud-sync content scanners pattern-match
+  // "PP_CLIENT_SECRET=" lines regardless and may surface DLP alerts.
+  {
+    const cloud = detectCloudSync(process.cwd());
+    if (cloud) {
+      console.log(cloudSyncWarning(cloud.provider, process.cwd()));
+      const proceed = await confirm({
+        message: `Continue setup inside this ${cloud.provider} folder?`,
+        default: false,
+      });
+      if (!proceed) {
+        ui.line('Aborted. Move the project out of the cloud-sync folder and re-run the wizard.');
+        process.exit(0);
+      }
+      ui.warn(`Continuing inside ${cloud.provider}. 1Password storage is strongly recommended in Step 4.`);
+      ui.line('');
+    }
+  }
 
   // Handle --from N flag (re-run from a specific step)
   const fromIdx = process.argv.indexOf('--from');

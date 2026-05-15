@@ -14,6 +14,7 @@ import stepsRoutes from './routes/steps.mjs';
 import streamRoutes from './routes/stream.mjs';
 import ptyRoutes from './routes/pty.mjs';
 import onepasswordRoutes from './routes/onepassword.mjs';
+import { detectCloudSync, cloudSyncWarning } from '../../wizard/lib/cloud-sync-detect.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UX_DIR = resolve(__dirname, '..');
@@ -49,11 +50,15 @@ await app.register(cors, {
 
 // Expose the CSRF token to the UI on a single endpoint. UI stores it in memory and
 // echoes it on mutating calls. Token rotates per server start.
-app.get('/api/handshake', async () => ({
-  csrfToken: CSRF_TOKEN,
-  rootDir: ROOT_DIR,
-  startedAt: new Date().toISOString(),
-}));
+app.get('/api/handshake', async () => {
+  const cloud = detectCloudSync(ROOT_DIR);
+  return {
+    csrfToken: CSRF_TOKEN,
+    rootDir: ROOT_DIR,
+    startedAt: new Date().toISOString(),
+    cloudSync: cloud ? { detected: true, provider: cloud.provider } : { detected: false },
+  };
+});
 
 // Guard mutating routes
 app.addHook('onRequest', async (req, reply) => {
@@ -129,6 +134,15 @@ if (!IS_DEV && haveDist) {
 }
 
 await app.listen({ host: HOST, port: PORT });
+
+// Cloud-sync warning surfaced in the server console at startup. The UI also
+// reads /api/handshake -> cloudSync to render an in-browser MessageBar.
+{
+  const cloud = detectCloudSync(ROOT_DIR);
+  if (cloud) {
+    console.log(cloudSyncWarning(cloud.provider, ROOT_DIR));
+  }
+}
 
 const url = `http://${HOST}:${PORT}`;
 console.log('');

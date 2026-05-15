@@ -17,12 +17,20 @@ You'll do everything from inside **VS Code with a coding agent enabled** (GitHub
 
 ### Prerequisites
 
-1. [VS Code](https://code.visualstudio.com/) with a coding-agent extension enabled and signed in
-2. A [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine)
-3. [Node.js 20+](https://nodejs.org/), [Git](https://git-scm.com/), [.NET SDK 8+](https://dotnet.microsoft.com/download), and the [Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction) installed locally
-4. A GitHub account
+You also need a [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine) and a GitHub account. Everything else is a local tool:
 
-> **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy-pasteable commands and verification checks. Takes about 10 minutes.
+| Tool | When & why you need it | Required? |
+|---|---|---|
+| **[VS Code](https://code.visualstudio.com/)** | Hosts the coding agent (GitHub Copilot Chat, Claude Code, Cursor, …) that drives the wizard, planning workflow, schema provisioning, and day‑two edits. The whole UX assumes an agent‑capable editor. | **Required** |
+| **[Git](https://git-scm.com/)** | Clones the template, tracks changes, lets the wizard auto‑commit scaffolded files, and powers the upstream‑sync workflow when new PACAF versions ship. | **Required** |
+| **[GitHub CLI (`gh`)](https://cli.github.com/)** | Convenience only — no PACAF tool invokes `gh` directly. Useful if you prefer creating the repo from the template (`gh repo create --template …`) and managing PRs from the terminal instead of the browser. | Optional |
+| **[Node.js 20+](https://nodejs.org/)** | Runs the wizard (`npx @pacaf/wizard-ux`), the Vite dev server on port 3000, `pnpm build`, and every `pacaf-*` CLI. Also installs `npm` and (via `corepack`) `pnpm`. | **Required** |
+| **[.NET SDK 8+](https://dotnet.microsoft.com/download)** | Sole purpose: the PAC CLI is a .NET global tool. Without .NET you can't run `dotnet tool install -g Microsoft.PowerApps.CLI.Tool`. You never write .NET code in this template. | **Required** |
+| **[Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction)** | The only bridge to Power Platform. Used by the wizard and agent for `pac auth`, `pac solution`, `pac code init`, `pac code add-data-source`, and `pac code push` (the actual deploy). | **Required** |
+| **[Python 3](https://www.python.org/downloads/)** | Powers the [Dataverse‑skills plugin](https://github.com/microsoft/Dataverse-skills) (`dv-connect`, `dv-metadata`, `dv-data`, `dv-solution`, …) that the agent uses to provision tables, import data, and manage solutions. The wizard runs without it, but the agent will hit a wall on the first Dataverse step. | **Required** for the full agent flow |
+| **Python Launcher (`py`)** | **Windows only.** On Windows, `python3` usually resolves to the Microsoft Store stub (which exits non‑zero and prompts to install). The wizard's prereq check falls back to `py -3` via the launcher. You get it automatically when you check **"Add python.exe to PATH"** in the python.org installer. | **Required on Windows** — irrelevant on macOS/Linux |
+
+> **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy‑pasteable commands and verification checks. Takes about 10 minutes.
 
 ### Step 1. Create your repo from this template
 

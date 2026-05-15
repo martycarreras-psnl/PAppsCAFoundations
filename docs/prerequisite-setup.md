@@ -2,6 +2,8 @@
 
 Everything you need to install before running the PACAF wizard for the first time. This takes about 10 minutes on a fresh machine.
 
+> **You need VS Code first.** This whole guide assumes you're running **[VS Code](https://code.visualstudio.com/)** with a coding‑agent extension (GitHub Copilot Chat, Claude Code, Cursor, …) signed in — it's how you talk to the agent that drives the wizard. If you don't have VS Code yet, install it before continuing.
+>
 > **Where to run commands:** Every command in this guide runs inside the **VS Code terminal**. To open it, press `` Ctrl+` `` on Windows or `` ⌃` `` on macOS. You'll see a panel appear at the bottom of VS Code — that's your terminal.
 
 ---
@@ -80,7 +82,7 @@ Git tracks your code changes and lets the wizard commit the scaffolded project f
 git --version
 ```
 
-If you see a version number, move on to [.NET SDK](#3-net-sdk--required-by-the-pac-cli).
+If you see a version number, move on to [GitHub CLI](#3-github-cli--optional-convenience).
 
 ### Install
 
@@ -122,7 +124,60 @@ git config --global user.email "your.email@company.com"
 
 ---
 
-## 3. .NET SDK — required by the PAC CLI
+## 3. GitHub CLI — optional convenience
+
+The GitHub CLI (`gh`) is **optional**. Nothing in PACAF invokes it directly. Install it if you want to create your repo from this template, open PRs, or manage GitHub auth without leaving the terminal. If you'd rather do those things in the browser, skip this section.
+
+### Check
+
+```
+gh --version
+```
+
+If you see a version number, you're set. If not — and you want it — install below. Otherwise move on to [.NET SDK](#4-net-sdk--required-by-the-pac-cli).
+
+### Install
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+```bash
+brew install gh
+```
+
+</details>
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+Using [winget](https://learn.microsoft.com/windows/package-manager/winget/) (built into Windows 10/11):
+
+```powershell
+winget install --id GitHub.cli
+```
+
+Or download the MSI installer from [https://cli.github.com/](https://cli.github.com/) and run it. **Close and reopen your VS Code terminal** after install.
+
+</details>
+
+### One-time auth (optional)
+
+```
+gh auth login
+```
+
+Follow the prompts — pick **GitHub.com**, **HTTPS**, and **Login with a web browser**. This stores credentials so `git push` and `gh` commands stop asking for them.
+
+### Verify
+
+```
+gh --version          # prints gh version 2.x.x
+gh auth status        # confirms you're signed in (only if you ran `gh auth login`)
+```
+
+---
+
+## 4. .NET SDK — required by the PAC CLI
 
 The Power Platform CLI (PAC) is built on .NET. You need the **.NET SDK version 8 or higher** installed before you can install PAC.
 
@@ -165,7 +220,7 @@ dotnet --version   # should print 8.x.x or higher
 
 ---
 
-## 4. PAC CLI — connects to Power Platform
+## 5. PAC CLI — connects to Power Platform
 
 The Power Platform CLI (`pac`) is how your Code App gets registered and deployed to Dataverse. It installs as a .NET global tool — that's why you needed .NET first.
 
@@ -175,7 +230,7 @@ The Power Platform CLI (`pac`) is how your Code App gets registered and deployed
 pac help
 ```
 
-If you see a help screen listing commands like `auth`, `solution`, `code`, move on to [Python](#5-python-3--recommended-for-dataverse-skills).
+If you see a help screen listing commands like `auth`, `solution`, `code`, move on to [Python](#6-python-3--recommended-for-dataverse-skills).
 
 ### Install
 
@@ -203,7 +258,7 @@ pac help   # should show the PAC CLI help screen
 
 ---
 
-## 5. Python 3 — recommended for Dataverse skills
+## 6. Python 3 — recommended for Dataverse skills
 
 Python powers the [Dataverse-skills plugin](https://github.com/microsoft/Dataverse-skills), which teaches your coding agent how to provision Dataverse schema, import data, and manage solutions. The wizard will run without Python, but you'll want it soon after.
 
@@ -248,6 +303,37 @@ brew install python@3
 ```
 python3 --version   # macOS — should print Python 3.x.x
 python --version    # Windows — should print Python 3.x.x
+```
+
+---
+
+## 7. Python Launcher (`py`) — Windows only
+
+**macOS/Linux users: skip this section.** The Python Launcher is a Windows-only shim that lets you run `py -3` regardless of how Python was installed, and it's how the PACAF wizard finds Python on Windows when `python3` resolves to the Microsoft Store stub (a placeholder that exits non-zero and tries to send you to the Store).
+
+If you installed Python from [python.org](https://www.python.org/downloads/) **and** ticked **"Add python.exe to PATH"** during install, the launcher is already there — you don't need to do anything else.
+
+### Check (Windows only)
+
+```powershell
+py --version
+py -3 --version
+```
+
+Both should print `Python 3.x.x`. If you see that, you're done.
+
+### Fix: "py is not recognized" or the Microsoft Store opens
+
+This means either the launcher isn't installed, or the Store stub is intercepting the call.
+
+1. **Reinstall Python from [python.org](https://www.python.org/downloads/)** — during install, expand **Customize installation** and make sure **`py launcher`** and **`Add python.exe to PATH`** are both checked. Choose **Install for all users** if you have admin rights.
+2. **Disable the Store stub** — Settings → **Apps** → **Advanced app settings** → **App execution aliases** → turn **off** the entries for `python.exe` and `python3.exe`.
+3. **Close and reopen your VS Code terminal**, then re-run the check.
+
+### Verify
+
+```powershell
+py -3 --version    # Python 3.x.x
 ```
 
 ---

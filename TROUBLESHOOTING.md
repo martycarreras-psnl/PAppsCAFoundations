@@ -49,6 +49,22 @@ SPN auth still works for `pac solution export/import`, `pac org who`, etc.
 
 ## Authentication & Secrets
 
+### Project lives inside OneDrive / Dropbox / iCloud — DLP alert on `.env.local`
+
+**Symptom:** OneDrive (or another cloud-sync provider) raises a "secret detected" or DLP alert pointing at your project, even though `.env.local` is gitignored and the wizard encrypted the value (the line starts with `PP_CLIENT_SECRET=ENC:...`).
+
+**Cause:** The project is inside a cloud-sync folder (e.g. `~/Library/CloudStorage/OneDrive-…/…`). `.gitignore` does **not** apply to cloud sync — every file in the folder is uploaded. Cloud-sync content scanners pattern-match the line `PP_CLIENT_SECRET=` regardless of whether the value is AES-256-GCM-encrypted, so they fire a DLP alert on file existence.
+
+**Why this is not an actual key leak:** the value is encrypted with a machine-bound AES-256-GCM key — it cannot be decrypted on any other machine, by the cloud provider, or by anyone with the file. The alert is a true positive on the *file pattern*, not on a recoverable secret.
+
+**Fix (recommended order):**
+1. **Move the project out of the cloud-sync folder** (e.g. `~/Code/MyApp`). This is the cleanest fix.
+2. Or **use 1Password storage** (Step 4 in the wizard): the secret never lands on disk.
+3. Or exclude the project folder from cloud-sync at the OS level (OneDrive Settings → Sync and backup → Manage backup; or rename the file to `.env.local.nosync` on macOS).
+4. As a precaution, **rotate the App Registration client secret** in Entra ID since the encrypted blob briefly existed in the cloud-sync provider's content store.
+
+The wizard now detects this scenario at startup and warns you before continuing.
+
 ### App Registration client secret expired — CI/CD silently fails
 
 **Cause:** Azure App Registration secrets expire (default 12 months). There is no automatic warning.

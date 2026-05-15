@@ -76,6 +76,7 @@ export interface SystemInfo {
   pac: string | null;
   op: boolean;
   rootDir: string;
+  cloudSync?: { detected: boolean; provider?: string };
   branch: string | null;
   repoIsClean: boolean;
 }

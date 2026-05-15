@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, platform, release } from 'node:os';
 import { pacPath as resolvePacPath, runSafe } from '@pacaf/wizard/lib/shell.mjs';
+import { detectCloudSync } from '@pacaf/wizard/lib/cloud-sync-detect.mjs';
 
 function safeRun(cmd) {
   try { return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim(); }
@@ -29,15 +30,19 @@ function pacVersion() {
 }
 
 export default async function systemRoutes(app, { rootDir }) {
-  app.get('/', async () => ({
-    os: { platform: platform(), release: release() },
-    node: process.version,
-    git: safeRun('git --version')?.replace('git version ', '') || null,
-    dotnet: safeRun('dotnet --version'),
-    pac: pacVersion(),
-    op: which('op'),
-    rootDir,
-    branch: safeRun(`git -C "${rootDir}" rev-parse --abbrev-ref HEAD`) || null,
-    repoIsClean: safeRun(`git -C "${rootDir}" status --porcelain`) === '',
-  }));
+  app.get('/', async () => {
+    const cloud = detectCloudSync(rootDir);
+    return {
+      os: { platform: platform(), release: release() },
+      node: process.version,
+      git: safeRun('git --version')?.replace('git version ', '') || null,
+      dotnet: safeRun('dotnet --version'),
+      pac: pacVersion(),
+      op: which('op'),
+      rootDir,
+      cloudSync: cloud ? { detected: true, provider: cloud.provider } : { detected: false },
+      branch: safeRun(`git -C "${rootDir}" rev-parse --abbrev-ref HEAD`) || null,
+      repoIsClean: safeRun(`git -C "${rootDir}" status --porcelain`) === '',
+    };
+  });
 }

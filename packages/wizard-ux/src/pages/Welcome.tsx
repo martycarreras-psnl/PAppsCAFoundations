@@ -343,6 +343,18 @@ export function Welcome() {
           </div>
         )}
 
+        {sysQ.data?.cloudSync?.detected && (
+          <MessageBar intent="warning">
+            <MessageBarBody>
+              <MessageBarTitle>Project is inside {sysQ.data.cloudSync.provider}</MessageBarTitle>
+              Cloud-sync providers upload every file in this folder, regardless of <code>.gitignore</code>.
+              They may raise DLP alerts on encrypted secrets in <code>.env.local</code>. We strongly recommend
+              moving the project out of {sysQ.data.cloudSync.provider}, or choosing <strong>1Password</strong> storage in Step 4.
+              See <code>TROUBLESHOOTING.md</code> → "Authentication & Secrets".
+            </MessageBarBody>
+          </MessageBar>
+        )}
+
         {reset.isError && (
           <MessageBar intent="error">
             <MessageBarBody>

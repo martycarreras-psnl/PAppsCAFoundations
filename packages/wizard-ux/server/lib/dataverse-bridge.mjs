@@ -49,3 +49,11 @@ export function hasUsableSecret() {
   if (secretsMod.getSecret()) return true;
   return Boolean(secretsMod.recoverSecret());
 }
+
+export function persistSecretToCache(value) {
+  return secretsMod.persistSecretToCache(value);
+}
+
+export function clearSecretCache() {
+  return secretsMod.clearSecretCache();
+}

@@ -6,7 +6,7 @@ import { platform } from 'node:os';
 import * as ui from '../lib/ui.mjs';
 import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
 import { pacPath, hasCommand, runSafeCapture, runSafeLive } from '../lib/shell.mjs';
-import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
+import { getSecret, recoverSecret, setSecret, persistSecretToCache, clearSecretCache } from '../lib/secrets.mjs';
 import { encrypt } from '../lib/crypto.mjs';
 import {
   buildPacProfileName,
@@ -163,6 +163,20 @@ export default async function stepAuthSetup() {
   let persistedCredentialValues = null;
 
   if (authMode === '1password') {
+    // 1Password mode: ensure no encrypted PP_CLIENT_SECRET lingers in .env.local
+    // (from a previous envlocal run) and remove the out-of-tree secret cache.
+    try {
+      const envLocalPath = join(ROOT, '.env.local');
+      if (existsSync(envLocalPath)) {
+        const original = readFileSync(envLocalPath, 'utf-8');
+        if (/^PP_CLIENT_SECRET=/m.test(original)) {
+          writeFileSync(envLocalPath, original.replace(/^PP_CLIENT_SECRET=.*\r?\n?/m, ''), 'utf-8');
+          ui.ok('Removed PP_CLIENT_SECRET from .env.local (1Password mode)');
+        }
+      }
+    } catch { /* best-effort */ }
+    try { clearSecretCache(); } catch { /* best-effort */ }
+
     // ── 1Password setup ──
     const appName = stateGet('APP_NAME');
     // Use vault/item from Step 03 if already set, otherwise prompt
@@ -226,6 +240,9 @@ export default async function stepAuthSetup() {
     if (platform() !== 'win32') {
       try { chmodSync(join(ROOT, '.env.local'), 0o600); } catch { /* best-effort */ }
     }
+    // Mirror the encrypted secret to the OS-temp cache so a wizard restart
+    // can recover without prompting (and without re-reading .env.local).
+    try { persistSecretToCache(secret); } catch { /* best-effort */ }
     ui.ok('Wrote .env.local (owner-only permissions)');
   }
 
