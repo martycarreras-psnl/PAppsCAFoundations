@@ -14,7 +14,15 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 
-const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
+// In the monorepo this script lives at packages/scripts/. The canonical
+// .github/instructions/ tree lives at the repo root, which is two levels up.
+// Allow PACAF_REPO_ROOT to override for tests / non-standard layouts.
+const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname);
+const ROOT = process.env.PACAF_REPO_ROOT
+  ? resolve(process.env.PACAF_REPO_ROOT)
+  : (existsSync(resolve(SCRIPT_DIR, '..', 'agent-guidance.config.json'))
+      ? resolve(SCRIPT_DIR, '..')
+      : resolve(SCRIPT_DIR, '..', '..'));
 const MANIFEST_PATH = join(ROOT, 'agent-guidance.config.json');
 
 // ── helpers ────────────────────────────────────────────────────────────

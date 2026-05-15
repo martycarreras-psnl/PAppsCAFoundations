@@ -140,11 +140,12 @@ Use:
 
 1. `scripts/schema-plan.example.json` as the starter artifact shape
 2. `pacaf-validate dataverse/planning-payload.json` to validate the plan
-3. `pacaf-generate dataverse/planning-payload.json` to generate normalized execution plans
-4. **Provision schema** — If the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin is installed, use `dv-metadata` to provision tables, columns, relationships, and option sets from the generated plan. The plugin handles idempotency, metadata propagation delays, and error recovery. If the plugin is not installed, use the bash/Web API patterns in `07-dataverse-schema.instructions.md`.
-5. `pacaf-register dataverse/register-datasources.plan.json` — run only after schema is provisioned and published. This generates the TypeScript service layer in `src/generated/`.
+3. **Existing-schema discovery & OOB-first decision** — run `07a-existing-schema-discovery.instructions.md` against the planning payload **before** generating execution plans. For every candidate entity and column, the agent must check whether an OOB Dataverse asset already covers it (e.g. `systemuser`, `contact`, `account`, `team`, `statuscode`) and raise a Pause Moment for any duplication risk. Reused / augmented / custom decisions are recorded back into the planning payload.
+4. `pacaf-generate dataverse/planning-payload.json` to generate normalized execution plans
+5. **Provision schema** — If the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin is installed, use `dv-metadata` to provision tables, columns, relationships, and option sets from the generated plan. The plugin handles idempotency, metadata propagation delays, and error recovery. If the plugin is not installed, use the bash/Web API patterns in `07-dataverse-schema.instructions.md`.
+6. `pacaf-register dataverse/register-datasources.plan.json` — run only after schema is provisioned and published. This generates the TypeScript service layer in `src/generated/`.
 
-For provisioning rules, naming rules, option set rules, and execution order, continue with `07-dataverse-schema.instructions.md`.
+For provisioning rules, naming rules, option set rules, and execution order, continue with `07a-existing-schema-discovery.instructions.md` and then `07-dataverse-schema.instructions.md`.
 
 ## Preferred Handoff Shape
 

@@ -170,6 +170,18 @@
       }
     },
     {
+      "id": "07a-existing-schema-discovery",
+      "canonical": "07a-existing-schema-discovery.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "scripts/**,src/**,solution/**,dataverse/**" },
+      "description": "Read BEFORE proposing or provisioning any new Dataverse table, column, choice, or lookup. Governs OOB-first design — strongly recommends reuse of existing Dataverse entities and platform columns, and forces a Pause Moment when a proposed addition could duplicate something that already exists.",
+      "projections": {
+        "claude": { "file": ".claude/rules/existing-schema-discovery.md", "mode": "summary", "paths": ["scripts/**", "src/**", "solution/**", "dataverse/**"] },
+        "cursor": { "file": ".cursor/rules/07a-existing-schema-discovery.mdc", "globs": "scripts/**,src/**,solution/**,dataverse/**" },
+        "codex": { "file": "scripts/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
       "id": "08-copilot-studio",
       "canonical": "08-copilot-studio.instructions.md",
       "role": "implementation",

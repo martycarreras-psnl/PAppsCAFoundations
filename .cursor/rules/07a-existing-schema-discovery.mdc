@@ -1,0 +1,52 @@
+---
+globs: "scripts/**,src/**,solution/**,dataverse/**"
+alwaysApply: false
+description: "Read BEFORE proposing or provisioning any new Dataverse table, column, choice, or lookup. Strongly recommends reuse of OOB Dataverse entities and platform columns and forces a Pause Moment when a proposed addition could duplicate something that already exists."
+---
+<!-- Generated from .github/instructions/07a-existing-schema-discovery.instructions.md — do not edit directly -->
+# Existing Schema Discovery & OOB-First Design
+
+Gate between planning (`00a → 00d`) and provisioning (`07-dataverse-schema`). Run BEFORE creating any new Dataverse table, column, choice, or lookup.
+
+## Three rules
+1. **OOB-first.** If a Dataverse OOB table or column already represents the concept, propose reuse — not creation.
+2. **Pause on duplication risk.** When a proposed addition resembles an OOB or already-present custom asset, stop and ask the developer before creating anything.
+3. **Developer override is final.** Record the rationale and proceed.
+
+## Always check the OOB matrix first
+- Internal employee / app user → `systemuser` (auto-synced from Entra ID)
+- External person → `contact`
+- Company / supplier / customer organization → `account`
+- Security group of users → `team`
+- Department / cost center → `businessunit`
+- Task → `task` · Note → `annotation` · Queue → `queue` + `queueitem` · Case → `incident`
+- Never recreate `createdon`, `modifiedon`, `createdby`, `modifiedby`, `ownerid`, `owningbusinessunit`, `owningteam`, `owninguser`, `statecode`, `statuscode`, `versionnumber`. Extend `statuscode` before adding a custom status column.
+
+## Pause Moment
+Trigger when proposing:
+- A table whose name resembles an OOB or existing custom table
+- A column whose name resembles a platform column
+- A Lookup to a person/team/org that should target `systemuser` / `contact` / `account` / `team` / `businessunit`
+- A "status" / "stage" / "lifecycle" column that should extend `statuscode`
+- An option set that mirrors an OOB global choice
+- A table that conceptually represents a relationship that native N:N or security teams already solve
+
+Output a `⏸ Pause:` block listing what was asked, the matching OOB asset and its standard columns, the recommended reuse approach (with `pac solution add-reference --component-name <table> --component-type Table` selecting only used columns/views), trade-offs, and three options (reuse / hybrid / override). Wait for explicit confirmation. Do not create while waiting.
+
+## Override recording
+On override, write to `dataverse/planning-payload.json`:
+```jsonc
+{ "oobAlternativeConsidered": "systemuser", "overrideRationale": "...", "overrideApprovedBy": "...", "overrideApprovedAt": "..." }
+```
+`pacaf-validate` reserved-name and reserved-column guards still apply.
+
+## Discovery
+Preferred — Dataverse-skills plugin: `dv-metadata list-tables --include-system`, `dv-metadata describe-table --table systemuser`.
+Fallback — Web API: `GET {env}/api/data/v9.2/EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity`.
+
+## Lookup gotchas
+- `ownerid` polymorphic: `"ownerid@odata.bind": "/systemusers(<guid>)"` or `/teams(<guid>)`. Read via `_ownerid_value`, navigate via `ownerid`.
+- Use OOB `Customer` AttributeType for account-or-contact polymorphism.
+- When adding an OOB table to the solution, select ONLY the columns and views your app uses.
+
+Full details: `.github/instructions/07a-existing-schema-discovery.instructions.md`

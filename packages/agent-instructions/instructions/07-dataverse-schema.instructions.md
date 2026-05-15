@@ -12,7 +12,7 @@ Schema mistakes are the most expensive kind to fix after data has been collected
 
 Dataverse work is not a single step. It is a sequence:
 
-`schema plan artifact -> option sets -> tables -> columns -> relationships -> security role -> publish -> register data sources -> generate SDK`
+`schema plan artifact -> existing-schema discovery -> option sets -> tables -> columns -> relationships -> security role -> publish -> register data sources -> generate SDK`
 
 If the app requirements still exist only as a rough narrative or brainstorming discussion, stop here and complete the upstream planning flow first:
 
@@ -23,6 +23,8 @@ If the app requirements still exist only as a rough narrative or brainstorming d
 This file assumes the business problem has already been decomposed, refined, and translated into a conceptual plan that is ready to become a Dataverse planning artifact.
 
 For non-trivial apps, that planning artifact should also have been pressure-tested by the prototype-validation phase. If the UX has not yet been validated with representative mock data and stakeholder review, strongly consider returning to `00d-prototype-validation.instructions.md` before freezing tables and relationships.
+
+> **Mandatory gate before this file.** Before provisioning anything, the agent must run the existing-schema discovery and OOB-first decision flow in `07a-existing-schema-discovery.instructions.md`. That file is what raises the Pause Moment when a proposed table or column duplicates something Dataverse already provides (e.g. `systemuser`, `contact`, `account`, `team`, `statuscode`). Skipping it produces the single most expensive class of schema mistake — inventing a parallel table for a concept the platform already models.
 
 **Inputs required:**
 - Publisher prefix
