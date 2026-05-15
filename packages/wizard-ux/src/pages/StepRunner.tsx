@@ -486,6 +486,20 @@ export function StepRunner() {
                 </div>
               )}
 
+              {/* Step 7 long-running scaffold notice */}
+              {stepNumber === 7 && isRunning && (
+                <MessageBar intent="info">
+                  <MessageBarBody>
+                    <strong>Scaffolding can take a few minutes.</strong>{' '}
+                    `pac code init` downloads templates, installs npm dependencies, and
+                    initializes the project. Please keep this browser tab open and stay on
+                    your network — closing the tab, sleeping the machine, or dropping VPN /
+                    Wi-Fi mid-run can interrupt the PAC CLI authentication and leave the
+                    scaffold in an incomplete state.
+                  </MessageBarBody>
+                </MessageBar>
+              )}
+
               {/* Inline live output — only shown when a run is active or has output */}
               {canRun && (stream.status === 'running' || stream.lines.length > 0) && (
                 <div className={s.inlineLog}>
