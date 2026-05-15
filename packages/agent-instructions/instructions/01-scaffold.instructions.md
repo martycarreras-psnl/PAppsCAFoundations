@@ -247,9 +247,10 @@ pac code init
 npm run dev:local
 
 # 10. When the planning payload is stable and you are ready to bind real data,
-#     re-run the wizard from the connector step so it can create connection
+#     re-run the Wizard UX from the connector step so it can create connection
 #     references and help discover existing connections.
-node wizard/index.mjs --from 8
+npx @pacaf/wizard-ux@latest --from 8
+#     (headless/SSH only: npx @pacaf/wizard@latest --from 8)
 
 # 11. Confirm the connector registration produced or refreshed src/generated/**
 #     If a table or connector is missing, re-run pac code add-data-source for it.

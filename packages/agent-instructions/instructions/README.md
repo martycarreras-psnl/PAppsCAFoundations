@@ -10,10 +10,11 @@ They are a reference set, not a tutorial.
 
 If you are a human opening this folder for the first time, do this instead:
 
-1. Go back to [../../README.md](../../README.md) and run the wizard (`cd wizard && node index.mjs`)
-2. If you want a visual walkthrough, open [../../docs/guide.html](../../docs/guide.html)
-3. If you want the end-to-end methodology, read [../../docs/prototype-golden-path.md](../../docs/prototype-golden-path.md)
-4. If a term is unfamiliar, check [../../docs/glossary.md](../../docs/glossary.md)
+1. Go back to [../../README.md](../../README.md) and run the wizard (`npx @pacaf/wizard-ux@latest`)
+2. If this is a fresh machine, follow the [Prerequisite Setup Guide](../../docs/prerequisite-setup.md) first
+3. If you want a visual walkthrough, open [../../docs/guide.html](../../docs/guide.html)
+4. If you want the end-to-end methodology, read [../../docs/prototype-golden-path.md](../../docs/prototype-golden-path.md)
+5. If a term is unfamiliar, check [../../docs/glossary.md](../../docs/glossary.md)
 
 Trying to read all 14 instruction files front-to-back will not make you productive faster. It will slow you down. Copilot is the intended audience.
 
@@ -58,6 +59,7 @@ Loaded via rich `description` fields during planning conversations, before any c
 | [02-connectors.instructions.md](02-connectors.instructions.md) | `src/generated/**`, `src/hooks/**`, `src/services/**` |
 | [03-components.instructions.md](03-components.instructions.md) | `src/components/**`, `src/pages/**`, `src/App.tsx` |
 | [06-security.instructions.md](06-security.instructions.md) | `src/**` |
+| [07a-existing-schema-discovery.instructions.md](07a-existing-schema-discovery.instructions.md) | `scripts/**`, `src/**`, `solution/**`, `dataverse/**` — OOB-first decision flow and Pause Moments before any schema is created |
 | [07-dataverse-schema.instructions.md](07-dataverse-schema.instructions.md) | `scripts/**`, `src/**`, `solution/**` |
 | [08-copilot-studio.instructions.md](08-copilot-studio.instructions.md) | `src/**`, `src/hooks/**`, `src/components/**`, `src/services/**` |
 | [09-form-field-pattern.instructions.md](09-form-field-pattern.instructions.md) | `src/**` — metadata-backed required indicator for every editable Dataverse field |

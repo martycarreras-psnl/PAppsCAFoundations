@@ -48,15 +48,21 @@ For a non-trivial app, also read [docs/prototype-golden-path.md](docs/prototype-
 
 ## Mandatory Starting Move For A Fresh Clone
 
-If the repository has no `src/`, no `power.config.json`, and no `package.json` at the root, the user has not yet run the setup wizard. Before generating any application code, direct them to run:
+If the repository has no `src/`, no `power.config.json`, and no `package.json` at the root, the user has not yet run the setup wizard. Before generating any application code, direct them to run the **browser-based Wizard UX**:
 
 ```bash
-cd wizard
-npm install
-node index.mjs
+npx @pacaf/wizard-ux@latest
 ```
 
-Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, auth profile, `pac code init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
+This opens a guided UI at `http://127.0.0.1:5174` in the browser. It is the default and preferred experience for all users — no flags, no extra arguments needed.
+
+**Only fall back to the CLI wizard if the environment is headless or SSH-only** (no browser available):
+
+```bash
+npx @pacaf/wizard@latest
+```
+
+Do not suggest the CLI wizard unless the user explicitly asks for it or confirms they cannot open a browser. Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, auth profile, `pac code init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
 
 ## Architectural Rules That Must Never Be Violated
 
