@@ -8,6 +8,18 @@
   },
   "instructions": [
     {
+      "id": "00-prereq-gate",
+      "canonical": "00-prereq-gate.instructions.md",
+      "role": "setup",
+      "scope": { "applyTo": "**" },
+      "description": "Loaded first on every interaction. Forces the agent to verify Node.js, npm, Git, .NET SDK, PAC CLI, and Python / py launcher are installed before running any wizard or tool that depends on them. On a fresh machine the agent must STOP, surface the missing items with installer links, and refuse to brute-force around missing prerequisites.",
+      "projections": {
+        "claude": { "file": ".claude/rules/prereq-gate.md", "mode": "summary", "paths": ["**"] },
+        "cursor": { "file": ".cursor/rules/00-prereq-gate.mdc", "globs": "**", "alwaysApply": true },
+        "codex": null
+      }
+    },
+    {
       "id": "00-before-you-start",
       "canonical": "00-before-you-start.instructions.md",
       "role": "setup",

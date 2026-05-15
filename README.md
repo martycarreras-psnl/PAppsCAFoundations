@@ -15,6 +15,30 @@ This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com
 
 You'll do everything from inside **VS Code with a coding agent enabled** (GitHub Copilot Chat in Agent mode, Claude Code, Cursor, or similar). The agent reads the guidance shipped by `@pacaf/agent-instructions` and drives the wizard, the deploy, and day-two changes for you.
 
+> ### 🛑 Brand-new machine? Do this first — the agent cannot.
+>
+> The wizard runs via `npx`, which means **Node.js must already be installed**. Likewise, the agent cannot install the .NET SDK, the PAC CLI, Python, or Git for you — those need installers with admin rights and PATH changes that no terminal command in a coding-agent session can reliably do, especially on Windows.
+>
+> **If this is a fresh laptop, follow [docs/prerequisite-setup.md](docs/prerequisite-setup.md) first.** It takes about 10 minutes. Then come back here.
+>
+> A 30‑second self-test you can paste into the VS Code terminal **before** asking your agent to run the wizard:
+>
+> ```bash
+> node --version && npm --version && git --version && dotnet --version && pac help
+> ```
+>
+> On **Windows**, also run `py -V`. On **macOS / Linux**, also run `python3 --version`.
+>
+> If any of those print *"command not found"* / *"is not recognized"* / opens the Microsoft Store, **do not ask the agent to run the wizard yet** — open [the prerequisite guide](docs/prerequisite-setup.md) and install the missing piece. Close and reopen the VS Code terminal after each install so the new PATH takes effect.
+>
+> **Common Windows gotchas** that look like PACAF bugs but are not:
+> - `python3` opens the Microsoft Store → test with `py -V` instead.
+> - VS Code terminal defaults to `cmd.exe`, not PowerShell → Command Palette → **Terminal: Select Default Profile** → **PowerShell**.
+> - `pac help` fails right after `dotnet tool install` → close and reopen the terminal; it's a PATH refresh, not a reinstall.
+> - `npx` returns exit code 9009 → Node.js is missing or the terminal needs restarting.
+>
+> If you skip this step and ask the agent to "just run the wizard", the wizard will fail with a cryptic error that looks like a bug. It isn't — the prerequisites are missing. Your agent is also instructed (via [`.github/instructions/00-prereq-gate.instructions.md`](.github/instructions/00-prereq-gate.instructions.md)) to detect this and stop with a clear list of what to install, but the cleanest experience is to do the precheck yourself first.
+
 ### Prerequisites
 
 You also need a [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine) and a GitHub account. Everything else is a local tool:

@@ -1,0 +1,57 @@
+---
+globs: "**"
+alwaysApply: true
+description: "Loaded on every interaction. Gates the agent on real prerequisite verification (Node.js, npm, Git, .NET SDK, PAC CLI, Python / py launcher) before any wizard/scaffold attempt. If anything is missing, stop and tell the user clearly — agents cannot install these for the user."
+---
+<!-- Generated from .github/instructions/00-prereq-gate.instructions.md — do not edit directly -->
+# Prerequisite Gate — Stop Before You Help
+
+Before running `npx @pacaf/wizard-ux@latest`, `pac` commands, `dotnet tool install`, or any tool that depends on Node.js/.NET/Python, **verify the user has the prerequisites installed**.
+
+## When to gate
+- Fresh repo (no `package.json`, no `src/`, no `power.config.json`)
+- User says "set up", "run the wizard", "get me started", "new machine"
+- A command in this session failed with `command not found` / `is not recognized` / `npx: command not found` / `pac: command not found`
+
+## The check (one at a time, no `&&`)
+```bash
+node --version
+npm --version
+git --version
+dotnet --version
+pac help
+```
+Windows: `py -V`. macOS/Linux: `python3 --version`.
+
+## If anything fails — STOP
+
+Output:
+```
+🛑 Prerequisite missing — only you can install this
+
+  ❌ <Tool> — <why needed>
+       Install: <official link>
+       Verify:  <command>
+
+✅ Already installed: <passing tools>
+
+Why I can't do this for you: installer/admin/PATH — close and reopen the
+VS Code terminal after install, then say "ready" and I'll re-check.
+
+Full guide: docs/prerequisite-setup.md
+```
+Then stop. Do not auto-`winget`/`brew`/`choco`/`apt` — those have their own elevation, proxy, and SSL-inspection failure modes you will end up debugging.
+
+## Windows gotchas
+- `python3` → Microsoft Store stub. Test with `py -V`.
+- VS Code default terminal often `cmd.exe`. Command Palette → **Terminal: Select Default Profile** → **PowerShell**.
+- `pac` lives in `%USERPROFILE%\.dotnet\tools` — restart terminal after `dotnet tool install`.
+- `npx` exit code 9009 = Node missing or terminal not restarted.
+- Corporate SSL inspection → cert errors on `npm`/`dotnet`/`pip`. Diagnose, do not retry.
+- OneDrive Files On-Demand → permission errors. Recommend "Always keep on this device" or move repo.
+
+## macOS gotchas
+- First `git --version` triggers Xcode CLT GUI installer (user-only).
+- Homebrew on Apple Silicon = `/opt/homebrew`; Intel = `/usr/local`. Must `eval "$(/opt/homebrew/bin/brew shellenv)"`.
+
+Full details: `.github/instructions/00-prereq-gate.instructions.md`
