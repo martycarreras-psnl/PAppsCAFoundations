@@ -1,5 +1,5 @@
 ---
-applyTo: "packages/**,.changeset/**,.github/workflows/release.yml"
+applyTo: "packages/**,.changeset/**,.github/workflows/release.yml,.github/instructions/**,.claude/rules/**,.cursor/rules/**,agent-guidance.config.json,AGENTS.md,CLAUDE.md,.github/copilot-instructions.md"
 ---
 
 # Publishing Discipline — Every Fix Must Ship
@@ -89,6 +89,101 @@ If a user reports (as in #19) that a fix is in `main` but not on npm, the recove
 4. Merge the release PR. Verify on npm. Comment back on the issue.
 
 Never publish manually from a developer machine. The workflow is the only authorized publisher because it pins the pnpm version, validates the lockfile, and uses repo-scoped npm credentials.
+
+## Editing Agent Instructions Is Also Publishing
+
+The `.github/instructions/`, `.claude/rules/`, `.cursor/rules/` trees at the **repo root** are not just developer documentation — they are the **payload of the `@pacaf/agent-instructions` npm package**. Every fork of this template, and every new repo scaffolded by `@pacaf/wizard` / `@pacaf/wizard-ux`, installs those files via `pacaf-instructions sync`. If you edit them and don't follow the steps below, the wider PACAF user base will not get the change.
+
+This applies whenever you create, modify, or delete any of:
+
+- `.github/instructions/*.instructions.md` (canonical Copilot instructions)
+- `.claude/rules/*.md` (Claude Code projections)
+- `.cursor/rules/*.mdc` (Cursor projections)
+- `.github/copilot-instructions.md`
+- Top-level `AGENTS.md` or `CLAUDE.md`
+- `agent-guidance.config.json` (the projection manifest)
+
+### The complete agent-instructions publishing flow
+
+```bash
+# 1. Edit the canonical file(s) at the repo root.
+#    .github/instructions/<NN>-<topic>.instructions.md is the source of truth.
+
+# 2. If you ADDED a brand-new instruction file, also add a manifest entry to
+#    agent-guidance.config.json and (in the same change) author the matching
+#    projection files at:
+#      .claude/rules/<slug>.md         (with paths: frontmatter)
+#      .cursor/rules/<NN>-<slug>.mdc   (with globs frontmatter)
+#    Both projections must include the marker:
+#      <!-- Generated from .github/instructions/<file>.instructions.md — do not edit directly -->
+
+# 3. Verify the projection set is complete and marked.
+node packages/scripts/generate-agent-guidance.mjs --check
+#    Ignore "MISSING" lines for nested AGENTS.md files that only exist in
+#    derived repos (e.g. scripts/AGENTS.md, src/AGENTS.md). They are expected
+#    to be missing in the template.
+
+# 4. Sync the canonical sources into the npm package payload.
+#    Without this, the published @pacaf/agent-instructions tarball will not
+#    contain your change and downstream `pacaf-instructions sync` users will
+#    not receive it.
+node packages/agent-instructions/scripts/sync-from-root.mjs
+
+# 5. Add a changeset that bumps @pacaf/agent-instructions:
+#      minor — new instruction file or significant behavior change
+#      patch — wording, typo, or small clarification
+cat > .changeset/agent-instructions-<short-slug>.md <<'EOF'
+---
+"@pacaf/agent-instructions": minor
+---
+
+One-paragraph user-facing summary of what changed and why downstream
+agents should care. Reference any issue with #NNN.
+EOF
+
+# 6. Commit canonical + projections + manifest + package payload mirror +
+#    changeset together so the change is atomic.
+git add .github/instructions/ .claude/rules/ .cursor/rules/ \
+        agent-guidance.config.json \
+        packages/agent-instructions/ \
+        .changeset/agent-instructions-<short-slug>.md
+git commit -m "feat(instructions): <short title>\n\n<body>"
+git push origin main
+
+# 7. The Release workflow opens a "chore(release): version packages" PR.
+#    Merge it. A second workflow run publishes @pacaf/agent-instructions
+#    (and any transitive bumps to @pacaf/wizard / @pacaf/wizard-ux) to npm.
+
+# 8. Verify.
+npm view @pacaf/agent-instructions version
+```
+
+### Mandatory checks before pushing
+
+- The new instruction file exists at **both** `.github/instructions/<file>` (canonical) **and** `packages/agent-instructions/instructions/<file>` (mirror produced by step 4).
+- If a new file was added, `agent-guidance.config.json` has a matching `instructions[]` entry with `projections.claude`, `projections.cursor`, and (where relevant) `projections.codex`.
+- The Claude projection has a `paths:` YAML frontmatter and the Cursor projection has a `globs:` YAML frontmatter.
+- Both projections contain the line `<!-- Generated from .github/instructions/<file> — do not edit directly -->`.
+- A changeset exists with the right bump type and a user-facing summary.
+- `node packages/scripts/generate-agent-guidance.mjs --check` returns exit 0 for every file other than the template-only nested `AGENTS.md` files.
+
+### How downstream actually picks up the change
+
+| Audience | Pickup mechanism | Action required |
+|---|---|---|
+| Fresh repos via `npx @pacaf/wizard-ux@latest` | The wizard installs `@pacaf/agent-instructions@latest` automatically | None — they get it on first scaffold |
+| Existing forks of this template | `pacaf-instructions sync` from the published package | Maintainer runs `npx @pacaf/agent-instructions pacaf-instructions sync` |
+| This template repo itself | The canonical files at `.github/instructions/` are already the source of truth | None — you just edited them |
+| Cloned but not-yet-scaffolded forks | Pulling from upstream | `git pull upstream main` |
+
+A `.foundations-version.json` stamp in each consumer repo records which `@pacaf/agent-instructions` version is installed. `pacaf-instructions check` reports drift.
+
+### What NOT to do
+
+- Do **not** edit files under `packages/agent-instructions/instructions/`, `packages/agent-instructions/claude/`, or `packages/agent-instructions/cursor/` directly. They are **overwritten** by `sync-from-root.mjs`. Always edit at the repo root.
+- Do **not** edit `.claude/rules/<file>.md` or `.cursor/rules/<file>.mdc` as your primary source — they are projections of `.github/instructions/`. If you want different content in them, the canonical file is still the source of truth for what the rule means; the projections may be shorter summaries linking back to the canonical.
+- Do **not** skip the changeset on the assumption that "it's just documentation." Anything inside `.github/instructions/`, `.claude/rules/`, `.cursor/rules/`, or `agent-guidance.config.json` is **shipped behavior** for every consumer.
+- Do **not** publish manually. Always go through the changeset PR.
 
 ## Why This Rule Exists
 
