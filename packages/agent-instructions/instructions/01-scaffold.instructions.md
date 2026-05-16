@@ -516,6 +516,32 @@ Deployed routes look like `…/app/<id>/#/episode/<id>` — exactly what works i
 
 This rule is non-negotiable and enforced at build time. `npm run build` runs `pacaf-patch-datasources` as a `prebuild` hook, which fails loudly if `src/main.tsx` or `src/router.tsx` still references `BrowserRouter` / `createBrowserRouter`. Symptom that triggers this guard: a deployed app that 404s on first load — see issue #47.
 
+### Tailwind v4 + CSS import — required scaffold
+
+A freshly-scaffolded Code App renders **completely unstyled** on first run if either of these two pieces is missing — the CSS pipeline silently produces an empty stylesheet, JS runs, React mounts, the DOM is correct, but every element is unstyled and the dev server prints no warning. Both pieces ship in the wizard scaffold; never remove them.
+
+1. **`src/main.tsx` must import `./index.css`.** Vite has no reason to include the stylesheet in the bundle unless something imports it. The wizard emits the import on the line immediately above `createRoot(...)`.
+
+   ```typescript
+   import './index.css';
+   ```
+
+2. **`vite.config.ts` must register the `@tailwindcss/vite` plugin.** Tailwind v4 requires the dedicated Vite plugin — the `@import "tailwindcss"` directive in `src/index.css` is processed *only* when that plugin is in the pipeline. Without it, the directive is treated as a literal CSS `@import` that resolves to nothing and is silently dropped.
+
+   ```typescript
+   import tailwindcss from '@tailwindcss/vite';
+   // ...
+   plugins: [react(), tailwindcss()],
+   ```
+
+3. **`src/index.css` must contain the Tailwind v4 entrypoint:**
+
+   ```css
+   @import "tailwindcss";
+   ```
+
+The scaffold's `package.json` declares both `tailwindcss` and `@tailwindcss/vite` as `devDependencies` — the Vite plugin is a hard requirement, not an option. If `npm run dev` produces a page where Fluent UI's chrome and every utility class are missing, the diagnosis is almost certainly one of these three pieces. See issue #48 and `TROUBLESHOOTING.md` keyed off "My app renders but everything is unstyled".
+
 ### Switching Between Modes
 
 | Phase | Command | What's Running | Data Source |

@@ -189,6 +189,44 @@ Current scaffold includes this automatically.
 
 Rebuild and `pac code push`. Routes now resolve as `…/play/e/<env>/app/<app>/#/<route>` and the deployed app stops 404-ing. The current scaffold uses `HashRouter` automatically, and `npm run build` fails loudly if `main.tsx` / `router.tsx` is still importing `BrowserRouter` / `createBrowserRouter` (see `packages/scripts/patch-datasources-info.mjs` and issue #47).
 
+### My app renders but everything is unstyled / no Fluent UI styling / no Tailwind classes work
+
+**Symptom:** `npm run dev` succeeds, the browser opens at `http://localhost:3000`, JS runs and React mounts, the DOM is correct — but the page looks like a 1995 browser: no Fluent UI chrome, no fonts, no colors, no Tailwind utility classes. No build error, no runtime error, no warning in the dev server log.
+
+**Cause:** Two independent scaffold defects, both silent (issue #48). Tailwind v4 split the PostCSS plugin in two — without **both** of the following, `@import "tailwindcss"` in `src/index.css` is treated as a literal CSS import and resolves to nothing:
+
+1. `src/main.tsx` does not import `./index.css` — Vite has no reason to include the stylesheet in the bundle, so it doesn't.
+2. `vite.config.ts` does not register the `@tailwindcss/vite` plugin — without it, the `@import "tailwindcss"` directive is dropped silently.
+
+A scaffold from a stale wizard can ship missing either or both pieces. Fixing only one of them produces the same broken result.
+
+**Fix — `src/main.tsx`:**
+```diff
+  import { HashRouter } from 'react-router-dom';
+  import { App } from './App';
++ import './index.css';
+```
+
+**Fix — `vite.config.ts`:**
+```diff
+  import { defineConfig } from 'vite';
+  import react from '@vitejs/plugin-react';
++ import tailwindcss from '@tailwindcss/vite';
+  import path from 'path';
+
+  export default defineConfig(({ command }) => ({
+    base: command === 'build' ? './' : '/',
+-   plugins: [react()],
++   plugins: [react(), tailwindcss()],
+```
+
+If `src/index.css` is missing, also create it with the Tailwind v4 entrypoint:
+```css
+@import "tailwindcss";
+```
+
+Make sure `package.json` lists both `tailwindcss` and `@tailwindcss/vite` in `devDependencies` (the current wizard scaffold adds both automatically). After the edits, Vite hot-reloads and the app paints with full Fluent UI + Tailwind styling.
+
 ---
 
 ## Wizard
