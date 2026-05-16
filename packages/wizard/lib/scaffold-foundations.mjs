@@ -29,6 +29,14 @@ export function buildRequiredDevPackages(config = loadPacafConfig()) {
     '@types/react-dom': '^18.3.1',
     vite: '^5.4.0',
     '@vitejs/plugin-react': '^4.3.0',
+    // Tailwind v4 split the PostCSS plugin in two: `tailwindcss` is the core,
+    // and `@tailwindcss/vite` is the Vite plugin that wires `@import "tailwindcss"`
+    // into the build. Both are required — without the Vite plugin, the
+    // `@import` directive in `src/index.css` is treated as a literal CSS
+    // `@import` and silently produces an empty stylesheet. See issue #48 and
+    // `.github/instructions/01-scaffold.instructions.md`.
+    tailwindcss: '^4.0.0',
+    '@tailwindcss/vite': '^4.0.0',
     vitest: '^2.1.0',
     '@testing-library/react': '^16.1.0',
     jsdom: '^25.0.0',
@@ -184,18 +192,23 @@ export function writeConfig(dir, logger = noopLogger) {
   logger.line('Writing vite.config.ts...');
   writeFileSync(join(dir, 'vite.config.ts'), `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? './' : '/',
-  plugins: [react()],
+  // The Tailwind v4 Vite plugin is REQUIRED — without it, the
+  // \`@import "tailwindcss"\` directive in src/index.css is treated as a
+  // literal CSS @import and silently produces an empty stylesheet. The app
+  // will render but every element will be unstyled. See issue #48.
+  plugins: [react(), tailwindcss()],
   server: { port: 3000 },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
 }));
 `);
-  logger.ok('vite.config.ts (port 3000)');
+  logger.ok('vite.config.ts (port 3000, Tailwind v4 plugin registered)');
 
   logger.line('Writing vitest.config.ts...');
   writeFileSync(join(dir, 'vitest.config.ts'), `import { defineConfig } from 'vitest/config';
@@ -325,6 +338,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // .github/instructions/01-scaffold.instructions.md.
 import { HashRouter } from 'react-router-dom';
 import { App } from './App';
+// Required: imports the Tailwind v4 stylesheet so the CSS pipeline emits a
+// non-empty chunk. Without this line the app renders but every element is
+// unstyled. See issue #48 and .github/instructions/01-scaffold.instructions.md.
+import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -345,6 +362,16 @@ createRoot(document.getElementById('root')!).render(
 );
 `);
   logger.ok('src/main.tsx');
+
+  // src/index.css — Tailwind v4 entrypoint. The @tailwindcss/vite plugin
+  // (registered in vite.config.ts) processes this @import at build time
+  // and emits the actual utility classes. Without the plugin the @import
+  // is treated as a literal CSS @import and resolves to nothing — see #48.
+  const indexCssPath = join(dir, 'src', 'index.css');
+  if (!existsSync(indexCssPath)) {
+    writeFileSync(indexCssPath, `@import "tailwindcss";\n`);
+    logger.ok('src/index.css');
+  }
 
   writeFileSync(join(dir, 'src', 'prototypeManifest.ts'), `export const prototypeManifest = {
   generatedFrom: 'dataverse/planning-payload.json',
