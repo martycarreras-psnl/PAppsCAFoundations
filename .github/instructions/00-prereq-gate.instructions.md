@@ -49,7 +49,41 @@ For each command that fails or returns a Microsoft Store stub (Windows `python3`
 
 Proceed normally. The user is set up. Move on to the wizard or whichever step they asked for. Do not lecture them about prerequisites they already have.
 
-## Step 3 — If anything fails
+## Step 2.5 — Before declaring a tool missing, probe its canonical install path
+
+Many "command not found" reports are actually **`PATH` problems, not install problems**. The classic case on macOS/Linux is a `PATH` entry containing a literal unexpanded tilde (e.g. `~/.dotnet/tools` instead of `$HOME/.dotnet/tools` or `/Users/<me>/.dotnet/tools`). Neither zsh nor bash tilde-expand inside `PATH` — the entry must use `$HOME` or an absolute path. The binary exists, runs fine when called with its absolute path, and the agent still concludes it is "missing" if it only trusts `which`.
+
+**Before** rendering the "🛑 Prerequisite missing" stop block in Step 3, for every tool that failed the precheck in Step 1, probe its canonical install path. If the binary is present and runs from its absolute path, switch the diagnosis from **missing tool** to **broken PATH** and emit the PATH-fix block in Step 3a instead.
+
+### Canonical install paths to probe (when `which <tool>` fails)
+
+| Tool | macOS / Linux | Windows |
+|---|---|---|
+| `pac` | `$HOME/.dotnet/tools/pac` | `%USERPROFILE%\.dotnet\tools\pac.exe` |
+| `dotnet` | `/usr/local/share/dotnet/dotnet`, `$HOME/.dotnet/dotnet` | `%ProgramFiles%\dotnet\dotnet.exe` |
+| `node` | `/usr/local/bin/node`, `/opt/homebrew/bin/node`, `$HOME/.nvm/versions/node/*/bin/node` | `%ProgramFiles%\nodejs\node.exe` |
+| `python3` | `/usr/local/bin/python3`, `/opt/homebrew/bin/python3` | (use `py -V` instead) |
+| `git` | `/usr/bin/git`, `/usr/local/bin/git`, `/opt/homebrew/bin/git` | `%ProgramFiles%\Git\cmd\git.exe` |
+
+### Diagnostic checks to run
+
+```bash
+# macOS / Linux — pac example
+[ -x "$HOME/.dotnet/tools/pac" ] && "$HOME/.dotnet/tools/pac" --version
+echo "$PATH" | tr ':' '\n' | grep -n '^~' && echo "⚠️  PATH contains literal ~ — these entries are broken in zsh/bash"
+echo "$PATH" | tr ':' '\n' | grep -F "$HOME/.dotnet/tools" || echo "ℹ️  \$HOME/.dotnet/tools is not on PATH"
+```
+
+```powershell
+# Windows — pac example
+$pac = "$env:USERPROFILE\.dotnet\tools\pac.exe"
+if (Test-Path $pac) { & $pac --version }
+$env:Path -split ';' | Where-Object { $_ -like "*\.dotnet\tools*" }
+```
+
+If the binary runs from its absolute path **and** `which`/`Get-Command` cannot find it, you have a broken `PATH`, not a missing tool. Skip Step 3 (which would recommend reinstalling) and go to Step 3a.
+
+## Step 3 — If a tool is genuinely missing
 
 **Stop. Do not run `npx @pacaf/wizard-ux@latest` or any other tool.** Output a single, structured block that the user can act on without back‑and‑forth. Use this exact format:
 
@@ -79,6 +113,39 @@ Full guide with copy-paste commands for each OS:
 
 Then **stop**. Do not try to install anything. Do not suggest `winget`, `brew`, `choco`, or `apt` as a one-liner unless the user explicitly asks — those have their own prerequisites and failure modes, and on a corporate Windows laptop `winget install` often fails with elevation or repository errors that the user then asks you to debug. The single source of truth for install instructions is [`docs/prerequisite-setup.md`](../../docs/prerequisite-setup.md); link to it and stop.
 
+## Step 3a — If a tool is installed but not on `PATH`
+
+When Step 2.5 finds the binary at its canonical install path and `which`/`Get-Command` still fails, **do not** tell the user to reinstall. Output a different stop block:
+
+```
+🛑 <Tool> installed but not on PATH
+
+<Tool> exists at <canonical path> but the shell cannot find it. This is almost
+always a PATH problem, not an install problem.
+
+Most common cause on macOS/Linux: a PATH entry that contains a literal
+unexpanded `~` (for example `~/.dotnet/tools`). zsh and bash do NOT
+tilde-expand inside PATH — every entry must use `$HOME` or an absolute path.
+
+One-line fix for the most common case (PAC CLI):
+
+  # zsh (macOS default)
+  echo 'export PATH="$HOME/.dotnet/tools:$PATH"' >> ~/.zshrc && exec zsh
+
+  # bash
+  echo 'export PATH="$HOME/.dotnet/tools:$PATH"' >> ~/.bash_profile && exec bash
+
+  # PowerShell (Windows)
+  [Environment]::SetEnvironmentVariable(
+    'Path', "$env:Path;$env:USERPROFILE\.dotnet\tools", 'User')
+  # Then close and reopen the terminal.
+
+After applying the fix, close and reopen the VS Code terminal so the new PATH
+takes effect, then say "ready" and I'll re-run the precheck.
+```
+
+Then **stop**. Do **not** advise the user to run `dotnet tool install`, `npm install -g`, or any other re-install. Re-installing on top of a broken `PATH` produces two copies of the same tool and a longer support thread.
+
 ## Step 4 — Common Windows gotchas you must surface
 
 On Windows, the following situations are mistaken for PACAF bugs almost weekly. When the user is on Windows, name them up front instead of letting them surprise the user later:
@@ -95,6 +162,11 @@ On Windows, the following situations are mistaken for PACAF bugs almost weekly. 
 1. **`xcode-select` not installed.** First `git --version` on a fresh Mac triggers the Xcode Command Line Tools installer. That's a GUI prompt only the user can accept — do not try to script it.
 2. **Homebrew on Apple Silicon vs Intel.** On Apple Silicon, Homebrew installs to `/opt/homebrew`; on Intel, to `/usr/local`. After install, the user must run `eval "$(/opt/homebrew/bin/brew shellenv)"` (or the equivalent for Intel) and add it to their shell rc. Until they do, `brew` works only in the install window's terminal.
 3. **`python3` on macOS without Xcode CLT.** Same trigger as #1 — the first `python3` invocation prompts the GUI installer.
+4. **`PATH` entries with literal `~` are silently broken in zsh/bash.** A `PATH` segment of `~/.dotnet/tools` (typed by an installer, an old shell rc, or a GUI tool) is *not* tilde-expanded by zsh or bash — `which pac` will fail even though `~/.dotnet/tools/pac` exists. Always use `$HOME/.dotnet/tools` or a fully-expanded absolute path. Detect with:
+   ```bash
+   echo "$PATH" | tr ':' '\n' | grep -n '^~' && echo "⚠️  PATH contains literal ~ — these entries are broken"
+   ```
+   This is what Step 2.5 / Step 3a is designed to catch — do not skip those steps on macOS.
 
 ## Step 6 — When the user comes back
 

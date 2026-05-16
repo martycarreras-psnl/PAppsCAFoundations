@@ -23,7 +23,39 @@ pac help
 ```
 On Windows also: `py -V`. On macOS/Linux: `python3 --version`.
 
-## If anything fails — STOP
+## Before declaring a tool missing — probe the canonical install path
+
+Many "command not found" reports are actually **PATH problems, not install problems**. The classic case on macOS/Linux is a `PATH` entry that contains a literal unexpanded `~` (e.g. `~/.dotnet/tools`). zsh and bash do not tilde-expand inside `PATH`, so `which pac` fails even though the binary exists at `$HOME/.dotnet/tools/pac`.
+
+For every tool that fails the precheck, **before** firing the missing-tool stop block, test the canonical install path directly:
+
+| Tool | macOS / Linux canonical path | Windows canonical path |
+|---|---|---|
+| `pac` | `$HOME/.dotnet/tools/pac` | `%USERPROFILE%\.dotnet\tools\pac.exe` |
+| `dotnet` | `/usr/local/share/dotnet/dotnet`, `$HOME/.dotnet/dotnet` | `%ProgramFiles%\dotnet\dotnet.exe` |
+| `node` | `/usr/local/bin/node`, `/opt/homebrew/bin/node` | `%ProgramFiles%\nodejs\node.exe` |
+| `git` | `/usr/bin/git`, `/usr/local/bin/git`, `/opt/homebrew/bin/git` | `%ProgramFiles%\Git\cmd\git.exe` |
+
+If the binary runs from the absolute path but `which`/`Get-Command` cannot find it, you have a **broken PATH**, not a **missing tool**. Output the PATH-fix stop block below instead of the install-missing one — do **not** advise reinstalling.
+
+```
+🛑 <Tool> installed but not on PATH
+
+<Tool> exists at <canonical path> but the shell cannot find it.
+
+Most common cause on macOS/Linux: a PATH entry containing a literal `~`.
+zsh and bash do NOT tilde-expand inside PATH — entries must use `$HOME`
+or an absolute path.
+
+  # zsh (macOS default)
+  echo 'export PATH="$HOME/.dotnet/tools:$PATH"' >> ~/.zshrc && exec zsh
+
+  # PowerShell (Windows)
+  [Environment]::SetEnvironmentVariable(
+    'Path', "$env:Path;$env:USERPROFILE\.dotnet\tools", 'User')
+```
+
+## If a tool is genuinely missing — STOP
 
 You cannot install Node.js, .NET SDK, PowerShell, Python, the PAC CLI, or Git for the user. Output a single structured block:
 
@@ -56,6 +88,7 @@ Then **stop**. Do not suggest `winget`, `brew`, `choco`, or `apt` one-liners unl
 ## macOS gotchas
 - First `git --version` triggers the Xcode Command Line Tools GUI installer — user-only.
 - Homebrew on Apple Silicon = `/opt/homebrew`; on Intel = `/usr/local`. Must `eval "$(/opt/homebrew/bin/brew shellenv)"` and add to shell rc.
+- **`PATH` entries with literal `~` are silently broken in zsh/bash.** `~/.dotnet/tools` is not tilde-expanded inside `PATH` — use `$HOME/.dotnet/tools`. This is the #1 cause of "pac not found" on a Mac that does have PAC installed; the canonical-path probe above is designed to catch it.
 
 ## When the user says "ready"
 Re-run **only** the previously-failing commands. Confirm each one passes before proceeding. Repeat the stop block with the still-missing items if anything is still failing.

@@ -23,7 +23,36 @@ pac help
 ```
 Windows: `py -V`. macOS/Linux: `python3 --version`.
 
-## If anything fails — STOP
+## Before declaring missing — probe canonical install path
+
+Many "command not found" reports are PATH problems, not install problems. The classic macOS/zsh case: a `PATH` entry that contains a literal unexpanded `~` (e.g. `~/.dotnet/tools`). zsh and bash do not tilde-expand inside `PATH` — `which pac` fails even though `$HOME/.dotnet/tools/pac` exists and runs.
+
+Before firing the missing-tool stop block, test the canonical install path directly:
+
+| Tool | macOS / Linux | Windows |
+|---|---|---|
+| `pac` | `$HOME/.dotnet/tools/pac` | `%USERPROFILE%\.dotnet\tools\pac.exe` |
+| `dotnet` | `/usr/local/share/dotnet/dotnet` | `%ProgramFiles%\dotnet\dotnet.exe` |
+| `node` | `/usr/local/bin/node`, `/opt/homebrew/bin/node` | `%ProgramFiles%\nodejs\node.exe` |
+| `git` | `/usr/bin/git`, `/usr/local/bin/git`, `/opt/homebrew/bin/git` | `%ProgramFiles%\Git\cmd\git.exe` |
+
+If the binary runs from the absolute path but `which`/`Get-Command` fails, this is a **broken PATH**, not a **missing tool**. Output the PATH-fix stop block — do not advise reinstalling:
+
+```
+🛑 <Tool> installed but not on PATH
+
+<Tool> exists at <canonical path> but the shell cannot find it.
+On macOS/Linux this is almost always a PATH entry containing a literal `~`.
+
+  # zsh (macOS default)
+  echo 'export PATH="$HOME/.dotnet/tools:$PATH"' >> ~/.zshrc && exec zsh
+
+  # PowerShell (Windows)
+  [Environment]::SetEnvironmentVariable(
+    'Path', "$env:Path;$env:USERPROFILE\.dotnet\tools", 'User')
+```
+
+## If a tool is genuinely missing — STOP
 
 Output:
 ```
@@ -53,5 +82,6 @@ Then stop. Do not auto-`winget`/`brew`/`choco`/`apt` — those have their own el
 ## macOS gotchas
 - First `git --version` triggers Xcode CLT GUI installer (user-only).
 - Homebrew on Apple Silicon = `/opt/homebrew`; Intel = `/usr/local`. Must `eval "$(/opt/homebrew/bin/brew shellenv)"`.
+- **`PATH` entries with literal `~` are silently broken in zsh/bash.** Use `$HOME/.dotnet/tools`, not `~/.dotnet/tools`. The canonical-path probe above catches this.
 
 Full details: `.github/instructions/00-prereq-gate.instructions.md`
