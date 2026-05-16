@@ -755,8 +755,28 @@ Before deploying to test or production, verify:
 - [ ] Power Apps Premium licenses assigned to target users
 - [ ] DLP policies in target environment allow all connectors used by the app
 - [ ] Test evidence for this build is recorded and attached to the handoff
-- [ ] App URL will be shared with `?hideNavBar=true` appended
+- [ ] App URL is shared with `?hideNavBar=true` appended (this is the default — see "Default play URL: `?hideNavBar=true`" below)
 - [ ] Handoff notes list schema/connectors touched and open risks
+
+## Default play URL: `?hideNavBar=true`
+
+Every Code App play URL surfaced by this template (wizard summary, deployment handoff, README examples, post-deploy log lines) **always** includes the `?hideNavBar=true` query string. This hides the Power Apps "purple bar" — the top chrome rendered by `apps.powerapps.com` around the iframe — which is the single most common piece of feedback an app owner receives after their first stakeholder demo:
+
+- It looks like part of the app and isn't.
+- It takes up vertical space on small screens.
+- Its controls (Apps menu, Share, Info) have no meaning for a deployed line-of-business app.
+
+The fix is the documented `?hideNavBar=true` query string parameter that the Power Apps host honors when present on the play URL. Making it the default avoids relying on every owner remembering to append it — usually for their most visible launch.
+
+**Format:**
+
+```text
+https://apps.powerapps.com/play/e/<environmentId>/a/<appId>?hideNavBar=true
+```
+
+If the host already added query parameters (e.g. `?source=portal`), append `hideNavBar=true` with `&` instead of `?`. The wizard handles this normalization automatically; do the same in any custom tooling that surfaces the URL.
+
+The flag is non-destructive: a user who wants the nav bar back can simply strip it from the URL. There is no wizard question for this — the goal is fewer decisions, not more.
 
 ## Deployment Handoff Template
 
@@ -765,7 +785,7 @@ Use this template for every deployment summary:
 ```text
 Environment:
 
-App name / URL: https://apps.powerapps.com/...?...&hideNavBar=true
+App name / URL: https://apps.powerapps.com/play/e/<envId>/a/<appId>?hideNavBar=true
 App version:
 Dataverse table(s) / connector changes:
 Tests run and result:

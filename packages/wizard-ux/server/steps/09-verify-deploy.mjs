@@ -82,6 +82,16 @@ function runFileCapture(log, file, args, opts = {}) {
 
 const PAC_HTTP_ERROR_RE = /HTTP error status:\s*[45]\d\d/i;
 
+// Append ?hideNavBar=true (or &hideNavBar=true if the URL already has a query
+// string) so the Power Apps "purple bar" — the top chrome rendered by the
+// Power Apps host around any Code App — is hidden by default. See
+// .github/instructions/04-deployment.instructions.md and issue #44.
+function withHideNavBar(url) {
+  if (!url) return url;
+  if (/[?&]hideNavBar=/i.test(url)) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'hideNavBar=true';
+}
+
 function resolveCredentialValues(state) {
   return PAC_TARGET.resolveCredentialValues({
     rootDir: PROJECT_DIR,
@@ -198,10 +208,12 @@ export default {
     //   "The app was successfully published. URL: https://apps.powerapps.com/play/e/<envId>/a/<appId>"
     // Capture the first matching apps.powerapps.com/play URL and persist it
     // to wizard state so the Summary can show the real launch URL.
+    // Always append ?hideNavBar=true so the deployed app hides the Power
+    // Apps "purple bar" by default (see issue #44 and 04-deployment.instructions.md).
     const deployedUrlMatch = pushOutput.match(/https:\/\/apps\.powerapps\.com\/play\/[^\s'"<>)]+/i);
     const stateUpdate = { PROJECT_DIR: projectDir };
     if (deployedUrlMatch) {
-      const deployedUrl = deployedUrlMatch[0].replace(/[.,;]+$/, '');
+      const deployedUrl = withHideNavBar(deployedUrlMatch[0].replace(/[.,;]+$/, ''));
       stateUpdate.DEPLOYED_APP_URL = deployedUrl;
       log.ok(`App URL: ${deployedUrl}`);
     } else {
