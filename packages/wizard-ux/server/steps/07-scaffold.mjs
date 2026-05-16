@@ -40,7 +40,9 @@ function runCommand(log, command, opts = {}) {
 function runFile(log, file, args, opts = {}) {
   return new Promise((resolvePromise) => {
     log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] });
+    const spawnOpts = { cwd: opts.cwd || process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] };
+    if (opts.env) spawnOpts.env = opts.env;
+    const child = SHELL.spawnSafe(file, args, spawnOpts);
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
@@ -51,6 +53,47 @@ function runFile(log, file, args, opts = {}) {
     });
     child.on('close', (code) => resolvePromise(code === 0));
   });
+}
+
+// Build a noisy-but-reassuring env for `npm install` / `pnpm install` so the
+// SSE-piped output stops looking frozen during long cold installs:
+//  - `npm_config_loglevel=http` is added at the CLI level (so it shows the
+//    `npm http fetch ...` per-package line).
+//  - `npm_config_progress=true` keeps progress hints on (npm still suppresses
+//    its TTY bar but at least won't strip extra hints).
+//  - `FORCE_COLOR=0` keeps ANSI escapes out of the SSE stream.
+//  - `CI` is unset to avoid npm dropping output thinking it is in CI.
+function installEnv() {
+  const env = { ...process.env, npm_config_progress: 'true', FORCE_COLOR: '0' };
+  delete env.CI;
+  return env;
+}
+
+// Detect whether `pnpm` is available on PATH. pnpm prints staged progress
+// (`Progress: resolved X, reused Y, downloaded Z`) even in non-TTY mode and
+// is materially faster on a cold cache, so prefer it when present.
+function detectPnpm() {
+  try {
+    execFileSync(process.platform === 'win32' ? 'where' : 'which', ['pnpm'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages = [] }) {
+  log.info('');
+  log.info(`[${stage}] ${label} (typically 30s–3min on a cold cache)…`);
+  const bin = pnpm
+    ? toolCommand('pnpm')
+    : toolCommand('npm');
+  const baseArgs = pnpm
+    ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...packages] : ['add', ...packages])
+    : (mode === 'base' ? ['install'] : mode === 'dev' ? ['install', '-D', ...packages] : ['install', ...packages]);
+  const noisyArgs = pnpm
+    ? ['--reporter=append-only', ...baseArgs]
+    : ['--loglevel=http', '--no-audit', '--no-fund', ...baseArgs];
+  return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv() });
 }
 
 function toolCommand(name) {
@@ -233,16 +276,32 @@ export default {
     }
 
     log.info('Installing dependencies...');
-    if (await runFile(log, toolCommand('npm'), ['install'], { cwd: projectDir })) log.ok('Base dependencies installed');
-    else log.warn('Base dependency install reported errors; continuing to merge required packages.');
+    const pnpm = detectPnpm();
+    if (pnpm) {
+      log.info('Detected pnpm — using it for faster installs and shared dependency cache.');
+    } else {
+      log.info('pnpm not found — using npm. Tip: `corepack enable && corepack prepare pnpm@latest --activate` makes Step 7 noticeably faster.');
+    }
+
+    if (await runInstall(log, { stage: '1/3', label: 'Installing base dependencies', projectDir, pnpm, mode: 'base' })) {
+      log.ok('[1/3] Base dependencies installed');
+    } else {
+      log.warn('[1/3] Base dependency install reported errors; continuing to merge required packages.');
+    }
 
     const prodPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_RUNTIME_PACKAGES);
-    if (await runFile(log, toolCommand('npm'), ['install', ...prodPkgs], { cwd: projectDir })) log.ok('Runtime packages installed');
-    else log.warn('Some runtime packages failed to install.');
+    if (await runInstall(log, { stage: '2/3', label: 'Installing runtime packages (React, Fluent UI, TanStack Query, SDK)', projectDir, pnpm, mode: 'prod', packages: prodPkgs })) {
+      log.ok('[2/3] Runtime packages installed');
+    } else {
+      log.warn('[2/3] Some runtime packages failed to install.');
+    }
 
     const devPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_DEV_PACKAGES);
-    if (await runFile(log, toolCommand('npm'), ['install', '-D', ...devPkgs], { cwd: projectDir })) log.ok('Dev packages installed');
-    else log.warn('Some dev packages failed to install.');
+    if (await runInstall(log, { stage: '3/3', label: 'Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)', projectDir, pnpm, mode: 'dev', packages: devPkgs })) {
+      log.ok('[3/3] Dev packages installed');
+    } else {
+      log.warn('[3/3] Some dev packages failed to install.');
+    }
 
     SCAFFOLD.writeConfig(projectDir, foundationLogger);
     SCAFFOLD.mergePackageJsonScripts(projectDir, foundationLogger);

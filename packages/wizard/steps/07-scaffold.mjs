@@ -122,30 +122,46 @@ export default async function stepScaffold() {
   ui.line('Installing dependencies...');
 
   // Prefer pnpm if available (much smaller per-project node_modules via the
-  // content-addressable store). Fall back to npm.
+  // content-addressable store, and visible per-package progress in non-TTY
+  // mode). Fall back to npm.
   const usePnpm = hasCommand('pnpm');
   const installBin = usePnpm ? (IS_WIN ? 'pnpm.cmd' : 'pnpm') : (IS_WIN ? 'npm.cmd' : 'npm');
 
   if (usePnpm) {
     ui.line('Detected pnpm — using it for faster installs and shared dependency cache.');
   } else {
-    ui.line('Tip: install pnpm (`corepack enable && corepack prepare pnpm@latest --activate`) for ~10x less disk usage per project.');
+    ui.line('Tip: install pnpm (`corepack enable && corepack prepare pnpm@latest --activate`) for ~10x less disk usage per project and much chattier install output.');
   }
 
-  runSafeLive(installBin, ['install'], { cwd: projectDir }) && ui.ok('Base dependencies installed');
+  // Make `npm install` less silent on cold installs (npm suppresses its
+  // progress bar in non-TTY mode). `--loglevel=http` prints one line per HTTP
+  // request, `--no-audit --no-fund` keeps the post-install summary from
+  // making the wait feel longer than it is, and the env vars keep ANSI
+  // escape noise out of any captured log file.
+  const npmFlags = usePnpm ? ['--reporter=append-only'] : ['--loglevel=http', '--no-audit', '--no-fund'];
+  const installEnv = { ...process.env, npm_config_progress: 'true', FORCE_COLOR: '0' };
+  delete installEnv.CI;
+  const installOpts = { cwd: projectDir, env: installEnv };
 
-  ui.line('Installing required packages...');
+  ui.line('');
+  ui.line('[1/3] Installing base dependencies (typically 30s–3min on a cold cache)…');
+  runSafeLive(installBin, [...npmFlags, 'install'], installOpts) && ui.ok('[1/3] Base dependencies installed');
+
+  ui.line('');
+  ui.line('[2/3] Installing runtime packages (React, Fluent UI, TanStack Query, SDK)…');
   const prodPkgs = packageSpecs(REQUIRED_RUNTIME_PACKAGES);
   const installArgs = usePnpm ? ['add', ...prodPkgs] : ['install', ...prodPkgs];
-  runSafeLive(installBin, installArgs, { cwd: projectDir })
-    ? ui.ok('React + Fluent UI + TanStack Query + SDK installed')
-    : ui.warn('Some packages failed to install');
+  runSafeLive(installBin, [...npmFlags, ...installArgs], installOpts)
+    ? ui.ok('[2/3] React + Fluent UI + TanStack Query + SDK installed')
+    : ui.warn('[2/3] Some packages failed to install');
 
+  ui.line('');
+  ui.line('[3/3] Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)…');
   const devPkgs = packageSpecs(REQUIRED_DEV_PACKAGES);
   const devInstallArgs = usePnpm ? ['add', '-D', ...devPkgs] : ['install', '-D', ...devPkgs];
-  runSafeLive(installBin, devInstallArgs, { cwd: projectDir })
-    ? ui.ok('Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)')
-    : ui.warn('Some dev packages failed to install');
+  runSafeLive(installBin, [...npmFlags, ...devInstallArgs], installOpts)
+    ? ui.ok('[3/3] Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)')
+    : ui.warn('[3/3] Some dev packages failed to install');
 
   // ── Config files ──
   writeConfig(projectDir, ui);
