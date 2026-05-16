@@ -16,6 +16,15 @@ function pickTargetEnvUrl(state) {
   return { target, environmentUrl: raw.replace(/\/$/, '') };
 }
 
+// Append ?hideNavBar=true (or & form) so the Power Apps "purple bar" is hidden
+// by default for every Code App built from this template. See issue #44 and
+// 04-deployment.instructions.md ("Default play URL: ?hideNavBar=true").
+function withHideNavBar(url) {
+  if (!url) return url;
+  if (/[?&]hideNavBar=/i.test(url)) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'hideNavBar=true';
+}
+
 function readPowerAppInfo(rootDir, state) {
   const projectDir = resolve(rootDir, String(state.PROJECT_DIR || '.'));
   const powerConfigPath = join(projectDir, 'power.config.json');
@@ -43,7 +52,7 @@ function readPowerAppInfo(rootDir, state) {
     appId,
     targetEnv: target,
     environmentUrl,
-    launchUrl: deployedUrl,
+    launchUrl: withHideNavBar(deployedUrl),
   };
 }
 

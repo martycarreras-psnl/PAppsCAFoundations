@@ -411,7 +411,9 @@ npm run build                     # Build to dist/
 \`\`\`
 
 The app URL after deployment:
-\`https://apps.powerapps.com/play/e/{environmentId}/app/{appId}\`
+\`https://apps.powerapps.com/play/e/{environmentId}/a/{appId}?hideNavBar=true\`
+
+> The \`?hideNavBar=true\` query string hides the Power Apps "purple bar" by default. See \`.github/instructions/04-deployment.instructions.md\`.
 
 ## Project Structure
 
