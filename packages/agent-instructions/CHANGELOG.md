@@ -1,5 +1,18 @@
 # @pacaf/agent-instructions
 
+## 3.4.0
+
+### Minor Changes
+
+- e7accf6: Prereq gate now probes the canonical install path before declaring a tool missing, so a working `pac`/`dotnet`/`node`/`git` install that simply isn't on `PATH` is no longer misdiagnosed as "Prerequisite missing — please reinstall". The classic macOS/zsh trigger — a `PATH` entry with a literal unexpanded `~` (e.g. `~/.dotnet/tools`, which neither zsh nor bash tilde-expand inside `PATH`) — is now called out explicitly with a one-line zsh / bash / PowerShell fix. New Step 2.5 + Step 3a in `.github/instructions/00-prereq-gate.instructions.md`, mirrored to the Claude and Cursor projections. Closes #45.
+- c813f30: `02-connectors.instructions.md` now opens its Dataverse section with a mandatory "Always call the `*WithOrganization` variants" subsection covering the silent-but-fatal HTTP 400 (`Invalid organization URL 'null' provided.`) that every Code App hits when its adapter calls the bare `ListRecords` / `GetItem` / `CreateRecord` / `UpdateRecord` / `DeleteRecord` overloads of `MicrosoftDataverseService`. Includes the bare-vs-`*WithOrganization` mapping table, the required `VITE_DATAVERSE_URL` `.env` entry, a canonical adapter snippet that threads the organization URL through every call, and the diagnostic rule for spotting the regression in network output. `.env.template` in `templates/starter/` now ships a commented-out `VITE_DATAVERSE_URL` line so it's discoverable at scaffold time. Closes #46.
+- 0aa64f2: Make `HashRouter` the routing default for every Code App. `packages/wizard/lib/scaffold-foundations.mjs` now emits `<HashRouter>` around `<App />` in `src/main.tsx` (with an inline comment pointing at issue #47), `pacaf-patch-datasources` (the `prebuild` hook in `packages/scripts/patch-datasources-info.mjs`) now fails the build with a pointed error if `src/main.tsx` or `src/router.tsx` still imports `BrowserRouter` / `createBrowserRouter`, and `.github/instructions/01-scaffold.instructions.md`, `AGENTS.md`, and `TROUBLESHOOTING.md` document the rule and its symptom (404 on first load inside the Power Apps iframe). Closes #47.
+
+### Patch Changes
+
+- 61b598b: Default the deployed-app URL to `?hideNavBar=true` so every Code App built from this template hides the Power Apps "purple bar" by default. The wizard appends `hideNavBar=true` when capturing the deployed URL from `pac code push` output, the state API normalizes any pre-existing URL when surfacing it to the Summary page, and `.github/instructions/04-deployment.instructions.md` now promotes the flag from "checklist item" to "default appended". Closes #44.
+- a1de977: Make the Tailwind v4 + CSS pipeline work out of the box. The wizard scaffold now (a) emits `import './index.css';` in `src/main.tsx`, (b) writes a `src/index.css` containing `@import "tailwindcss";`, (c) registers the required `@tailwindcss/vite` plugin in `vite.config.ts`, and (d) declares both `tailwindcss` and `@tailwindcss/vite` as `devDependencies`. Documents both rules in `.github/instructions/01-scaffold.instructions.md` and adds a keyed `TROUBLESHOOTING.md` entry ("My app renders but everything is unstyled"). Closes #48.
+
 ## 3.3.0
 
 ### Minor Changes
