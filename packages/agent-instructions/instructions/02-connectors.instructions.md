@@ -150,6 +150,97 @@ Generated connector types are useful inputs to the adapter layer. They should no
 
 ### Dataverse
 
+#### ⚠️ Always call the `*WithOrganization` variants (not the bare overloads)
+
+The `shared_commondataserviceforapps` connector (the **"Microsoft Dataverse — current environment"** data source) generates two variants of every CRUD method in `src/generated/services/MicrosoftDataverseService.ts`:
+
+| ❌ Bare overload (DO NOT USE) | ✅ `*WithOrganization` overload (USE THIS) |
+|---|---|
+| `ListRecords(entityName, …)` | `ListRecordsWithOrganization(organization, entityName, …)` |
+| `GetItem(prefer, accept, entityName, recordId, …)` | `GetItemWithOrganization(prefer, accept, organization, entityName, recordId, …)` |
+| `CreateRecord(prefer, accept, entityName, item, …)` | `CreateRecordWithOrganization(prefer, accept, organization, entityName, item, …)` |
+| `UpdateRecord(prefer, accept, entityName, recordId, item, …)` | `UpdateRecordWithOrganization(prefer, accept, organization, entityName, recordId, item, …)` |
+| `DeleteRecord(entityName, recordId, …)` | `DeleteRecordWithOrganization(organization, entityName, recordId, …)` |
+
+The method names strongly imply that the bare overloads auto-resolve the current environment. **In a deployed Code App they do not.** Calling the bare overloads results in:
+
+```text
+HTTP 400 Bad Request
+{
+  "Message": "Invalid organization URL 'null' provided.",
+  "OperationId": "ListRecords"
+}
+```
+
+The app compiles cleanly, `pac code add-data-source` succeeds, the app deploys, and every list view comes back **empty**. Writes appear to succeed from the user's perspective because mutations error in the network layer but TanStack Query's optimistic update still renders the in-flight value.
+
+**Required setup:** add the environment URL to `.env` (the same value as `PP_ENV_DEV` from `00-before-you-start.instructions.md`, no trailing slash):
+
+```bash
+# .env  (in addition to your existing entries)
+VITE_DATAVERSE_URL=https://yourorg.crm.dynamics.com
+```
+
+**Canonical adapter snippet** — every Dataverse adapter you write must thread the organization URL through every call:
+
+```typescript
+// src/services/dataverse-provider.ts
+import { MicrosoftDataverseService } from '../generated/services/MicrosoftDataverseService';
+
+const ORG_URL = import.meta.env.VITE_DATAVERSE_URL as string;
+if (!ORG_URL) {
+  throw new Error('VITE_DATAVERSE_URL is not set. See 02-connectors.instructions.md.');
+}
+
+export const dataverseProvider = {
+  async list<T>(entitySet: string, query?: string): Promise<T[]> {
+    const result = await MicrosoftDataverseService.ListRecordsWithOrganization(
+      ORG_URL,
+      entitySet,
+      query, // OData $filter / $select / $orderby / $expand
+    );
+    return result?.value ?? [];
+  },
+
+  async get<T>(entitySet: string, id: string): Promise<T> {
+    return MicrosoftDataverseService.GetItemWithOrganization(
+      undefined, // Prefer header
+      undefined, // Accept header
+      ORG_URL,
+      entitySet,
+      id,
+    );
+  },
+
+  async create<T>(entitySet: string, body: Partial<T>): Promise<T> {
+    return MicrosoftDataverseService.CreateRecordWithOrganization(
+      undefined,
+      undefined,
+      ORG_URL,
+      entitySet,
+      body,
+    );
+  },
+
+  async update<T>(entitySet: string, id: string, patch: Partial<T>): Promise<T> {
+    return MicrosoftDataverseService.UpdateRecordWithOrganization(
+      undefined,
+      undefined,
+      ORG_URL,
+      entitySet,
+      id,
+      patch,
+    );
+  },
+
+  async remove(entitySet: string, id: string): Promise<void> {
+    await MicrosoftDataverseService.DeleteRecordWithOrganization(ORG_URL, entitySet, id);
+  },
+};
+```
+
+**Diagnostic rule:** if you ever see `Invalid organization URL 'null' provided.` in a network response, **find the bare `*Record` / `GetItem` call in your adapter and switch it to the `*WithOrganization` overload.** No other change is required.
+
 Dataverse is the richest connector. Use OData query parameters for efficient data retrieval:
 
 ```typescript
