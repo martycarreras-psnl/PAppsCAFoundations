@@ -318,7 +318,12 @@ export function writeStarterFiles(dir, appName, logger = noopLogger) {
 import { createRoot } from 'react-dom/client';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+// HashRouter (NOT BrowserRouter) is required for Code Apps. The Power Apps host
+// owns the URL path (apps.powerapps.com/play/e/<env>/app/<app>/...) so only the
+// fragment is reliably owned by the iframe. BrowserRouter 404s on first load
+// and on every deep link. Do not change this — see issue #47 and
+// .github/instructions/01-scaffold.instructions.md.
+import { HashRouter } from 'react-router-dom';
 import { App } from './App';
 
 const queryClient = new QueryClient({
@@ -331,9 +336,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <FluentProvider theme={webLightTheme}>
-        <BrowserRouter>
+        <HashRouter>
           <App />
-        </BrowserRouter>
+        </HashRouter>
       </FluentProvider>
     </QueryClientProvider>
   </StrictMode>,
