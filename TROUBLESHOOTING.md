@@ -169,6 +169,26 @@ export default defineConfig(({ command }) => ({
 ```
 Current scaffold includes this automatically.
 
+### Deployed app shows a 404 on first load (or the moment you navigate)
+
+**Symptom:** `pac code push` reports success, but opening `https://apps.powerapps.com/play/e/<env>/app/<app>/...` returns a 404 page, or the app loads fine until you navigate to a non-index route and then 404s.
+
+**Cause:** `src/main.tsx` (or `src/router.tsx`) is using `react-router-dom`'s `BrowserRouter` / `createBrowserRouter`. The Power Apps host owns the URL path, so any non-root path the router pushes into history does not resolve to a static asset and `index.html` is served from the wrong base. Only the fragment (`#/...`) is reliably owned by the iframe.
+
+**Fix:** Switch to `HashRouter`:
+```diff
+- import { BrowserRouter } from 'react-router-dom';
++ import { HashRouter } from 'react-router-dom';
+…
+-        <BrowserRouter>
++        <HashRouter>
+           <App />
+-        </BrowserRouter>
++        </HashRouter>
+```
+
+Rebuild and `pac code push`. Routes now resolve as `…/play/e/<env>/app/<app>/#/<route>` and the deployed app stops 404-ing. The current scaffold uses `HashRouter` automatically, and `npm run build` fails loudly if `main.tsx` / `router.tsx` is still importing `BrowserRouter` / `createBrowserRouter` (see `packages/scripts/patch-datasources-info.mjs` and issue #47).
+
 ---
 
 ## Wizard

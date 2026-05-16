@@ -496,6 +496,26 @@ Key settings:
 - **`strictPort: true`**: Prevents Vite from falling back to 3001/3002 if 3000 is busy. If it fails, you have a stale process — kill it and retry.
 - **`open: true`**: Launches your default browser automatically. Remove this if you prefer to open manually.
 
+### Routing: use `HashRouter`, never `BrowserRouter`
+
+For client-side routing inside a Code App you **must** use `react-router-dom`'s `HashRouter` (or `createHashRouter`). The Power Apps host owns the URL path — every deployed app is served from a nested path like `https://apps.powerapps.com/play/e/<env>/app/<app>/...` — so any non-root path the router pushes into history (or that the host pushes back into the iframe via deep-link) does not resolve to a static asset and `index.html` is served from the wrong base, producing a **404 on first load** or the moment a user navigates to a non-index route.
+
+The fragment (`#/...`) is the only URL segment the iframe reliably owns. `HashRouter` keeps every route in the fragment, so the host never asks for a path it doesn't know.
+
+Required scaffold in `src/main.tsx`:
+
+```typescript
+import { HashRouter } from 'react-router-dom';
+// ...
+<HashRouter>
+  <App />
+</HashRouter>
+```
+
+Deployed routes look like `…/app/<id>/#/episode/<id>` — exactly what works inside the iframe.
+
+This rule is non-negotiable and enforced at build time. `npm run build` runs `pacaf-patch-datasources` as a `prebuild` hook, which fails loudly if `src/main.tsx` or `src/router.tsx` still references `BrowserRouter` / `createBrowserRouter`. Symptom that triggers this guard: a deployed app that 404s on first load — see issue #47.
+
 ### Switching Between Modes
 
 | Phase | Command | What's Running | Data Source |
