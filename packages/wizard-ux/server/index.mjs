@@ -14,6 +14,7 @@ import stepsRoutes from './routes/steps.mjs';
 import streamRoutes from './routes/stream.mjs';
 import ptyRoutes from './routes/pty.mjs';
 import onepasswordRoutes from './routes/onepassword.mjs';
+import configSeedRoutes from './routes/config-seed.mjs';
 import { detectCloudSync, cloudSyncWarning } from '../../wizard/lib/cloud-sync-detect.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -84,6 +85,7 @@ await app.register(stepsRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(streamRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });
 await app.register(ptyRoutes, { rootDir: ROOT_DIR, csrfToken: CSRF_TOKEN });
 await app.register(onepasswordRoutes, { prefix: '/api/1password' });
+await app.register(configSeedRoutes, { prefix: '/api/config-seed', rootDir: ROOT_DIR });
 
 // Serve the UI — prebuilt dist/ by default; vite middleware only in dev mode
 const distDir = join(UX_DIR, 'dist');

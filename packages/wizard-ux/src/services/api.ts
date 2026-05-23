@@ -40,6 +40,26 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return res.json() as Promise<T>;
 }
 
+export type ConfigSeedKeyType = 'string' | 'string[]' | 'stringMap';
+export interface ConfigSeedKeySpec {
+  key: string;
+  type: ConfigSeedKeyType;
+  label: string;
+}
+export interface ConfigSeed {
+  $schema?: string;
+  version: number;
+  exportedAt?: string;
+  values: Record<string, unknown>;
+}
+export type ConfigSeedImportMode = 'merge' | 'replace-allowlisted';
+export interface ConfigSeedImportResult {
+  mode: ConfigSeedImportMode;
+  written: { key: string }[];
+  preserved: { key: string; reason: string }[];
+  skipped: { key: string; reason: string }[];
+}
+
 export const api = {
   state: () => req<StateSnapshot>('GET', '/api/state'),
   saveState: (partial: Record<string, unknown>) =>
@@ -51,4 +71,17 @@ export const api = {
   questions: (n: number) => req<QuestionsResponse>('GET', `/api/steps/${n}/questions`),
   apply: (n: number, answers: Record<string, unknown>) =>
     req<ApplyResponse>('POST', `/api/steps/${n}/apply`, { answers }),
+
+  configSeedKeys: () =>
+    req<{ version: number; keys: ConfigSeedKeySpec[] }>('GET', '/api/config-seed/keys'),
+  exportConfigSeed: async (): Promise<{ blob: Blob; filename: string }> => {
+    const res = await fetch('/api/config-seed/export', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`Export failed (${res.status})`);
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = /filename="([^"]+)"/i.exec(disposition);
+    const filename = match?.[1] || `pacaf-wizard-config-${new Date().toISOString().slice(0, 10)}.json`;
+    return { blob: await res.blob(), filename };
+  },
+  importConfigSeed: (seed: ConfigSeed, mode: ConfigSeedImportMode = 'merge') =>
+    req<ConfigSeedImportResult>('POST', '/api/config-seed/import', { seed, mode }),
 };
