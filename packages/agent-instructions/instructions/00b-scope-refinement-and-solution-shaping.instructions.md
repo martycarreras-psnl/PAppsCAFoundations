@@ -24,6 +24,12 @@ This phase starts after the business problem has been restated and decomposed, b
 - If the scope still has major ambiguity around core workflows or outcomes, keep refining before moving on
 - If critical enterprise concerns are still unknown, do not move into technical modeling yet
 
+## Interview Cadence
+
+Use the grilling cadence from `00e-grill-and-document.instructions.md` throughout this phase: one question at a time, with the agent's recommended answer, walking dependencies depth-first. Do not batch questions. If a question can be answered by reading the codebase or existing solution metadata, read instead of ask.
+
+**Glossary rule:** Before introducing a new business term, consult `CONTEXT.md` at the repo root (if it exists). When a term is resolved or sharpened during refinement, update `CONTEXT.md` inline — do not wait until the session ends. See `00e-grill-and-document.instructions.md` for the glossary format and PACAF bridge.
+
 ## Refinement Domains
 
 Copilot should expand the user's narrative across these domains, in whatever order best fits the conversation:
@@ -165,7 +171,7 @@ When helpful, structure the response in this order:
 4. A focused set of follow-up questions or challenge points
 5. A revised scope summary after each refinement round
 
-This phase should feel like progressive elaboration, not like a requirements spreadsheet pasted into chat.
+This phase should feel like progressive elaboration, not like a requirements spreadsheet pasted into chat. Follow the one-question-at-a-time cadence from `00e-grill-and-document.instructions.md` — do not batch follow-up questions.
 
 ## Outputs From This Phase
 
@@ -183,5 +189,7 @@ Once those are strong enough, proceed to conceptual modeling and Dataverse plann
 ## Downstream Handoff
 
 Continue with `00c-solution-concept-to-dataverse-plan.instructions.md`.
+
+`00e-grill-and-document.instructions.md` applies throughout — it governs the interview cadence, `CONTEXT.md` glossary maintenance, and ADR creation for all planning phases. Before handing off to 00c, check whether any decisions locked during this phase meet the ADR threshold (hard to reverse + surprising without context + real trade-off). If so, offer to record them now.
 
 Do not move directly to connector registration or schema provisioning until the refined scope is stable enough to drive durable modeling decisions.

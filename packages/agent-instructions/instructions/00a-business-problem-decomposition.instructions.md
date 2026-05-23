@@ -31,10 +31,12 @@ When the user describes a problem space, Copilot should follow this sequence:
 2. **Decompose** it into major planning dimensions
 3. **Separate** what is explicit from what is implied but unconfirmed
 4. **Challenge** missing enterprise concerns and weak assumptions
-5. **Ask** the smallest possible set of targeted follow-up questions
+5. **Grill** — ask follow-up questions using the cadence defined in `00e-grill-and-document.instructions.md`: one question at a time, with the agent's recommended answer, walking dependencies depth-first
 6. **Synthesize** the updated understanding into a refined scope narrative
 
-Do not ask long questionnaires by default. Ask the fewest questions that produce the largest increase in planning clarity.
+Do not batch multiple questions into a single response. Do not ask long questionnaires. See `00e-grill-and-document.instructions.md` for the full interview protocol.
+
+**Glossary rule:** Before introducing a new business term, consult `CONTEXT.md` at the repo root (if it exists). If the term sharpens or conflicts with an existing entry, update `CONTEXT.md` inline. If `CONTEXT.md` does not exist yet and the first term is being resolved, create it. See `00e-grill-and-document.instructions.md` for the glossary format and the PACAF bridge (glossary term → Dataverse `DisplayName` → `DataverseFieldLabel` fallback).
 
 ## Decomposition Taxonomy
 
@@ -115,9 +117,10 @@ Good pattern:
 
 Bad pattern:
 
-1. Dumping a long intake checklist
+1. Dumping a long intake checklist or batching multiple questions in one turn
 2. Asking every possible question before providing any structure
 3. Jumping into entities, tables, or UI without clarifying the business problem
+4. Introducing a new business term without checking `CONTEXT.md` first
 
 ## Preferred Response Shape
 
@@ -148,5 +151,6 @@ Once the business problem is decomposed well enough, continue with:
 
 - `00b-scope-refinement-and-solution-shaping.instructions.md` for enterprise completeness and solution shaping
 - `00c-solution-concept-to-dataverse-plan.instructions.md` for technical handoff into Dataverse planning
+- `00e-grill-and-document.instructions.md` applies throughout — it governs the interview cadence, `CONTEXT.md` glossary maintenance, and ADR creation for all planning phases
 
 Do not skip directly to connector or schema work while the core business narrative is still unstable.

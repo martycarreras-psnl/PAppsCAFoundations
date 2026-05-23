@@ -43,6 +43,7 @@ Loaded via rich `description` fields during planning conversations, before any c
 | [00b-scope-refinement-and-solution-shaping.instructions.md](00b-scope-refinement-and-solution-shaping.instructions.md) | Business problem is understood; scope needs pressure-testing |
 | [00c-solution-concept-to-dataverse-plan.instructions.md](00c-solution-concept-to-dataverse-plan.instructions.md) | Scope is stable; translating into entities and relationships |
 | [00d-prototype-validation.instructions.md](00d-prototype-validation.instructions.md) | Conceptual model needs UX validation before schema hardens |
+| [00e-grill-and-document.instructions.md](00e-grill-and-document.instructions.md) | Default interview style for 00a–00c: stress-test plans, sharpen terminology into `CONTEXT.md`, record hard-to-reverse decisions as ADRs |
 
 ### Setup phase (one-time team decisions)
 

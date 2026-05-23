@@ -27,6 +27,12 @@ This phase starts after the business narrative has been decomposed and refined e
 - If the workflow model is still unstable, stop and continue solution shaping first
 - If major reporting, governance, or authority concerns are still unresolved, stop before freezing conceptual entities
 
+## Interview Cadence & Glossary Traceability
+
+Use the grilling cadence from `00e-grill-and-document.instructions.md` throughout this phase. Continue updating `CONTEXT.md` inline as terms are resolved.
+
+**Traceability rule:** Every entity, relationship, and lifecycle state proposed for `dataverse/planning-payload.json` must trace back to a term in `CONTEXT.md`. If no term exists for a proposed entity or column, sharpen it in `CONTEXT.md` first — then add it to the planning payload. The `DisplayName` in the payload should match the canonical glossary term.
+
 ## Conversion Goals
 
 Copilot should translate the refined narrative into the kinds of planning inputs needed for durable Dataverse design.
@@ -127,6 +133,8 @@ Do not assume reporting can always be layered on later without model impact.
 ## Handoff Into Dataverse Planning
 
 Once the conceptual model is strong enough, validate it through a mock-backed UX prototype before freezing the schema plan.
+
+**ADR checkpoint:** Before handing off to prototype validation or schema provisioning, explicitly prompt the user: *"Before we hand off to schema provisioning — are there any decisions we locked during this session that a future developer would find surprising? If so, let's record them as ADRs."* Check the PACAF-specific qualifying decision list in `00e-grill-and-document.instructions.md` against what was resolved in this phase.
 
 Use:
 
