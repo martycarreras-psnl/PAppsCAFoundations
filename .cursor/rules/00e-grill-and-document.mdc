@@ -1,0 +1,34 @@
+---
+description: "Read when the user wants to stress-test a plan, challenge assumptions, lock decisions, build or update the project glossary, or record an architectural decision. Governs the default interview style for the entire 00a→00c planning flow."
+globs: ""
+alwaysApply: false
+---
+<!-- Generated from .github/instructions/00e-grill-and-document.instructions.md — do not edit directly -->
+# Grill & Document
+
+Adapted with thanks from Matt Pocock's "grill-with-docs" skill (https://github.com/mattpocock/skills, MIT © 2026 Matt Pocock). PACAF-specific additions: Dataverse-aware glossary bridge, Code-App ADR trigger list, planning-payload integration.
+
+## Grilling Cadence (default for all planning phases)
+1. One question at a time; always supply the agent's recommended answer
+2. Walk the design tree depth-first — resolve dependencies before moving sideways
+3. If a question can be answered by reading code, solution metadata, or Dataverse schema, read instead of asking
+4. Challenge against `CONTEXT.md` when the user's terminology conflicts with established glossary entries
+5. Sharpen fuzzy language: propose a precise canonical term, update `CONTEXT.md` inline
+6. Discuss concrete scenarios to probe edge cases
+7. Cross-reference with code when the user states how something works
+
+## CONTEXT.md — Living Glossary
+- Lives at repo root. Created lazily on the first sharpened term.
+- Pure business glossary — no implementation details, no specs.
+- When a term is canonicalized, propose the PACAF bridge: glossary term → Dataverse `DisplayName` in `planning-payload.json` → `DataverseFieldLabel` `fallback` prop.
+- Consult `CONTEXT.md` before introducing any new business term. Update inline, not in batches.
+- Do not introduce `CONTEXT-MAP.md`. Single-context only.
+
+## docs/adr/ — Architecture Decision Records
+Offer an ADR only when all three hold: hard to reverse + surprising without context + real trade-off.
+
+PACAF-specific qualifying decisions: publisher prefix, solution boundary, Dataverse vs SharePoint vs Custom Connector, environment topology, router choice deviation, Copilot Studio agent placement, Custom API vs Power Automate flow boundary, security model, seeding strategy.
+
+Format: short title + 1–3 sentence paragraph. Optional: Status, Considered Options, Consequences. Sequential numbering in `docs/adr/`.
+
+Full details: `.github/instructions/00e-grill-and-document.instructions.md`

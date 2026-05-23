@@ -46,6 +46,8 @@ Before writing any code or answering any architectural question, load context in
 
 For a non-trivial app, also read [docs/prototype-golden-path.md](docs/prototype-golden-path.md) to understand the plan-first → prototype-second → connect-later delivery sequence.
 
+During the planning phase (00a → 00b → 00c), the default interview style is the **grilling cadence** defined in [.github/instructions/00e-grill-and-document.instructions.md](.github/instructions/00e-grill-and-document.instructions.md): one question at a time with the agent's recommended answer, depth-first dependency resolution, a living glossary in `CONTEXT.md` at the repo root, and lightweight ADRs in `docs/adr/` for hard-to-reverse decisions. Consult `CONTEXT.md` before introducing any new business term and update it inline as terms are sharpened.
+
 ## Mandatory Starting Move For A Fresh Clone
 
 If the repository has no `src/`, no `power.config.json`, and no `package.json` at the root, the user has not yet run the setup wizard. Before generating any application code, direct them to run the **browser-based Wizard UX**:
