@@ -8,6 +8,7 @@ import {
 } from '@fluentui/react-icons';
 import { useTheme } from '../theme/ThemeProvider';
 import { gradients } from '../theme/tokens';
+import { ConfigSeedMenu } from './ConfigSeedMenu';
 
 const useStyles = makeStyles({
   root: {
@@ -82,6 +83,8 @@ export function AppHeader() {
       <Tooltip relationship="label" content={`Theme: ${mode}. Click to cycle.`}>
         <Button appearance="subtle" icon={<Icon />} onClick={() => setMode(next)} aria-label="Toggle theme" />
       </Tooltip>
+
+      <ConfigSeedMenu />
     </header>
   );
 }
