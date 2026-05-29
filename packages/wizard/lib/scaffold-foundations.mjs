@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { runSafe, runSafeLive, IS_WIN } from './shell.mjs';
 import { loadPacafConfig, scopedPackageName, binName } from './pacaf-config.mjs';
@@ -362,6 +362,20 @@ createRoot(document.getElementById('root')!).render(
 );
 `);
   logger.ok('src/main.tsx');
+
+  // Scrub upstream src/router.tsx if it shipped one. The Microsoft starter
+  // template now defines a `createBrowserRouter` in src/router.tsx — we don't
+  // use it (our main.tsx wraps <App /> in <HashRouter> directly) and leaving
+  // it on disk trips the prebuild routing guard on the next build. See #63.
+  const upstreamRouterPath = join(dir, 'src', 'router.tsx');
+  if (existsSync(upstreamRouterPath)) {
+    try {
+      unlinkSync(upstreamRouterPath);
+      logger.ok('Removed upstream src/router.tsx (uses BrowserRouter — see #63)');
+    } catch (error) {
+      logger.warn(`Could not remove src/router.tsx: ${error.message}`);
+    }
+  }
 
   // src/index.css — Tailwind v4 entrypoint. The @tailwindcss/vite plugin
   // (registered in vite.config.ts) processes this @import at build time
