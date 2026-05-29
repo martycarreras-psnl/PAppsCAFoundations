@@ -13,11 +13,30 @@ export const REQUIRED_RUNTIME_PACKAGES = {
   react: '^18.3.1',
   'react-dom': '^18.3.1',
   '@fluentui/react-components': '^9.56.0',
+  // The generated src/App.tsx imports icons from @fluentui/react-icons, so it
+  // must be a runtime dependency. Without it the smoke test fails with
+  // "Failed to resolve import \"@fluentui/react-icons\" from src/App.tsx".
+  // See issue #76.
+  '@fluentui/react-icons': '^2.0.270',
   '@tanstack/react-query': '^5.62.0',
   'react-router-dom': '^7.1.0',
   '@microsoft/power-apps': '^1.0.3',
   concurrently: '^9.1.0',
 };
+
+// Packages whose postinstall build scripts pnpm blocks by default. pnpm v9+
+// reads `pnpm.onlyBuiltDependencies` from package.json and runs the build
+// scripts of exactly these packages without the interactive
+// `pnpm approve-builds` prompt. esbuild is Vite's bundler and keytar/node-pty
+// back PAC auth credential storage, so their build scripts must run for the
+// app to build and deploy. See issue #76.
+export const PNPM_ALLOWED_BUILD_DEPENDENCIES = [
+  '@azure/msal-node-extensions',
+  '@azure/msal-node-runtime',
+  'esbuild',
+  'keytar',
+  'node-pty',
+];
 
 // Devs deps are computed dynamically so forks can rebrand the @pacaf scope.
 export function buildRequiredDevPackages(config = loadPacafConfig()) {
@@ -97,6 +116,21 @@ export function packageSpecs(packages) {
   return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
 }
 
+// Detect whether `dir` (or any ancestor) is a pnpm workspace root, i.e. it
+// contains a `pnpm-workspace.yaml`. When scaffolding into such a directory,
+// plain `pnpm add` aborts with ERR_PNPM_ADDING_TO_ROOT and the `-w` /
+// `--workspace-root` flag is required. See issue #76.
+export function isPnpmWorkspaceRoot(dir) {
+  let current = dir;
+  // Walk up to the filesystem root.
+  while (true) {
+    if (existsSync(join(current, 'pnpm-workspace.yaml'))) return true;
+    const parent = dirname(current);
+    if (parent === current) return false;
+    current = parent;
+  }
+}
+
 export function normalizePackageJsonDependencies(dir, logger = noopLogger) {
   const pkgPath = join(dir, 'package.json');
   let pkg = {};
@@ -121,6 +155,15 @@ export function normalizePackageJsonDependencies(dir, logger = noopLogger) {
     delete pkg.dependencies[name];
     delete pkg.devDependencies[name];
   }
+
+  // Pre-approve pnpm-blocked build scripts (esbuild, keytar, node-pty, …) so
+  // installs don't stall on the interactive `pnpm approve-builds` step. Merge
+  // with any existing list rather than clobbering it. See issue #76.
+  pkg.pnpm = pkg.pnpm || {};
+  pkg.pnpm.onlyBuiltDependencies = Array.from(new Set([
+    ...(pkg.pnpm.onlyBuiltDependencies || []),
+    ...PNPM_ALLOWED_BUILD_DEPENDENCIES,
+  ]));
 
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
   logger.ok('package.json dependencies normalized');
@@ -158,6 +201,11 @@ export function createMinimalProject(dir, appName) {
     dependencies: REQUIRED_RUNTIME_PACKAGES,
     devDependencies: REQUIRED_DEV_PACKAGES,
     scripts: buildRequiredScripts(),
+    // Pre-approve the build scripts pnpm blocks by default so installs don't
+    // require the interactive `pnpm approve-builds` step. See issue #76.
+    pnpm: {
+      onlyBuiltDependencies: PNPM_ALLOWED_BUILD_DEPENDENCIES,
+    },
   }, null, 2) + '\n');
 }
 

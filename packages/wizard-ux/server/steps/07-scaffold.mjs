@@ -81,14 +81,18 @@ function detectPnpm() {
   }
 }
 
-async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages = [] }) {
+async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages = [], workspaceRoot = false }) {
   log.info('');
   log.info(`[${stage}] ${label} (typically 30s–3min on a cold cache)…`);
   const bin = pnpm
     ? toolCommand('pnpm')
     : toolCommand('npm');
+  // When scaffolding into a pnpm workspace root (pnpm-workspace.yaml present),
+  // `pnpm add` aborts with ERR_PNPM_ADDING_TO_ROOT unless -w is passed. See
+  // issue #76.
+  const rootFlag = pnpm && workspaceRoot ? ['-w'] : [];
   const baseArgs = pnpm
-    ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...packages] : ['add', ...packages])
+    ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...rootFlag, ...packages] : ['add', ...rootFlag, ...packages])
     : (mode === 'base' ? ['install'] : mode === 'dev' ? ['install', '-D', ...packages] : ['install', ...packages]);
   const noisyArgs = pnpm
     ? ['--reporter=append-only', ...baseArgs]
@@ -284,21 +288,28 @@ export default {
       log.info('pnpm not found — using npm. Tip: `corepack enable && corepack prepare pnpm@latest --activate` makes Step 7 noticeably faster.');
     }
 
-    if (await runInstall(log, { stage: '1/3', label: 'Installing base dependencies', projectDir, pnpm, mode: 'base' })) {
+    // pnpm refuses `pnpm add` at a workspace root (pnpm-workspace.yaml present)
+    // without -w, which would silently fail the runtime/dev installs. See issue #76.
+    const workspaceRoot = pnpm && SCAFFOLD.isPnpmWorkspaceRoot(projectDir);
+    if (workspaceRoot) {
+      log.warn('This is a pnpm workspace root (pnpm-workspace.yaml present) — adding packages with --workspace-root (-w).');
+    }
+
+    if (await runInstall(log, { stage: '1/3', label: 'Installing base dependencies', projectDir, pnpm, mode: 'base', workspaceRoot })) {
       log.ok('[1/3] Base dependencies installed');
     } else {
       log.warn('[1/3] Base dependency install reported errors; continuing to merge required packages.');
     }
 
     const prodPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_RUNTIME_PACKAGES);
-    if (await runInstall(log, { stage: '2/3', label: 'Installing runtime packages (React, Fluent UI, TanStack Query, SDK)', projectDir, pnpm, mode: 'prod', packages: prodPkgs })) {
+    if (await runInstall(log, { stage: '2/3', label: 'Installing runtime packages (React, Fluent UI, TanStack Query, SDK)', projectDir, pnpm, mode: 'prod', packages: prodPkgs, workspaceRoot })) {
       log.ok('[2/3] Runtime packages installed');
     } else {
       log.warn('[2/3] Some runtime packages failed to install.');
     }
 
     const devPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_DEV_PACKAGES);
-    if (await runInstall(log, { stage: '3/3', label: 'Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)', projectDir, pnpm, mode: 'dev', packages: devPkgs })) {
+    if (await runInstall(log, { stage: '3/3', label: 'Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)', projectDir, pnpm, mode: 'dev', packages: devPkgs, workspaceRoot })) {
       log.ok('[3/3] Dev packages installed');
     } else {
       log.warn('[3/3] Some dev packages failed to install.');

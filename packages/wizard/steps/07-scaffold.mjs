@@ -19,6 +19,7 @@ import {
 import {
   copyFoundationFiles,
   createMinimalProject,
+  isPnpmWorkspaceRoot,
   mergePackageJsonScripts,
   normalizePackageJsonDependencies,
   packageSpecs,
@@ -125,6 +126,16 @@ export default async function stepScaffold() {
     ui.line('Tip: install pnpm (`corepack enable && corepack prepare pnpm@latest --activate`) for ~10x less disk usage per project and much chattier install output.');
   }
 
+  // When scaffolding into a pnpm workspace root (a directory with
+  // pnpm-workspace.yaml), `pnpm add` aborts with ERR_PNPM_ADDING_TO_ROOT
+  // unless the -w / --workspace-root flag is passed. Detect it and add the
+  // flag so the runtime/dev installs don't silently fail. See issue #76.
+  const pnpmWorkspaceRoot = usePnpm && isPnpmWorkspaceRoot(projectDir);
+  if (pnpmWorkspaceRoot) {
+    ui.warn('This is a pnpm workspace root (pnpm-workspace.yaml present) — adding packages with --workspace-root (-w).');
+  }
+  const pnpmAddRootFlag = pnpmWorkspaceRoot ? ['-w'] : [];
+
   // Make `npm install` less silent on cold installs (npm suppresses its
   // progress bar in non-TTY mode). `--loglevel=http` prints one line per HTTP
   // request, `--no-audit --no-fund` keeps the post-install summary from
@@ -142,7 +153,7 @@ export default async function stepScaffold() {
   ui.line('');
   ui.line('[2/3] Installing runtime packages (React, Fluent UI, TanStack Query, SDK)…');
   const prodPkgs = packageSpecs(REQUIRED_RUNTIME_PACKAGES);
-  const installArgs = usePnpm ? ['add', ...prodPkgs] : ['install', ...prodPkgs];
+  const installArgs = usePnpm ? ['add', ...pnpmAddRootFlag, ...prodPkgs] : ['install', ...prodPkgs];
   runSafeLive(installBin, [...npmFlags, ...installArgs], installOpts)
     ? ui.ok('[2/3] React + Fluent UI + TanStack Query + SDK installed')
     : ui.warn('[2/3] Some packages failed to install');
@@ -150,7 +161,7 @@ export default async function stepScaffold() {
   ui.line('');
   ui.line('[3/3] Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)…');
   const devPkgs = packageSpecs(REQUIRED_DEV_PACKAGES);
-  const devInstallArgs = usePnpm ? ['add', '-D', ...devPkgs] : ['install', '-D', ...devPkgs];
+  const devInstallArgs = usePnpm ? ['add', '-D', ...pnpmAddRootFlag, ...devPkgs] : ['install', '-D', ...devPkgs];
   runSafeLive(installBin, [...npmFlags, ...devInstallArgs], installOpts)
     ? ui.ok('[3/3] Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)')
     : ui.warn('[3/3] Some dev packages failed to install');
