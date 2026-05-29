@@ -56,9 +56,18 @@ You also need a [Power Platform environment](https://admin.powerplatform.microso
 
 > **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy‑pasteable commands and verification checks. Takes about 10 minutes.
 
-### Step 1. Create your repo from this template
+### Step 1. Create your repo from the starter template
 
-Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PAppsCAFoundations/generate)** at the top of this page. You'll get a clean repo containing a starter README, `.gitignore`, `.env.template`, and a `.github/copilot-instructions.md` pointer that tells your agent where to load the foundations guidance from. Clone the new repo and open it in VS Code.
+Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter/generate)** on the [**PowerAppsCodeApp-Starter**](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter) repo. You'll get a clean repo containing a starter README, `.gitignore`, `.env.template`, and a `.github/copilot-instructions.md` pointer that tells your agent where to load the foundations guidance from. Clone the new repo and open it in VS Code.
+
+> **This repository (PAppsCAFoundations) is the tooling/source factory** — it builds and publishes the `@pacaf/*` npm packages. Do **not** start an app by cloning or templating this monorepo; its `pnpm-workspace.yaml` and `packages/` will be pulled into your app and break the install. Always start from the clean **PowerAppsCodeApp-Starter** template above.
+>
+> **Prefer no template repo?** Start from an empty folder instead:
+> ```bash
+> mkdir my-code-app && cd my-code-app && git init
+> npx @pacaf/wizard-ux@latest
+> # then publish it:  gh repo create my-code-app --public --source=. --push
+> ```
 
 ### Step 2. Ask your agent to run the wizard
 
