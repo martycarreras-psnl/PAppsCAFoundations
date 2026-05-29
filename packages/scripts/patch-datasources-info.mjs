@@ -51,13 +51,31 @@ if (existsSync(DS_INFO_PATH)) {
 // moved into src/router.tsx). Rather than fail the build every time Microsoft
 // reshapes their starter, we auto-rewrite the offending file in place and
 // emit a warning. The build continues; the user can commit the patch.
-const BROWSER_ROUTER_RE = /\b(BrowserRouter|createBrowserRouter)\b/;
+// Strip line and block comments before scanning so words like "BrowserRouter"
+// appearing inside an explanatory comment don't trigger the guard (#71).
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
+// Match real BrowserRouter usage only: a named import from react-router-dom,
+// a JSX tag, or a createBrowserRouter() call. Plain mentions in identifiers
+// like `MyBrowserRouterThing` or in strings/comments don't count.
+const BROWSER_ROUTER_IMPORT_RE = /import\s*\{[^}]*\b(BrowserRouter|createBrowserRouter)\b[^}]*\}\s*from\s*['"]react-router-dom['"]/;
+const BROWSER_ROUTER_USAGE_RE = /<\s*BrowserRouter\b|\bcreateBrowserRouter\s*\(/;
+
+function hasBrowserRouter(source) {
+  const code = stripComments(source);
+  return BROWSER_ROUTER_IMPORT_RE.test(code) || BROWSER_ROUTER_USAGE_RE.test(code);
+}
+
 const MAIN_TSX = join(PROJECT_DIR, 'src', 'main.tsx');
 const ROUTER_TSX = join(PROJECT_DIR, 'src', 'router.tsx');
 
 if (existsSync(MAIN_TSX)) {
   const original = readFileSync(MAIN_TSX, 'utf-8');
-  if (BROWSER_ROUTER_RE.test(original)) {
+  if (hasBrowserRouter(original)) {
     const patched = original
       .replace(/\bcreateBrowserRouter\b/g, 'createHashRouter')
       .replace(/\bBrowserRouter\b/g, 'HashRouter');
@@ -72,7 +90,7 @@ if (existsSync(MAIN_TSX)) {
 
 if (existsSync(ROUTER_TSX)) {
   const contents = readFileSync(ROUTER_TSX, 'utf-8');
-  if (BROWSER_ROUTER_RE.test(contents)) {
+  if (hasBrowserRouter(contents)) {
     // src/router.tsx is an upstream Microsoft starter artifact that we don't
     // use (our main.tsx wraps <App /> in <HashRouter> directly). Auto-rewriting
     // it to createHashRouter is risky because createHashRouter does not accept

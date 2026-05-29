@@ -39,6 +39,8 @@ export interface Question {
   validatePattern?: 'dataverseUrl';
   hideIf?: QuestionCondition | QuestionCondition[];
   showIf?: QuestionCondition | QuestionCondition[];
+  /** If true, render this question inside a collapsed "Advanced options" section. */
+  advanced?: boolean;
 }
 
 export interface StepMeta {

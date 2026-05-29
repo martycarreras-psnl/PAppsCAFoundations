@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   makeStyles, tokens, Title2, Body1, Button, Spinner,
   MessageBar, MessageBarBody, Caption1,
+  Accordion, AccordionItem, AccordionHeader, AccordionPanel,
 } from '@fluentui/react-components';
 import {
   ArrowLeftRegular, ArrowRightFilled, PlayRegular,
@@ -231,21 +232,26 @@ export function StepRunner() {
 
   const meta = questionsQ.data?.meta;
   const questions = questionsQ.data?.questions ?? [];
-  const questionBlocks = useMemo(() => {
-    const blocks: QuestionBlock[] = [];
-    for (const q of questions) {
-      if (!q.group) {
-        blocks.push({ kind: 'question', question: q });
-        continue;
+  const { primaryBlocks, advancedBlocks } = useMemo(() => {
+    const build = (qs: Question[]): QuestionBlock[] => {
+      const blocks: QuestionBlock[] = [];
+      for (const q of qs) {
+        if (!q.group) {
+          blocks.push({ kind: 'question', question: q });
+          continue;
+        }
+        const previous = blocks[blocks.length - 1];
+        if (previous?.kind === 'group' && previous.group.id === q.group.id) {
+          previous.questions.push(q);
+        } else {
+          blocks.push({ kind: 'group', group: q.group, questions: [q] });
+        }
       }
-      const previous = blocks[blocks.length - 1];
-      if (previous?.kind === 'group' && previous.group.id === q.group.id) {
-        previous.questions.push(q);
-      } else {
-        blocks.push({ kind: 'group', group: q.group, questions: [q] });
-      }
-    }
-    return blocks;
+      return blocks;
+    };
+    const primary = questions.filter((q) => !q.advanced);
+    const advanced = questions.filter((q) => q.advanced);
+    return { primaryBlocks: build(primary), advancedBlocks: build(advanced) };
   }, [questions]);
 
   const hasUnsavedChanges = useMemo(
@@ -380,31 +386,50 @@ export function StepRunner() {
               {/* Question form */}
               {canRun && questions.length > 0 && (
                 <div className={s.questions}>
-                  {questionBlocks.map((block) => {
+                  {(() => {
                     const onChange = (id: string, v: unknown) => setAnswers((a) => ({ ...a, [id]: v }));
-                    if (block.kind === 'group') {
+                    const renderBlock = (block: QuestionBlock) => {
+                      if (block.kind === 'group') {
+                        return (
+                          <QuestionGroupCard
+                            key={block.group.id}
+                            group={block.group}
+                            questions={block.questions}
+                            answers={answers}
+                            onChange={onChange}
+                            showError={showErrors}
+                          />
+                        );
+                      }
                       return (
-                        <QuestionGroupCard
-                          key={block.group.id}
-                          group={block.group}
-                          questions={block.questions}
+                        <QuestionCard
+                          key={block.question.id}
+                          question={block.question}
                           answers={answers}
+                          value={answers[block.question.id]}
                           onChange={onChange}
                           showError={showErrors}
                         />
                       );
-                    }
+                    };
                     return (
-                      <QuestionCard
-                        key={block.question.id}
-                        question={block.question}
-                        answers={answers}
-                        value={answers[block.question.id]}
-                        onChange={onChange}
-                        showError={showErrors}
-                      />
+                      <>
+                        {primaryBlocks.map(renderBlock)}
+                        {advancedBlocks.length > 0 && (
+                          <Accordion collapsible>
+                            <AccordionItem value="advanced">
+                              <AccordionHeader>Advanced options</AccordionHeader>
+                              <AccordionPanel>
+                                <div className={s.questions}>
+                                  {advancedBlocks.map(renderBlock)}
+                                </div>
+                              </AccordionPanel>
+                            </AccordionItem>
+                          </Accordion>
+                        )}
+                      </>
                     );
-                  })}
+                  })()}
                 </div>
               )}
 

@@ -209,6 +209,7 @@ export default {
         label: 'Continue if the project directory is not empty',
         help: 'Existing files may be overwritten. Leave this on when scaffolding into this template-derived repo.',
         defaultValue: true,
+        advanced: true,
       },
       {
         id: 'GIT_REMOTE',
@@ -223,6 +224,7 @@ export default {
           'Use it when you already created an empty repository for the new app and want the wizard to set it as git origin.',
           'Leave it blank if you have not created a repo yet or do not want the wizard to touch git remotes.',
         ].join('\n'),
+        advanced: true,
       },
       {
         id: 'PUSH_INITIAL_COMMIT',
@@ -231,6 +233,7 @@ export default {
         help: 'Optional. Turn this on only if the remote URL above points to an empty repo you can push to. Otherwise leave it off and push manually later.',
         defaultValue: false,
         hideIf: { id: 'GIT_REMOTE', equals: '' },
+        advanced: true,
       },
     ];
   },
