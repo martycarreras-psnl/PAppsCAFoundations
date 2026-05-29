@@ -1,5 +1,11 @@
 # @pacaf/wizard-ux
 
+## 3.3.4
+
+### Patch Changes
+
+- @pacaf/wizard@3.3.6
+
 ## 3.3.3
 
 ### Patch Changes
