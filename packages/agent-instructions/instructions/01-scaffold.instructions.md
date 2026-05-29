@@ -223,8 +223,12 @@ pac org who
 #    If you prefer, create the solution in the Power Apps Maker Portal instead.
 pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
 
-# 3. Clone the starter template
-npx degit microsoft/PowerAppsCodeApps/templates/starter my-app
+# 3. Scaffold the starter project
+#    Prefer the wizard — it writes the entire starter payload locally from
+#    PAppsCAFoundations, so the project is always self-consistent and does not
+#    drift when external template repos change shape.
+npx @pacaf/wizard-ux@latest
+#    (headless/SSH only: npx @pacaf/wizard@latest)
 cd my-app
 
 # 4. Install dependencies
