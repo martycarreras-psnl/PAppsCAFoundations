@@ -389,20 +389,30 @@ createRoot(document.getElementById('root')!).render(
 `);
   logger.ok('src/prototypeManifest.ts');
 
-  writeFileSync(join(dir, 'src', 'App.tsx'), `import {
+  writeFileSync(join(dir, 'src', 'App.tsx'), `import { useState } from 'react';
+import {
+  Button,
   Card,
   Divider,
   Subtitle1,
+  Subtitle2,
   Text,
   Title1,
+  Title2,
   Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import {
+  ArrowLeft24Regular,
+  Clipboard24Regular,
+  Checkmark24Regular,
+} from '@fluentui/react-icons';
 
-// Celebratory launch screen — shown immediately after a successful \`pac code push\`.
-// Replace this file once you start building your real app. The golden path:
-//   Plan → Prototype → Connect → Deploy → Iterate
+type Path = null | 'new-tables' | 'existing-tables';
+
+// ── Styles ──────────────────────────────────────────────────────────────────
+
 const useStyles = makeStyles({
   root: {
     minHeight: '100vh',
@@ -424,9 +434,8 @@ const useStyles = makeStyles({
     alignItems: 'center',
     textAlign: 'center',
     gap: tokens.spacingVerticalM,
-    maxWidth: '680px',
+    maxWidth: '720px',
   },
-  // Bouncy entrance animation for the party-popper emoji
   burst: {
     fontSize: '72px',
     lineHeight: '1',
@@ -446,9 +455,119 @@ const useStyles = makeStyles({
   },
   tagline: {
     color: tokens.colorNeutralForeground2,
-    maxWidth: '520px',
+    maxWidth: '600px',
   },
-  // Pill that summarises the full delivery loop
+  question: {
+    color: tokens.colorNeutralForeground1,
+    marginTop: tokens.spacingVerticalL,
+  },
+  paths: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: tokens.spacingHorizontalL,
+    width: '100%',
+    maxWidth: '800px',
+  },
+  card: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+    padding: tokens.spacingHorizontalXL,
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow16,
+    cursor: 'pointer',
+    transitionProperty: 'box-shadow, transform',
+    transitionDuration: '0.2s',
+    ':hover': {
+      boxShadow: tokens.shadow28,
+      transform: 'translateY(-2px)',
+    },
+  },
+  cardHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
+  cardEmoji: {
+    fontSize: '32px',
+    lineHeight: '1',
+  },
+  cardBody: {
+    color: tokens.colorNeutralForeground2,
+  },
+  // Next-steps detail view
+  stepsContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+    width: '100%',
+    maxWidth: '800px',
+  },
+  stepCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    padding: tokens.spacingHorizontalXL,
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow8,
+  },
+  stepNumber: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    borderRadius: tokens.borderRadiusCircular,
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundOnBrand,
+    fontWeight: tokens.fontWeightBold,
+    fontSize: tokens.fontSizeBase300,
+    flexShrink: 0,
+  },
+  stepHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
+  stepBody: {
+    color: tokens.colorNeutralForeground2,
+    paddingLeft: '44px',
+  },
+  prompt: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusMedium,
+    paddingTop: tokens.spacingVerticalS,
+    paddingBottom: tokens.spacingVerticalS,
+    paddingLeft: tokens.spacingHorizontalM,
+    paddingRight: tokens.spacingHorizontalM,
+    borderLeftStyle: 'solid',
+    borderLeftWidth: '3px',
+    borderLeftColor: tokens.colorBrandStroke1,
+    marginLeft: '44px',
+    position: 'relative',
+  },
+  promptLabel: {
+    display: 'block',
+    fontSize: tokens.fontSizeBase100,
+    color: tokens.colorNeutralForeground3,
+    marginBottom: tokens.spacingVerticalXS,
+  },
+  promptText: {
+    fontFamily: tokens.fontFamilyMonospace,
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorBrandForeground1,
+  },
+  copyButton: {
+    position: 'absolute',
+    top: tokens.spacingVerticalXS,
+    right: tokens.spacingHorizontalXS,
+  },
+  backRow: {
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: '800px',
+  },
   goldenPath: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -469,57 +588,6 @@ const useStyles = makeStyles({
   arrow: {
     color: tokens.colorNeutralForeground4,
   },
-  // Two "what's next" cards — idea-first and data-first paths
-  paths: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: tokens.spacingHorizontalL,
-    width: '100%',
-    maxWidth: '800px',
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
-    padding: tokens.spacingHorizontalXL,
-    borderRadius: tokens.borderRadiusXLarge,
-    boxShadow: tokens.shadow16,
-  },
-  cardHead: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-  },
-  cardEmoji: {
-    fontSize: '32px',
-    lineHeight: '1',
-  },
-  cardBody: {
-    color: tokens.colorNeutralForeground2,
-  },
-  // Styled block for the suggested agent prompt
-  prompt: {
-    backgroundColor: tokens.colorNeutralBackground3,
-    borderRadius: tokens.borderRadiusMedium,
-    paddingTop: tokens.spacingVerticalS,
-    paddingBottom: tokens.spacingVerticalS,
-    paddingLeft: tokens.spacingHorizontalM,
-    paddingRight: tokens.spacingHorizontalM,
-    borderLeftStyle: 'solid',
-    borderLeftWidth: '3px',
-    borderLeftColor: tokens.colorBrandStroke1,
-  },
-  promptLabel: {
-    display: 'block',
-    fontSize: tokens.fontSizeBase100,
-    color: tokens.colorNeutralForeground3,
-    marginBottom: tokens.spacingVerticalXS,
-  },
-  promptText: {
-    fontFamily: tokens.fontFamilyMonospace,
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorBrandForeground1,
-  },
   divider: {
     width: '100%',
     maxWidth: '800px',
@@ -527,16 +595,236 @@ const useStyles = makeStyles({
   footer: {
     color: tokens.colorNeutralForeground3,
     textAlign: 'center',
-    maxWidth: '520px',
+    maxWidth: '560px',
   },
 });
 
-export function App() {
+// ── Copy-to-clipboard button ────────────────────────────────────────────────
+
+function CopyButton({ text }: { text: string }) {
+  const styles = useStyles();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Button
+      className={styles.copyButton}
+      appearance="subtle"
+      size="small"
+      icon={copied ? <Checkmark24Regular /> : <Clipboard24Regular />}
+      title={copied ? 'Copied!' : 'Copy to clipboard'}
+      onClick={handleCopy}
+    />
+  );
+}
+
+// ── Step card ───────────────────────────────────────────────────────────────
+
+interface StepProps {
+  number: number;
+  title: string;
+  description: string;
+  agentPrompt?: string;
+}
+
+function StepItem({ number, title, description, agentPrompt }: StepProps) {
   const styles = useStyles();
 
   return (
+    <Card className={styles.stepCard}>
+      <div className={styles.stepHead}>
+        <span className={styles.stepNumber}>{number}</span>
+        <Subtitle2>{title}</Subtitle2>
+      </div>
+      <Text className={styles.stepBody}>{description}</Text>
+      {agentPrompt && (
+        <div className={styles.prompt}>
+          <span className={styles.promptLabel}>Paste this in your agent chat:</span>
+          <Text className={styles.promptText}>{agentPrompt}</Text>
+          <CopyButton text={agentPrompt} />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── Next steps: New tables (idea-first) ─────────────────────────────────────
+
+function NewTablesSteps() {
+  const styles = useStyles();
+
+  return (
+    <div className={styles.stepsContainer}>
+      <div className={styles.hero}>
+        <Title2>Building something new</Title2>
+        <Text className={styles.tagline}>
+          You have a business problem but no data model yet. Here is the path from idea
+          to working app — each step feeds the next.
+        </Text>
+      </div>
+
+      <StepItem
+        number={1}
+        title="Describe your business problem"
+        description="Open VS Code, start a chat with your coding agent, and describe what you want to build in plain language. The agent will decompose your narrative into business dimensions — roles, workflows, approvals, data, and reporting — without jumping to implementation."
+        agentPrompt="I want to build a [describe your app]. Help me plan it as a Power Apps Code App. Walk me through business problem decomposition first — don't jump to code."
+      />
+
+      <StepItem
+        number={2}
+        title="Grill the plan"
+        description="Once the agent has a draft understanding, ask it to grill you. It will challenge your assumptions one question at a time, sharpen your terminology into a CONTEXT.md glossary, and surface decisions that need recording as ADRs. This is where fuzzy ideas become precise requirements."
+        agentPrompt="Grill me on this plan. Challenge my assumptions one question at a time, sharpen the terminology, and build the CONTEXT.md glossary as we go."
+      />
+
+      <StepItem
+        number={3}
+        title="Generate the planning payload"
+        description="When the scope is stable, the agent translates your refined narrative into a Dataverse planning payload — candidate tables, columns, relationships, and lifecycle states. Every entity traces back to a glossary term in CONTEXT.md."
+        agentPrompt="The scope is stable. Translate it into a Dataverse planning payload. Make sure every entity traces back to a CONTEXT.md term."
+      />
+
+      <StepItem
+        number={4}
+        title="Build a clickable prototype"
+        description="Before provisioning any Dataverse schema, the agent scaffolds a mock-data-backed prototype you can click through. This validates the UX against real business scenarios without touching your environment."
+        agentPrompt="Build a clickable prototype against mock data so I can validate the UX before we create any Dataverse tables."
+      />
+
+      <StepItem
+        number={5}
+        title="Connect and deploy"
+        description="Once the prototype validates, provision the Dataverse schema, register data sources with pac code add-data-source, swap mock providers for real ones, and deploy with pac code push."
+        agentPrompt="The prototype looks good. Provision the Dataverse schema from the planning payload, register the data sources, and help me deploy."
+      />
+
+      <Divider className={styles.divider} />
+
+      <div className={styles.goldenPath} role="list" aria-label="The golden path">
+        <Text className={styles.step}>📋 Plan</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔥 Grill</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🖼️ Prototype</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔌 Connect</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🚀 Deploy</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔁 Iterate</Text>
+      </div>
+    </div>
+  );
+}
+
+// ── Next steps: Existing tables (data-first) ────────────────────────────────
+
+function ExistingTablesSteps() {
+  const styles = useStyles();
+
+  return (
+    <div className={styles.stepsContainer}>
+      <div className={styles.hero}>
+        <Title2>Building on existing data</Title2>
+        <Text className={styles.tagline}>
+          You already have Dataverse tables, a SharePoint list, or a data model. Here is the
+          fastest path from existing schema to a working Code App.
+        </Text>
+      </div>
+
+      <StepItem
+        number={1}
+        title="Discover your existing schema"
+        description="Open VS Code and ask your agent to examine what already exists in your environment. It will query Dataverse metadata, identify tables, columns, relationships, and OOB entities you can reuse — so you don't accidentally recreate something that already exists."
+        agentPrompt="Examine my Dataverse environment and show me what tables, columns, and relationships already exist. Highlight any OOB entities I should reuse instead of recreating."
+      />
+
+      <StepItem
+        number={2}
+        title="Build the glossary from your schema"
+        description="The agent reverse-engineers a CONTEXT.md glossary from your existing tables — mapping Dataverse display names to canonical business terms. This grounds all future development in your actual data model."
+        agentPrompt="Build a CONTEXT.md glossary from my existing Dataverse tables. Map each table and key column to a canonical business term."
+      />
+
+      <StepItem
+        number={3}
+        title="Grill for gaps"
+        description="Even with existing tables, there are usually gaps — missing relationships, lifecycle states that aren't modelled, or new entities needed for the app you're building. The grilling process surfaces these before you write any UI code."
+        agentPrompt="Grill me on whether my existing schema is complete for the app I want to build. Surface any gaps — missing tables, columns, relationships, or lifecycle states."
+      />
+
+      <StepItem
+        number={4}
+        title="Register data sources and prototype"
+        description="Register your existing tables with pac code add-data-source to generate TypeScript services. Then scaffold a prototype backed by real data — you get a working app against your actual schema immediately."
+        agentPrompt="Register my existing Dataverse tables as data sources and scaffold a prototype using the generated services. Show me real data from my environment."
+      />
+
+      <StepItem
+        number={5}
+        title="Iterate and deploy"
+        description="Refine the UI, add any new tables the grilling process identified, and deploy. Each iteration follows the same loop — plan any changes, grill the plan, prototype, connect, deploy."
+        agentPrompt="The prototype is working. Help me refine the UI and deploy to my environment with pac code push."
+      />
+
+      <Divider className={styles.divider} />
+
+      <div className={styles.goldenPath} role="list" aria-label="The golden path">
+        <Text className={styles.step}>🔍 Discover</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>📖 Glossary</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔥 Grill</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔌 Connect</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🚀 Deploy</Text>
+        <Text className={styles.arrow}>→</Text>
+        <Text className={styles.step}>🔁 Iterate</Text>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ────────────────────────────────────────────────────────────────
+
+export function App() {
+  const styles = useStyles();
+  const [selectedPath, setSelectedPath] = useState<Path>(null);
+
+  // ── Detail view (after a choice is made) ──
+  if (selectedPath) {
+    return (
+      <div className={styles.root}>
+        <div className={styles.backRow}>
+          <Button
+            appearance="subtle"
+            icon={<ArrowLeft24Regular />}
+            onClick={() => setSelectedPath(null)}
+          >
+            Back
+          </Button>
+        </div>
+
+        {selectedPath === 'new-tables' ? <NewTablesSteps /> : <ExistingTablesSteps />}
+
+        <Text className={styles.footer}>
+          Every iteration brings you back to this loop. This screen is your pitstop, not
+          your finish line. 🏁
+        </Text>
+      </div>
+    );
+  }
+
+  // ── Choice screen ──
+  return (
     <div className={styles.root}>
-      {/* ── Hero ── */}
       <div className={styles.hero}>
         <span className={styles.burst} role="img" aria-label="Party popper">
           🎉
@@ -546,75 +834,53 @@ export function App() {
         </Title1>
         <Subtitle1 as="p" className={styles.tagline}>
           You just deployed a real Power Apps Code App to Dataverse. That is not a demo —
-          that is a production-grade Microsoft 365 integration running on your tenant. Take a
-          moment to appreciate what you just shipped.
+          that is a production-grade Microsoft 365 integration running on your tenant.
         </Subtitle1>
 
-        {/* Golden-path delivery loop */}
-        <div className={styles.goldenPath} role="list" aria-label="The golden path">
-          <Text className={styles.step}>📋 Plan</Text>
-          <Text className={styles.arrow}>→</Text>
-          <Text className={styles.step}>🖼️ Prototype</Text>
-          <Text className={styles.arrow}>→</Text>
-          <Text className={styles.step}>🔌 Connect</Text>
-          <Text className={styles.arrow}>→</Text>
-          <Text className={styles.step}>🚀 Deploy</Text>
-          <Text className={styles.arrow}>→</Text>
-          <Text className={styles.step}>🔁 Iterate</Text>
-        </div>
+        <Title3 className={styles.question}>What are you building?</Title3>
       </div>
 
-      {/* ── Next-step paths ── */}
       <div className={styles.paths}>
-        {/* Path A: idea-first */}
-        <Card className={styles.card}>
+        <Card
+          className={styles.card}
+          onClick={() => setSelectedPath('new-tables')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && setSelectedPath('new-tables')}
+        >
           <div className={styles.cardHead}>
             <span className={styles.cardEmoji}>🧠</span>
-            <Title3>Start with an idea</Title3>
+            <Title3>A brand new app</Title3>
           </div>
           <Text className={styles.cardBody}>
-            You have a business problem in mind but have not modelled the data yet. Return to
-            VS Code, open your code agent, and describe what you want to build. It will walk
-            you through the plan → prototype → connect loop so you validate the UX before
-            touching Dataverse.
+            I have a business problem or app idea. I need to design the data model, plan
+            the workflows, and build from scratch.
           </Text>
-          <div className={styles.prompt}>
-            <span className={styles.promptLabel}>Try asking your agent:</span>
-            <Text className={styles.promptText}>
-              "I want to build [describe your app]. Help me plan it as a Power Apps Code App
-              and take me through the golden path."
-            </Text>
-          </div>
         </Card>
 
-        {/* Path B: data-first */}
-        <Card className={styles.card}>
+        <Card
+          className={styles.card}
+          onClick={() => setSelectedPath('existing-tables')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && setSelectedPath('existing-tables')}
+        >
           <div className={styles.cardHead}>
             <span className={styles.cardEmoji}>📊</span>
-            <Title3>Start with your data</Title3>
+            <Title3>An app on existing data</Title3>
           </div>
           <Text className={styles.cardBody}>
-            Already have a Dataverse schema, an Excel workbook, or a data model sketched out?
-            Hand it to your code agent. It can reverse-engineer the structure into a planning
-            payload, generate a prototype, and get you to a working first pass faster than
-            starting from scratch.
+            I already have Dataverse tables, a SharePoint list, or a data model. I want to
+            build a new Code App on top of what I have.
           </Text>
-          <div className={styles.prompt}>
-            <span className={styles.promptLabel}>Try asking your agent:</span>
-            <Text className={styles.promptText}>
-              "Here is my existing schema / Excel file. Examine the data structures and
-              generate a first-pass planning payload, then take me through prototyping it as a
-              Code App."
-            </Text>
-          </div>
         </Card>
       </div>
 
       <Divider className={styles.divider} />
 
       <Text className={styles.footer}>
-        Every iteration brings you back here. This screen is your pitstop, not your finish
-        line. 🏁
+        Pick a path and we will show you exactly what to ask your coding agent in VS Code
+        to get started. You can always come back.
       </Text>
     </div>
   );
@@ -736,7 +1002,7 @@ export { customRender as render };
 
   // src/App.test.tsx — smoke tests for the scaffolded App component
   writeFileSync(join(dir, 'src', 'App.test.tsx'), `import { describe, it, expect } from 'vitest';
-import { render, screen } from '../tests/setup/test-utils';
+import { render, screen, fireEvent } from '../tests/setup/test-utils';
 import { App } from './App';
 
 describe('App — smoke tests', () => {
@@ -752,8 +1018,33 @@ describe('App — smoke tests', () => {
 
   it('shows the celebratory launch screen', () => {
     render(<App />);
-    // The launch screen always contains the golden-path loop text
     expect(screen.getByText(/is live!/i)).toBeTruthy();
+  });
+
+  it('shows the path selection question', () => {
+    render(<App />);
+    expect(screen.getByText(/What are you building/i)).toBeTruthy();
+  });
+
+  it('navigates to new-tables steps when first card is clicked', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('A brand new app'));
+    expect(screen.getByText('Building something new')).toBeTruthy();
+    expect(screen.getByText('Describe your business problem')).toBeTruthy();
+  });
+
+  it('navigates to existing-tables steps when second card is clicked', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('An app on existing data'));
+    expect(screen.getByText('Building on existing data')).toBeTruthy();
+    expect(screen.getByText('Discover your existing schema')).toBeTruthy();
+  });
+
+  it('returns to the choice screen when Back is clicked', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('A brand new app'));
+    fireEvent.click(screen.getByText('Back'));
+    expect(screen.getByText(/What are you building/i)).toBeTruthy();
   });
 });
 `);
