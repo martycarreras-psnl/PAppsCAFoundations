@@ -41,8 +41,15 @@ export const PNPM_ALLOWED_BUILD_DEPENDENCIES = [
 // Devs deps are computed dynamically so forks can rebrand the @pacaf scope.
 export function buildRequiredDevPackages(config = loadPacafConfig()) {
   return {
-    [scopedPackageName('scripts', config)]: '^3.0.0',
-    [scopedPackageName('agent-instructions', config)]: '^3.0.0',
+    // Pin the first-party packages to the `latest` dist-tag rather than a
+    // `^3.0.0` caret. With a warm pnpm store, a caret range lets pnpm resolve
+    // to a previously-cached 3.x version instead of re-querying the registry,
+    // so fresh scaffolds could land on a stale @pacaf/* release. `latest`
+    // forces `pnpm add` / `npm install` to fetch the newest published version
+    // every time; the package manager then writes back the resolved caret
+    // range into the generated package.json. See issue #43 / wizard scaffold.
+    [scopedPackageName('scripts', config)]: 'latest',
+    [scopedPackageName('agent-instructions', config)]: 'latest',
     typescript: '5.7.3',
     '@types/react': '^18.3.12',
     '@types/react-dom': '^18.3.1',
