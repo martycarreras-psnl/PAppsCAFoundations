@@ -1,6 +1,6 @@
 {
   "name": "@pacaf/agent-instructions",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "private": false,
   "type": "module",
   "description": "Power Apps Code App Foundations agent guidance for GitHub Copilot, Claude, and Cursor. Materializes .github/instructions/, .claude/rules/, .cursor/rules/ into a target repo and detects drift.",
