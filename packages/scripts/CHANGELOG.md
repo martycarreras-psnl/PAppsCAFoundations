@@ -1,5 +1,11 @@
 # @pacaf/scripts
 
+## 3.0.5
+
+### Patch Changes
+
+- 549648e: `pacaf-update --check` now also reports `@pacaf/scripts` version drift. It compares the locally installed version against the latest published version and prints whether it is up to date, drifted, not installed, or unreachable — alongside the existing `@pacaf/agent-instructions` check.
+
 ## 3.0.4
 
 ### Patch Changes
