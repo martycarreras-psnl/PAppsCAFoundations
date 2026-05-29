@@ -84,4 +84,31 @@ Then stop. Do not auto-`winget`/`brew`/`choco`/`apt` — those have their own el
 - Homebrew on Apple Silicon = `/opt/homebrew`; Intel = `/usr/local`. Must `eval "$(/opt/homebrew/bin/brew shellenv)"`.
 - **`PATH` entries with literal `~` are silently broken in zsh/bash.** Use `$HOME/.dotnet/tools`, not `~/.dotnet/tools`. The canonical-path probe above catches this.
 
+## If this IS the PACAF monorepo source tree — gate on `pnpm install` + build
+
+The checks above only cover **consumers** running `npx @pacaf/wizard-ux@latest` (published artifact, self-contained). They do **not** cover **contributors** working inside the PACAF source repo who try to run the wizard / scripts / rebrand tool from source. In that case the workspace `node_modules` and built artifacts are missing and the wizard crashes with `Cannot find package 'fastify'` (or similar) which looks like a PACAF bug. It isn't.
+
+Detect the source tree: presence of **all** of `pnpm-workspace.yaml`, `packages/wizard-ux/package.json`, and `packages/agent-instructions/package.json` at the workspace root.
+
+If detected, before suggesting `pnpm --filter ... dev`, `node packages/.../bin/...`, or any local wizard invocation:
+
+```bash
+[ -d node_modules ] && [ -d packages/wizard-ux/node_modules ] && echo "✅ installed" || echo "❌ run: pnpm install"
+[ -d packages/wizard-ux/dist ] && echo "✅ built" || echo "❌ run: pnpm --filter @pacaf/wizard-ux build"
+```
+
+If either fails, stop and tell the user:
+
+```
+🛑 Monorepo source tree — workspace not ready
+
+Run:
+  pnpm install
+  pnpm --filter @pacaf/wizard-ux build
+
+End users do NOT need this — `npx @pacaf/wizard-ux@latest` is self-contained.
+```
+
+Does **not** apply to downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
+
 Full details: `.github/instructions/00-prereq-gate.instructions.md`

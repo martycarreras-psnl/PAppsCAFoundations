@@ -93,4 +93,31 @@ Then **stop**. Do not suggest `winget`, `brew`, `choco`, or `apt` one-liners unl
 ## When the user says "ready"
 Re-run **only** the previously-failing commands. Confirm each one passes before proceeding. Repeat the stop block with the still-missing items if anything is still failing.
 
+## If this IS the PACAF monorepo source tree — gate on `pnpm install` + build
+
+The checks above only cover **consumers** running `npx @pacaf/wizard-ux@latest` (published artifact, self-contained). They do **not** cover **contributors** working inside the PACAF source repo who try to run the wizard / scripts / rebrand tool from source. In that case the workspace `node_modules` and built artifacts are missing and the wizard crashes with `Cannot find package 'fastify'` (or similar) which looks like a PACAF bug. It isn't.
+
+Detect the source tree: presence of **all** of `pnpm-workspace.yaml`, `packages/wizard-ux/package.json`, and `packages/agent-instructions/package.json` at the workspace root.
+
+If detected, before suggesting `pnpm --filter ... dev`, `node packages/.../bin/...`, or any local wizard invocation:
+
+```bash
+[ -d node_modules ] && [ -d packages/wizard-ux/node_modules ] && echo "✅ installed" || echo "❌ run: pnpm install"
+[ -d packages/wizard-ux/dist ] && echo "✅ built" || echo "❌ run: pnpm --filter @pacaf/wizard-ux build"
+```
+
+If either fails, stop and tell the user:
+
+```
+🛑 Monorepo source tree — workspace not ready
+
+Run:
+  pnpm install
+  pnpm --filter @pacaf/wizard-ux build
+
+End users do NOT need this — `npx @pacaf/wizard-ux@latest` is self-contained.
+```
+
+Does **not** apply to downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
+
 Full details: `.github/instructions/00-prereq-gate.instructions.md`
