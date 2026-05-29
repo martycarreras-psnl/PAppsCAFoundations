@@ -36,7 +36,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/shell.test.mjs tests/connection-discovery.test.mjs tests/pac-target.test.mjs",
+    "test": "node --test tests/shell.test.mjs tests/connection-discovery.test.mjs tests/pac-target.test.mjs tests/routing-guard.test.mjs",
     "test:legacy": "echo 'agent-guidance-drift, scaffold-prototype-path, and seed-prototype-assets tests need rewriting for the monorepo layout (paths to scripts/AGENTS.md, scripts/seed-prototype-assets.mjs, etc. are stale). See issue TBD.' && exit 1"
   },
   "engines": {
