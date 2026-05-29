@@ -12,7 +12,7 @@
 // Usage:  node scripts/patch-datasources-info.mjs
 // Runs automatically as part of `npm run build` (prebuild hook).
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PROJECT_DIR = process.cwd();
@@ -39,36 +39,59 @@ if (existsSync(DS_INFO_PATH)) {
     console.log('✓ dataSourcesInfo.ts — no patching needed');
   }
 }
-// ── Code App routing guard (issue #47) ───────────────────────────────────────
+// ── Code App routing guard (issues #47, #63) ────────────────────────────────
 // BrowserRouter / createBrowserRouter from react-router-dom 404s on first load
 // inside the Power Apps host iframe because the host owns the URL path. Only
 // the fragment is reliably owned by the iframe, so HashRouter (or
 // createHashRouter) is the only routing option that works for a deployed Code
-// App. Fail the build loudly if main.tsx or router.tsx still reference the
-// browser router — much better than letting it ship and 404 in production.
-const ROUTER_FILES = [
-  join(PROJECT_DIR, 'src', 'main.tsx'),
-  join(PROJECT_DIR, 'src', 'router.tsx'),
-];
+// App.
+//
+// This guard is SELF-HEALING (#63): the upstream Microsoft starter template
+// keeps shifting where BrowserRouter lives (originally in src/main.tsx, then
+// moved into src/router.tsx). Rather than fail the build every time Microsoft
+// reshapes their starter, we auto-rewrite the offending file in place and
+// emit a warning. The build continues; the user can commit the patch.
 const BROWSER_ROUTER_RE = /\b(BrowserRouter|createBrowserRouter)\b/;
-for (const file of ROUTER_FILES) {
-  if (!existsSync(file)) continue;
-  const contents = readFileSync(file, 'utf-8');
+const MAIN_TSX = join(PROJECT_DIR, 'src', 'main.tsx');
+const ROUTER_TSX = join(PROJECT_DIR, 'src', 'router.tsx');
+
+if (existsSync(MAIN_TSX)) {
+  const original = readFileSync(MAIN_TSX, 'utf-8');
+  if (BROWSER_ROUTER_RE.test(original)) {
+    const patched = original
+      .replace(/\bcreateBrowserRouter\b/g, 'createHashRouter')
+      .replace(/\bBrowserRouter\b/g, 'HashRouter');
+    writeFileSync(MAIN_TSX, patched, 'utf-8');
+    console.warn('');
+    console.warn('⚠ Routing guard auto-fix: rewrote src/main.tsx BrowserRouter → HashRouter');
+    console.warn('  Power Apps host iframes 404 on BrowserRouter (see #47, #63).');
+    console.warn('  Review the change and commit it.');
+    console.warn('');
+  }
+}
+
+if (existsSync(ROUTER_TSX)) {
+  const contents = readFileSync(ROUTER_TSX, 'utf-8');
   if (BROWSER_ROUTER_RE.test(contents)) {
-    console.error('');
-    console.error('✗ Code App routing guard FAILED');
-    console.error('');
-    console.error(`  ${file} imports BrowserRouter / createBrowserRouter from react-router-dom.`);
-    console.error('  BrowserRouter 404s on first load inside the Power Apps iframe because the');
-    console.error('  Power Apps host owns the URL path. Use HashRouter (or createHashRouter)');
-    console.error('  instead — the fragment is the only URL segment the iframe reliably owns.');
-    console.error('');
-    console.error('  Fix:');
-    console.error('    - import { HashRouter } from \'react-router-dom\';');
-    console.error('    + <HashRouter><App /></HashRouter>');
-    console.error('');
-    console.error('  See .github/instructions/01-scaffold.instructions.md and issue #47.');
-    console.error('');
-    process.exit(1);
+    // src/router.tsx is an upstream Microsoft starter artifact that we don't
+    // use (our main.tsx wraps <App /> in <HashRouter> directly). Auto-rewriting
+    // it to createHashRouter is risky because createHashRouter does not accept
+    // the `basename` option the upstream file passes. Safer: delete it and let
+    // main.tsx own the router. See #63.
+    try {
+      unlinkSync(ROUTER_TSX);
+      console.warn('');
+      console.warn('⚠ Routing guard auto-fix: removed src/router.tsx (used BrowserRouter)');
+      console.warn('  This file was left over from the upstream Microsoft starter template.');
+      console.warn('  Our src/main.tsx already wraps <App /> in <HashRouter>. See #47, #63.');
+      console.warn('');
+    } catch (error) {
+      console.error('');
+      console.error('✗ Code App routing guard FAILED');
+      console.error(`  Could not remove ${ROUTER_TSX}: ${error.message}`);
+      console.error('  Delete the file manually — main.tsx already provides the HashRouter.');
+      console.error('');
+      process.exit(1);
+    }
   }
 }
