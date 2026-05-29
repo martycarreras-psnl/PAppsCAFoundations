@@ -78,27 +78,19 @@ export default async function stepScaffold() {
     }
   }
 
-  // ── Download template ──
+  // ── Write starter project ──
+  // The wizard owns the entire starter payload locally (createMinimalProject +
+  // writeConfig + writeStarterFiles below). We do NOT fetch from an upstream
+  // template repo: that path produced surplus files (e.g. src/router.tsx with
+  // BrowserRouter, an unrelated setup-wizard app shipped from microsoft/
+  // PowerAppsCodeApps/templates/starter) that broke fresh scaffolds whenever
+  // upstream reshaped itself. See issues #47, #63, and the follow-up that
+  // removed degit entirely.
   ui.line('');
-  ui.line('Downloading starter template...');
+  ui.line('Writing starter project...');
   mkdirSync(projectDir, { recursive: true });
-
-  const dirNotEmpty = existsSync(projectDir) && readdirSync(projectDir).length > 0;
-  const degitArgs = ['--yes', 'degit', 'microsoft/PowerAppsCodeApps/templates/starter', projectDir];
-  if (dirNotEmpty) degitArgs.push('--force');
-
-  let templateOk = false;
-  try {
-    templateOk = runSafeLive(IS_WIN ? 'npx.cmd' : 'npx', degitArgs);
-    if (templateOk) ui.ok('Template downloaded');
-  } catch { /* fall through */ }
-
-  if (!templateOk) {
-    ui.warn('Template download failed (network issue or repo changed).');
-    ui.line('  Creating minimal project structure instead...');
-    createMinimalProject(projectDir, appName);
-    ui.ok('Minimal structure created');
-  }
+  createMinimalProject(projectDir, appName);
+  ui.ok('Starter project written');
   normalizePackageJsonDependencies(projectDir, ui);
 
   // ── Ensure vite-env.d.ts exists (declares SVG/asset imports for TypeScript) ──

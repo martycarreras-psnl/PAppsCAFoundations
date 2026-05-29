@@ -247,17 +247,15 @@ export default {
     mkdirSync(projectDir, { recursive: true });
     log.ok(`Project path: ${projectDir}`);
 
-    const dirNotEmpty = existsSync(projectDir) && readdirSync(projectDir).length > 0;
-    log.info('Downloading starter template...');
-    const templateArgs = ['--yes', 'degit', 'microsoft/PowerAppsCodeApps/templates/starter', projectDir];
-    if (dirNotEmpty) templateArgs.push('--force');
-    const templateOk = await runFile(log, toolCommand('npx'), templateArgs, { cwd: projectDir });
-    if (!templateOk) {
-      log.warn('Template download failed. Creating minimal project structure instead.');
-      SCAFFOLD.createMinimalProject(projectDir, appName);
-    } else {
-      log.ok('Starter template downloaded');
-    }
+    // Write the starter project locally. We own this payload end-to-end
+    // (createMinimalProject + writeConfig + writeStarterFiles below) and do
+    // not fetch from an upstream template repo: that path shipped surplus
+    // files (e.g. src/router.tsx with BrowserRouter, an unrelated setup-wizard
+    // app) that broke fresh scaffolds whenever upstream reshaped itself.
+    // See issues #47, #63, and the follow-up that removed degit entirely.
+    log.info('Writing starter project...');
+    SCAFFOLD.createMinimalProject(projectDir, appName);
+    log.ok('Starter project written');
     SCAFFOLD.normalizePackageJsonDependencies(projectDir, foundationLogger);
 
     const viteEnvPath = join(projectDir, 'src', 'vite-env.d.ts');
