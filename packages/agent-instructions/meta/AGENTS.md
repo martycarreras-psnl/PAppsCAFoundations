@@ -68,16 +68,16 @@ Do not suggest the CLI wizard unless the user explicitly asks for it or confirms
 
 ### Consumer vs. monorepo source contributor
 
-The `npx @pacaf/wizard-ux@latest` flow above is the **consumer** path — it pulls a self-contained published artifact from npm and is what every downstream Code App user runs. It has no workspace prerequisites beyond Node.js.
+The `npx @pacaf/wizard-ux@latest` flow above is the **consumer** path — it pulls a self-contained published artifact from npm and is what every downstream Code App user runs. It has no workspace prerequisites beyond Node.js. **It is also the right default when the user says "run the wizard" from inside the PACAF monorepo itself** — the published artifact does not read the local workspace, so cwd is irrelevant. Do not stop and demand `pnpm install` just because the cwd happens to be the source tree.
 
-If you are working inside the **PACAF monorepo source tree** itself (you can see `pnpm-workspace.yaml`, `packages/wizard-ux/`, and `packages/agent-instructions/` at the repo root), you are a **contributor**, not a consumer. Running the wizard, scripts, or rebrand tool from source requires the workspace to be installed and built first:
+The contributor / source-tree path is different. You are a **contributor** only when the user has explicitly asked for a source-tree invocation such as `pnpm --filter @pacaf/wizard-ux dev`, `node packages/wizard-ux/bin/...`, `node packages/wizard/index.mjs`, or any other `pnpm --filter @pacaf/...` / `node packages/...` command. In that case — and only that case — the workspace must be installed and built first:
 
 ```bash
 pnpm install
 pnpm --filter @pacaf/wizard-ux build
 ```
 
-Without these, source-tree invocations crash with `Cannot find package 'fastify'` (or similar missing-dependency errors) which look like PACAF bugs but are not. Step 7 of [.github/instructions/00-prereq-gate.instructions.md](.github/instructions/00-prereq-gate.instructions.md) gates on this — do not skip it when working inside the monorepo.
+Without these, source-tree invocations crash with `Cannot find package 'fastify'` (or similar missing-dependency errors) which look like PACAF bugs but are not. Step 7 of [.github/instructions/00-prereq-gate.instructions.md](.github/instructions/00-prereq-gate.instructions.md) gates on this — but only for explicit source-tree invocations, never for `npx @pacaf/...`.
 
 ## Architectural Rules That Must Never Be Violated
 

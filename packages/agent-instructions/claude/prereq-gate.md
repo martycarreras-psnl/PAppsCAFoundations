@@ -93,31 +93,41 @@ Then **stop**. Do not suggest `winget`, `brew`, `choco`, or `apt` one-liners unl
 ## When the user says "ready"
 Re-run **only** the previously-failing commands. Confirm each one passes before proceeding. Repeat the stop block with the still-missing items if anything is still failing.
 
-## If this IS the PACAF monorepo source tree — gate on `pnpm install` + build
+## Only if the user explicitly invokes the wizard *from source*, gate on `pnpm install` + build
 
-The checks above only cover **consumers** running `npx @pacaf/wizard-ux@latest` (published artifact, self-contained). They do **not** cover **contributors** working inside the PACAF source repo who try to run the wizard / scripts / rebrand tool from source. In that case the workspace `node_modules` and built artifacts are missing and the wizard crashes with `Cannot find package 'fastify'` (or similar) which looks like a PACAF bug. It isn't.
+When the user says "run the wizard", "start the wizard", "set me up" — or any similar bootstrap intent — your default action is `npx @pacaf/wizard-ux@latest`. That artifact is **self-contained from npm**: it does not read the local workspace, it does not need `pnpm install`, and it does not need anything to be built. It runs the same in an empty folder, in a downstream Code App, or inside the PACAF monorepo itself. **Do not gate on workspace install just because the cwd looks like the source tree.**
 
-Detect the source tree: presence of **all** of `pnpm-workspace.yaml`, `packages/wizard-ux/package.json`, and `packages/agent-instructions/package.json` at the workspace root.
+This source-tree gate fires **only** when the user explicitly typed a source-tree invocation:
 
-If detected, before suggesting `pnpm --filter ... dev`, `node packages/.../bin/...`, or any local wizard invocation:
+- `pnpm --filter @pacaf/wizard-ux dev` / `start`
+- `node packages/wizard-ux/bin/...`
+- `node packages/wizard/index.mjs`
+- `node packages/scripts/...`
+- `node packages/rebrand/bin/...`
+- Anything starting with `pnpm --filter @pacaf/...` or `node packages/...`
+
+If the user asked for one of the above **and** the cwd contains all three of `pnpm-workspace.yaml`, `packages/wizard-ux/package.json`, `packages/agent-instructions/package.json`:
 
 ```bash
 [ -d node_modules ] && [ -d packages/wizard-ux/node_modules ] && echo "✅ installed" || echo "❌ run: pnpm install"
 [ -d packages/wizard-ux/dist ] && echo "✅ built" || echo "❌ run: pnpm --filter @pacaf/wizard-ux build"
 ```
 
-If either fails, stop and tell the user:
+If either fails:
 
 ```
 🛑 Monorepo source tree — workspace not ready
 
-Run:
+You asked to run from source (`pnpm --filter ...` / `node packages/...`). Run:
   pnpm install
   pnpm --filter @pacaf/wizard-ux build
 
-End users do NOT need this — `npx @pacaf/wizard-ux@latest` is self-contained.
+If you just want to *use* the wizard, you don't need any of this —
+`npx @pacaf/wizard-ux@latest` is self-contained and works from any cwd.
 ```
 
-Does **not** apply to downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
+Does **not** apply to:
+- Downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
+- Any `npx @pacaf/...` invocation, regardless of cwd.
 
 Full details: `.github/instructions/00-prereq-gate.instructions.md`
