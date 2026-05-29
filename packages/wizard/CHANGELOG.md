@@ -1,5 +1,12 @@
 # @pacaf/wizard
 
+## 3.3.3
+
+### Patch Changes
+
+- Updated dependencies [bda4afe]
+  - @pacaf/scripts@3.0.4
+
 ## 3.3.2
 
 ### Patch Changes
