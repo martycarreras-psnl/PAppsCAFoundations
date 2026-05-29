@@ -24,7 +24,8 @@ That's it. The wizard handles `pnpm install`, `pac code init`, dependency select
 
 - `.env.template` — environment variable scaffold (the wizard fills it out)
 - `.gitignore` — sensible defaults for Power Apps Code Apps
-- `.github/copilot-instructions.md` — pointer for Copilot to load the foundation's agent guidance via `@pacaf/agent-instructions`
+- `.github/copilot-instructions.md` — pointer for VS Code Copilot to load the foundation's agent guidance via `@pacaf/agent-instructions`
+- `AGENTS.md` / `CLAUDE.md` — bootstrap pointers so Copilot CLI, Claude Code, Cursor, and other agents know to run the wizard and load the full guidance (the sync replaces these with the full versions)
 - This README
 
 After the wizard runs, you will additionally have `src/`, `package.json`, `vite.config.ts`, `power.config.json`, `.github/instructions/`, and everything else needed to build and deploy.
