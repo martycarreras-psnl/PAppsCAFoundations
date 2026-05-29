@@ -520,6 +520,33 @@ Deployed routes look like `…/app/<id>/#/episode/<id>` — exactly what works i
 
 This rule is non-negotiable and enforced at build time. `npm run build` runs `pacaf-patch-datasources` as a `prebuild` hook, which fails loudly if `src/main.tsx` or `src/router.tsx` still references `BrowserRouter` / `createBrowserRouter`. Symptom that triggers this guard: a deployed app that 404s on first load — see issue #47.
 
+#### If the routing guard fails on code that already uses `HashRouter` (stale `@pacaf/scripts`)
+
+There is one false-positive that bites freshly-scaffolded repos: the prebuild guard reports **`✗ Code App routing guard FAILED … main.tsx imports BrowserRouter`** even though `src/main.tsx` correctly uses `HashRouter` and the only `BrowserRouter` text is inside an explanatory comment. **Do not "fix" the app code — it is already correct.** The repo has a stale `@pacaf/scripts` whose old guard matched the bare word `BrowserRouter` before stripping comments (fixed in `@pacaf/scripts@3.0.2`+).
+
+Why a *brand-new* repo can still get a stale package — two machine-global caches that creating a new folder does **not** reset:
+
+1. **The `npx` wizard cache.** `npx @pacaf/wizard-ux@latest` reuses a cached wizard under `~/.npm/_npx/<hash>/`. If that cache predates `@pacaf/wizard@3.3.5`, the wizard writes a caret range (`"@pacaf/scripts": "^3.0.0"`) into the new `package.json` instead of pinning the `latest` dist-tag.
+2. **The pnpm warm shared store.** `pnpm install` then resolves that caret against already-cached store metadata instead of re-querying the registry, landing on a stale `@pacaf/scripts@3.0.1` rather than the newest release.
+
+The two stack: old npx cache writes `^3.0.0` → warm pnpm store resolves it to the buggy `3.0.1`.
+
+**Fix for an affected repo** (exact/`latest` pins defeat the warm store):
+
+```bash
+pnpm add -D @pacaf/scripts@latest @pacaf/agent-instructions@latest
+npm run build   # guard now exits 0
+```
+
+**Defeat both caches before scaffolding a new app:**
+
+```bash
+npx clear-npx-cache 2>/dev/null || rm -rf ~/.npm/_npx   # force npx to refetch the wizard
+pnpm store prune                                         # drop stale store entries
+```
+
+The factory-side fix is already shipped: `buildRequiredDevPackages` in the wizard pins first-party `@pacaf/*` dev deps to the `latest` dist-tag (`@pacaf/wizard@3.3.5`, `@pacaf/wizard-ux@3.3.3`), and the guard strips comments before matching (`@pacaf/scripts@3.0.5`). A scaffold from a refreshed npx cache no longer hits this.
+
 ### Tailwind v4 + CSS import — required scaffold
 
 A freshly-scaffolded Code App renders **completely unstyled** on first run if either of these two pieces is missing — the CSS pipeline silently produces an empty stylesheet, JS runs, React mounts, the DOM is correct, but every element is unstyled and the dev server prints no warning. Both pieces ship in the wizard scaffold; never remove them.

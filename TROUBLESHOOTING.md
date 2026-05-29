@@ -189,6 +189,31 @@ Current scaffold includes this automatically.
 
 Rebuild and `pac code push`. Routes now resolve as `…/play/e/<env>/app/<app>/#/<route>` and the deployed app stops 404-ing. The current scaffold uses `HashRouter` automatically, and `npm run build` fails loudly if `main.tsx` / `router.tsx` is still importing `BrowserRouter` / `createBrowserRouter` (see `packages/scripts/patch-datasources-info.mjs` and issue #47).
 
+### `npm run build` fails with "Code App routing guard FAILED" — but my code already uses `HashRouter`
+
+**Symptom:** The `prebuild` hook prints `✗ Code App routing guard FAILED … main.tsx imports BrowserRouter` and the build aborts, but `src/main.tsx` clearly uses `HashRouter` — the only `BrowserRouter` text is inside an explanatory comment. This can happen on a **brand-new** repo straight out of the wizard.
+
+**Cause:** A stale `@pacaf/scripts` (pre-`3.0.2`) whose guard matched the bare word `BrowserRouter` *before* stripping comments. Your app code is not the problem. A new repo can still get the stale package because two machine-global caches survive folder creation:
+
+1. **`npx` wizard cache** (`~/.npm/_npx/<hash>/`) — if it predates `@pacaf/wizard@3.3.5`, the wizard writes a caret range (`"@pacaf/scripts": "^3.0.0"`) into your new `package.json` instead of pinning the `latest` dist-tag.
+2. **pnpm warm shared store** — `pnpm install` resolves that caret against cached metadata and lands on a stale `@pacaf/scripts@3.0.1` instead of the newest release.
+
+The two stack: old npx cache writes `^3.0.0` → warm store resolves it to the buggy `3.0.1`.
+
+**Fix (existing repo)** — exact/`latest` pins force past the warm store:
+```bash
+pnpm add -D @pacaf/scripts@latest @pacaf/agent-instructions@latest
+npm run build   # guard now exits 0
+```
+
+**Prevent it before scaffolding a new app** — clear both caches first:
+```bash
+npx clear-npx-cache 2>/dev/null || rm -rf ~/.npm/_npx   # force npx to refetch the wizard
+pnpm store prune                                         # drop stale store entries
+```
+
+The factory fix is already shipped (`@pacaf/scripts@3.0.5` strips comments before matching; `@pacaf/wizard@3.3.5` / `@pacaf/wizard-ux@3.3.3` pin first-party deps to `latest`), so a scaffold from a refreshed npx cache no longer hits this.
+
 ### My app renders but everything is unstyled / no Fluent UI styling / no Tailwind classes work
 
 **Symptom:** `npm run dev` succeeds, the browser opens at `http://localhost:3000`, JS runs and React mounts, the DOM is correct — but the page looks like a 1995 browser: no Fluent UI chrome, no fonts, no colors, no Tailwind utility classes. No build error, no runtime error, no warning in the dev server log.
