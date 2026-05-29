@@ -1,5 +1,12 @@
 # @pacaf/wizard
 
+## 3.3.1
+
+### Patch Changes
+
+- Updated dependencies [d6dc0b6]
+  - @pacaf/agent-instructions@3.5.3
+
 ## 3.3.0
 
 ### Minor Changes
