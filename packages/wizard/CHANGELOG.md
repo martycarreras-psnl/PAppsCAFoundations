@@ -1,5 +1,12 @@
 # @pacaf/wizard
 
+## 3.3.2
+
+### Patch Changes
+
+- Updated dependencies [6a4d182]
+  - @pacaf/scripts@3.0.3
+
 ## 3.3.1
 
 ### Patch Changes
