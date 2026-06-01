@@ -131,6 +131,48 @@ export function packageSpecs(packages) {
   return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
 }
 
+// Resolve the EXACT newest published version of the first-party @pacaf/* dev
+// deps at scaffold time, replacing the floating `latest` dist-tag with a pinned
+// semver. This is the manager-agnostic cure for the warm-store staleness trap:
+//
+//   - Pinning to the `latest` dist-tag is not enough — pnpm/npm resolve `latest`
+//     from a CACHED packument, so a warm store can install a previous @pacaf
+//     release even though a newer one was published ("Already up to date").
+//   - `--prefer-online` defeats that, but it is an npm-only flag — pnpm aborts
+//     with "Unknown option: 'prefer-online'". So it can't be passed to the
+//     actual install.
+//
+// Instead we run `npm view <name> version --prefer-online` once (the npx'd
+// wizard always has a fresh npm available; `npm view` queries the registry, and
+// `--prefer-online` is valid there) to learn the true latest version, then pin
+// it. An EXACT version can never be served stale: if the warm store lacks it,
+// the package manager must refetch the packument to satisfy the pin. Falls back
+// to the `latest` tag if the lookup fails, so an offline scaffold still works.
+// See issue #81 follow-up.
+export function resolveFirstPartyLatest(packages, config = loadPacafConfig(), { runner = runSafe } = {}) {
+  const firstParty = new Set([
+    scopedPackageName('scripts', config),
+    scopedPackageName('agent-instructions', config),
+  ]);
+  const resolved = { ...packages };
+  for (const name of Object.keys(resolved)) {
+    if (!firstParty.has(name) || resolved[name] !== 'latest') continue;
+    const version = runner('npm', ['view', name, 'version', '--prefer-online']);
+    if (version && /^\d+\.\d+\.\d+/.test(version.trim())) {
+      resolved[name] = version.trim();
+    }
+  }
+  return resolved;
+}
+
+// Build the dev-dependency install specs with first-party @pacaf/* packages
+// pinned to their exact latest published version. Used by both the CLI wizard
+// and the browser wizard so every fresh scaffold always lands on the newest
+// published @pacaf/* release regardless of package-manager cache state.
+export function freshDevPackageSpecs(config = loadPacafConfig(), opts = {}) {
+  return packageSpecs(resolveFirstPartyLatest(buildRequiredDevPackages(config), config, opts));
+}
+
 // Detect whether `dir` (or any ancestor) is a pnpm workspace root, i.e. it
 // contains a `pnpm-workspace.yaml`. When scaffolding into such a directory,
 // plain `pnpm add` aborts with ERR_PNPM_ADDING_TO_ROOT and the `-w` /

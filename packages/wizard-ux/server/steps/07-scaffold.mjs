@@ -94,17 +94,14 @@ async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages 
   const baseArgs = pnpm
     ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...rootFlag, ...packages] : ['add', ...rootFlag, ...packages])
     : (mode === 'base' ? ['install'] : mode === 'dev' ? ['install', '-D', ...packages] : ['install', ...packages]);
-  // `--prefer-online` forces the package manager to revalidate cached registry
-  // metadata (the packument) instead of trusting a warm cache. Without it,
-  // `@pacaf/*@latest` resolves against a stale cached packument and a fresh
-  // scaffold can install a previous @pacaf release even though a newer one is
-  // published (the "Already up to date" trap). This is the single guarantee
-  // that every new repo always picks up the latest published capabilities.
-  // See issue #81 follow-up.
-  const freshArgs = ['--prefer-online', ...baseArgs];
+  // Freshness of the first-party @pacaf/* packages is guaranteed by pinning
+  // their exact latest version at spec-build time (see
+  // SCAFFOLD.freshDevPackageSpecs / resolveFirstPartyLatest), NOT by a
+  // package-manager flag. `--prefer-online` is npm-only — pnpm aborts on it —
+  // so it must never be passed to the actual install. See issue #81 follow-up.
   const noisyArgs = pnpm
-    ? ['--reporter=append-only', ...freshArgs]
-    : ['--loglevel=http', '--no-audit', '--no-fund', ...freshArgs];
+    ? ['--reporter=append-only', ...baseArgs]
+    : ['--loglevel=http', '--no-audit', '--no-fund', ...baseArgs];
   return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv() });
 }
 
@@ -316,7 +313,7 @@ export default {
       log.warn('[2/3] Some runtime packages failed to install.');
     }
 
-    const devPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_DEV_PACKAGES);
+    const devPkgs = SCAFFOLD.freshDevPackageSpecs();
     if (await runInstall(log, { stage: '3/3', label: 'Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)', projectDir, pnpm, mode: 'dev', packages: devPkgs, workspaceRoot })) {
       log.ok('[3/3] Dev packages installed');
     } else {
