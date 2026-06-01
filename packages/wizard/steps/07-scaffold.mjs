@@ -141,7 +141,17 @@ export default async function stepScaffold() {
   // request, `--no-audit --no-fund` keeps the post-install summary from
   // making the wait feel longer than it is, and the env vars keep ANSI
   // escape noise out of any captured log file.
-  const npmFlags = usePnpm ? ['--reporter=append-only'] : ['--loglevel=http', '--no-audit', '--no-fund'];
+  //
+  // `--prefer-online` forces the package manager to revalidate cached registry
+  // metadata (the packument) instead of trusting a warm cache. Without it,
+  // `@pacaf/*@latest` resolves against a stale cached packument and a fresh
+  // scaffold can install a previous @pacaf release even though a newer one is
+  // published (the "Already up to date" trap). This is the single guarantee
+  // that every new repo always picks up the latest published capabilities.
+  // See issue #81 follow-up.
+  const npmFlags = usePnpm
+    ? ['--reporter=append-only', '--prefer-online']
+    : ['--loglevel=http', '--no-audit', '--no-fund', '--prefer-online'];
   const installEnv = { ...process.env, npm_config_progress: 'true', FORCE_COLOR: '0' };
   delete installEnv.CI;
   const installOpts = { cwd: projectDir, env: installEnv };

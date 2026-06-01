@@ -94,9 +94,17 @@ async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages 
   const baseArgs = pnpm
     ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...rootFlag, ...packages] : ['add', ...rootFlag, ...packages])
     : (mode === 'base' ? ['install'] : mode === 'dev' ? ['install', '-D', ...packages] : ['install', ...packages]);
+  // `--prefer-online` forces the package manager to revalidate cached registry
+  // metadata (the packument) instead of trusting a warm cache. Without it,
+  // `@pacaf/*@latest` resolves against a stale cached packument and a fresh
+  // scaffold can install a previous @pacaf release even though a newer one is
+  // published (the "Already up to date" trap). This is the single guarantee
+  // that every new repo always picks up the latest published capabilities.
+  // See issue #81 follow-up.
+  const freshArgs = ['--prefer-online', ...baseArgs];
   const noisyArgs = pnpm
-    ? ['--reporter=append-only', ...baseArgs]
-    : ['--loglevel=http', '--no-audit', '--no-fund', ...baseArgs];
+    ? ['--reporter=append-only', ...freshArgs]
+    : ['--loglevel=http', '--no-audit', '--no-fund', ...freshArgs];
   return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv() });
 }
 
