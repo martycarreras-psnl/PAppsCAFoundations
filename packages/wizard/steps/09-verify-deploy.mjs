@@ -92,14 +92,13 @@ export default async function stepVerifyAndDeploy() {
       // ALL pac code push calls require user auth — SPN is always rejected
       const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
       if (profileReady) {
-        // PRE-PUSH ORPHAN GUARD. Solution membership is decided ONLY on the
-        // CREATE (first push). If an appId already exists this push is an
-        // UPDATE and -s is ignored — so if the app is not already in the
-        // solution, NO push can fix it. Hard-stop with recovery instead of
-        // wasting an update that silently leaves the app orphaned.
+        // PRE-PUSH MEMBERSHIP CHECK (informational only). The documented
+        // contract is `pac code push --solutionName <name>` — association is
+        // handled by that push. We surface a best-effort membership hint but
+        // NEVER block the deploy on it (the export+type-300 cross-check is not
+        // authoritative).
         if (!isFirstPush && solUniqueName) {
-          const guardOk = await verifyAppInSolution(pac, projectDir, solUniqueName, false, 'pre-push', appName);
-          if (!guardOk) return; // orphaned — recovery steps already printed
+          await verifyAppInSolution(pac, projectDir, solUniqueName, false, 'pre-push', appName);
         }
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
@@ -387,11 +386,17 @@ async function verifyAppInSolution(pac, projectDir, solutionUniqueName, isFirstP
     return true;
   }
   if (membership.status === 'absent') {
+    // INFORMATIONAL ONLY — never block the deploy on this signal. The documented
+    // contract (learn.microsoft.com/power-apps/developer/code-apps/how-to/alm)
+    // is simply `pac code push --solutionName <name>`; association happens as
+    // part of that push. The export+type-300 component count is a best-effort
+    // cross-check, NOT authoritative — a clean export with zero Canvas App
+    // components does NOT reliably mean the app is orphaned. Surface a hint and
+    // continue rather than aborting a legitimate push.
     ui.line('');
-    if (phase === 'pre-push') ui.warn('Pre-push check: the existing app is NOT in the selected solution. A re-push (UPDATE) cannot fix this.');
-    else ui.warn('The create did NOT associate the app to the solution.');
-    for (const line of orphanRecoverySteps(solutionUniqueName, appDisplayName)) ui.line(`  ${line}`);
-    return false;
+    ui.warn(`Could not see this app as a component of solution "${solutionUniqueName}" via export.`);
+    ui.line(`  If it is missing in the Maker Portal, add it with: Solutions → ${solutionUniqueName} → Add existing → App → Code app.`);
+    return true;
   }
   ui.warn(`Could not confirm solution membership for "${solutionUniqueName}" (${membership.detail}).`);
   ui.line('  Verify in Maker Portal → Solutions → ' + solutionUniqueName + ' → Apps.');

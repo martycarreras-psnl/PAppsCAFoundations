@@ -130,11 +130,16 @@ async function verifyAppInSolution(log, pac, projectDir, solutionUniqueName, { p
     return membership;
   }
   if (membership.status === 'absent') {
-    const steps = SOLUTION_MEMBERSHIP.orphanRecoverySteps(solutionUniqueName, appDisplayName || 'this Code App');
-    for (const line of steps) log.fail(line);
-    // A confirmed orphan is a hard error in BOTH phases: pre-push (an UPDATE
-    // cannot fix it) and post-create (the create silently failed to associate).
-    throw new Error(`Code App is orphaned — NOT a component of solution "${solutionUniqueName}". ${phase === 'pre-push' ? 'A re-push will not fix this.' : 'The create did not associate it.'} See the recovery steps above.`);
+    // INFORMATIONAL ONLY — never block the deploy on this signal. The documented
+    // contract (learn.microsoft.com/power-apps/developer/code-apps/how-to/alm)
+    // is simply `pac code push --solutionName <name>`; association happens as
+    // part of that push. The export+type-300 component count below is a
+    // best-effort cross-check, NOT an authoritative source of truth — a clean
+    // export with zero Canvas App components does NOT reliably mean the app is
+    // orphaned. So we surface a hint and continue rather than throwing.
+    const hint = SOLUTION_MEMBERSHIP.orphanRecoverySteps(solutionUniqueName, appDisplayName || 'this Code App')[0];
+    log.warn(`${hint} If it is missing in the Maker Portal, add it with: Solutions → ${solutionUniqueName} → Add existing → App → Code app.`);
+    return membership;
   }
   log.warn(`Could not confirm solution membership for "${solutionUniqueName}" (${membership.detail}). Verify in the Maker Portal that the app is listed under it.`);
   return membership;
