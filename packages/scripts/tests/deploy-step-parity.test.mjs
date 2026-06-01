@@ -66,6 +66,15 @@ const PAIRED_STEPS = [
         re: /UNIQUE name/,
       },
       {
+        label: 'verifies the solution EXISTS in the target env before the first push',
+        // `pac code push -s <name>` only associates the app when a solution with
+        // that unique name already EXISTS in the pushed environment; otherwise
+        // pac SILENTLY publishes into the Default solution. Both copies must
+        // call the shared pre-push existence check so a missing/typo'd solution
+        // name is caught BEFORE the CREATE instead of silently orphaning the app.
+        re: /solutionExistsInSelectedEnv\s*\(/,
+      },
+      {
         label: 'keeps the issue #81 rationale anchor so the fix is traceable',
         re: /#81/,
       },

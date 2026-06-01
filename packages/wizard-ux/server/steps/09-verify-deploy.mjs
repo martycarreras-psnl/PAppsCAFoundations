@@ -194,6 +194,27 @@ export default {
       log.info(`Existing appId detected (${preInfo.appId}) — this push is an UPDATE (republish in place).`);
     }
 
+    // PRECONDITION (issue #81 follow-up): `pac code push -s` only associates the
+    // app with its solution if that UNIQUE name already EXISTS in the target
+    // environment. If it does not, pac SILENTLY publishes into the Default
+    // solution. On the FIRST push, verify the solution exists FIRST and STOP if
+    // it is absent — never let the CREATE land the app outside its solution.
+    if (isFirstPush) {
+      log.info(`Verifying solution "${solutionUniqueName}" exists in the target environment...`);
+      const solCheck = PAC_TARGET.solutionExistsInSelectedEnv({ pac, uniqueName: solutionUniqueName, cwd: projectDir });
+      if (solCheck.status === 'absent') {
+        throw new Error(`Solution "${solutionUniqueName}" does not exist in the target environment. `
+          + `Running "pac code push -s ${solutionUniqueName}" now would SILENTLY publish the app into the Default solution `
+          + `(the recurring "app not in my solution" failure). Create the solution in this environment (Maker Portal → Solutions → New solution, or reuse an existing one), `
+          + `then re-run this step. Tip: the -s value must be the solution UNIQUE name, not the display name.`);
+      }
+      if (solCheck.status === 'unknown') {
+        log.warn(`Could not confirm solution "${solutionUniqueName}" exists (${solCheck.reason}). Proceeding, but if the app lands in the Default solution, verify the unique name is correct.`);
+      } else {
+        log.ok(`Solution "${solutionUniqueName}" exists in the target environment — safe to push with -s`);
+      }
+    }
+
     const pushResult = await runFileCapture(log, pac, pushArgs, { cwd: projectDir });
     const pushOutput = `${pushResult.stdout}\n${pushResult.stderr}`;
     if (!pushResult.ok || PAC_HTTP_ERROR_RE.test(pushOutput)) throw new Error('pac code push failed. Check the live output above, then retry.');

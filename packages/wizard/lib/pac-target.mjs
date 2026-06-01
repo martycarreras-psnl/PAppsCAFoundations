@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { decrypt, isEncrypted } from './crypto.mjs';
@@ -492,4 +493,63 @@ export function selectAndVerifyPacProfile({
     whoInfo,
     powerConfigInfo,
   };
+}
+
+// ── Pre-push solution-existence verification (issue #81 follow-up) ──────────
+//
+// `pac code push -s <uniqueName>` only adds the Code App to a solution when a
+// solution with that EXACT unique name ALREADY EXISTS in the environment being
+// pushed to. If it does not exist, pac SILENTLY publishes the app into the
+// Default solution with no error — the recurring "my app isn't in my solution"
+// symptom. This was verified live: apps whose `-s` name existed (RSVPTracker,
+// AgentIdeator, VendorManagement) joined their solution; an app whose typed
+// unique name never existed landed in Default only.
+//
+// This helper queries the CURRENTLY SELECTED environment (the same env that
+// `pac code push` targets, since the profile is selected/verified first) for a
+// solution with the given unique name. It returns one of:
+//   { status: 'exists',  friendlyName }  — safe to push with -s
+//   { status: 'absent' }                 — push would silently fall back to Default; STOP
+//   { status: 'unknown', reason }         — query failed; cannot prove absence (warn + proceed)
+export function solutionExistsInSelectedEnv({ pac, uniqueName, cwd } = {}) {
+  const name = String(uniqueName || '').trim();
+  if (!pac) return { status: 'unknown', reason: 'PAC CLI path not provided.' };
+  if (!name) return { status: 'unknown', reason: 'No solution unique name provided.' };
+
+  const xml = [
+    '<fetch>',
+    '  <entity name="solution">',
+    '    <attribute name="uniquename"/>',
+    '    <attribute name="friendlyname"/>',
+    '    <filter>',
+    `      <condition attribute="uniquename" operator="eq" value="${name.replace(/"/g, '&quot;')}"/>`,
+    '    </filter>',
+    '  </entity>',
+    '</fetch>',
+  ].join('\n');
+
+  const tmp = join(tmpdir(), `pac-solcheck-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`);
+  let out;
+  try {
+    writeFileSync(tmp, xml, 'utf-8');
+    out = runSafe(pac, ['env', 'fetch', '--xmlFile', tmp], { cwd, timeout: 20000 });
+  } finally {
+    try { unlinkSync(tmp); } catch { /* best effort */ }
+  }
+
+  // runSafe returns null only when the command itself failed (bad XML, no env
+  // selected, auth error). A successful query with zero matches returns a
+  // (non-null) header-only table. So null === can't prove absence.
+  if (out === null || out === undefined) {
+    return { status: 'unknown', reason: 'Could not query solutions in the target environment.' };
+  }
+
+  // The FetchXML filters by the exact unique name, so the value only appears in
+  // output when a matching solution row exists. Match the value, not the
+  // (lowercase) "uniquename" column header.
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`(^|\\s)${escaped}(\\s|$)`, 'm').test(out)) {
+    return { status: 'exists' };
+  }
+  return { status: 'absent' };
 }

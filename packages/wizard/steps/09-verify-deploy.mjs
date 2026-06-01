@@ -12,6 +12,7 @@ import {
   repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
+  solutionExistsInSelectedEnv,
 } from '../lib/pac-target.mjs';
 
 export default async function stepVerifyAndDeploy() {
@@ -98,6 +99,34 @@ export default async function stepVerifyAndDeploy() {
         if (!isFirstPush && solUniqueName) {
           ui.line('Existing appId detected — this push is an UPDATE (republish in place).');
         }
+
+        // PRECONDITION (issue #81 follow-up): `pac code push -s` only associates
+        // the app with its solution if that UNIQUE name already EXISTS in the
+        // target environment. If it does not, pac SILENTLY publishes into the
+        // Default solution. On the FIRST push, verify the solution exists first
+        // and REFUSE to push if it is absent — never let the CREATE land the app
+        // outside its solution.
+        if (isFirstPush) {
+          ui.line(`Verifying solution "${solUniqueName}" exists in the target environment...`);
+          const solCheck = solutionExistsInSelectedEnv({ pac, uniqueName: solUniqueName, cwd: projectDir });
+          if (solCheck.status === 'absent') {
+            ui.fail(`Solution "${solUniqueName}" does not exist in the target environment.`);
+            ui.line(`  Refusing to run "pac code push -s ${solUniqueName}" — it would SILENTLY publish the app`);
+            ui.line('  into the Default solution (the recurring "app not in my solution" failure).');
+            ui.line('  Create the solution in this environment (Maker Portal → Solutions → New solution,');
+            ui.line('  or reuse an existing one), then re-run this step. The -s value must be the');
+            ui.line('  solution UNIQUE name, not the display name.');
+            setCompletedStep(9);
+            return;
+          }
+          if (solCheck.status === 'unknown') {
+            ui.warn(`Could not confirm solution "${solUniqueName}" exists (${solCheck.reason}).`);
+            ui.line('  Proceeding, but if the app lands in the Default solution, verify the unique name.');
+          } else {
+            ui.ok(`Solution "${solUniqueName}" exists in the target environment — safe to push with -s`);
+          }
+        }
+
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
         const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solUniqueName, credentialValues);

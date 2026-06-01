@@ -222,13 +222,17 @@ export function StepRunner() {
   useEffect(() => {
     if (stream.status === 'done' && !hasWarnings) {
       const total = stepsQ.data?.totalSteps ?? 9;
+      // On the FINAL step (Verify & Deploy) do NOT auto-advance to the summary —
+      // stay put so the user can read the deploy log and see exactly what pac
+      // code push reported (solution association, app URL, warnings). The user
+      // moves on by explicitly clicking "View summary".
+      if (stepNumber >= total) return;
       autoAdvanceRef.current = setTimeout(() => {
-        if (stepNumber >= total) navigate('/summary');
-        else navigate(`/step/${stepNumber + 1}`);
+        navigate(`/step/${stepNumber + 1}`);
       }, 1500);
     }
     return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
-  }, [stream.status, stepNumber, stepsQ.data?.totalSteps, navigate]);
+  }, [stream.status, stepNumber, stepsQ.data?.totalSteps, navigate, hasWarnings]);
 
   const meta = questionsQ.data?.meta;
   const questions = questionsQ.data?.questions ?? [];
@@ -491,7 +495,7 @@ export function StepRunner() {
                         : 'Step complete'}
                     </Body1>
                     <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                      {isLastStep ? 'Heading to summary…'
+                      {isLastStep ? 'Review the deploy log above, then click View summary when ready.'
                         : hasWarnings ? 'Some items need attention. Continue when ready.'
                         : `Moving to step ${stepNumber + 1}…`}
                     </Caption1>
