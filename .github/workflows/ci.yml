@@ -84,6 +84,8 @@ jobs:
           CHANGED=$(git diff --name-only "$BASE_REF...HEAD" -- \
             'packages/*/src/**' \
             'packages/*/server/**' \
+            'packages/*/steps/**' \
+            'packages/*/scripts/**' \
             'packages/*/bin/**' \
             'packages/*/lib/**' \
             'packages/*/package.json' \
@@ -111,4 +113,50 @@ jobs:
             echo "::error::See .github/instructions/10-publishing.instructions.md for details."
             exit 1
           }
+
+      - name: Verify EVERY changed package has its own changeset entry
+        if: steps.detect.outputs.needs_changeset == 'true'
+        run: |
+          # A single changeset is not enough. Issue #81 shipped a fix to
+          # @pacaf/wizard while @pacaf/wizard-ux changed too but was omitted from
+          # the changeset — so wizard-ux only got a dependent version bump with
+          # NO code fix, and the regression shipped to users as 3.3.5. This gate
+          # requires that every package whose publishable source changed is named
+          # explicitly in a .changeset/*.md file.
+          BASE_REF="origin/${{ github.base_ref }}"
+          CHANGED_DIRS=$(git diff --name-only "$BASE_REF...HEAD" -- \
+            'packages/*/src/**' \
+            'packages/*/server/**' \
+            'packages/*/bin/**' \
+            'packages/*/lib/**' \
+            'packages/*/steps/**' \
+            'packages/*/scripts/**' \
+            'packages/*/package.json' \
+            ':(exclude)packages/*/**/*.test.ts' \
+            ':(exclude)packages/*/**/*.test.mjs' \
+            ':(exclude)packages/*/**/*.md' \
+            | sed -E 's#^(packages/[^/]+)/.*#\1#' | sort -u)
+          MISSING=""
+          for dir in $CHANGED_DIRS; do
+            [ -f "$dir/package.json" ] || continue
+            pkg=$(node -p "try{require('./$dir/package.json').name||''}catch(e){''}")
+            priv=$(node -p "try{require('./$dir/package.json').private===true}catch(e){false}")
+            # Skip unnamed or private (unpublishable) packages.
+            if [ -z "$pkg" ] || [ "$priv" = "true" ]; then
+              continue
+            fi
+            # Changeset frontmatter lists packages as: "@scope/name": patch
+            if ! grep -REq "[\"']${pkg}[\"'][[:space:]]*:" .changeset 2>/dev/null; then
+              MISSING="$MISSING $pkg"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::These changed packages are NOT named in any changeset:$MISSING"
+            echo "::error::A dependent version bump is NOT enough — without an explicit entry the"
+            echo "::error::package republishes with no code change and the fix never ships (see issue #81)."
+            echo "::error::Add each package to a .changeset/*.md file. See .github/instructions/10-publishing.instructions.md."
+            exit 1
+          fi
+          echo "All changed publishable packages are named in a changeset entry."
+
 
