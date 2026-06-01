@@ -135,7 +135,7 @@ async function ensureAppInSolution(log, pac, projectDir, appId, solutionUniqueNa
     pac, projectDir, appId, solutionUniqueName, runCapture, log,
   });
   if (result.status !== 'member' && result.status === 'absent') {
-    for (const line of SOLUTION_MEMBERSHIP.manualSolutionAddSteps(solutionUniqueName, appDisplayName || 'this Code App')) {
+    for (const line of SOLUTION_MEMBERSHIP.manualSolutionAddSteps(solutionUniqueName, appDisplayName || 'this Code App', appId)) {
       log.warn(line);
     }
   }

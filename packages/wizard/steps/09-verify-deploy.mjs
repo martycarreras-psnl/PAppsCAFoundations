@@ -392,7 +392,7 @@ async function ensureAppInSolution(pac, projectDir, appId, solutionUniqueName, a
 
   if (result.status === 'absent') {
     ui.line('');
-    for (const stepLine of manualSolutionAddSteps(solutionUniqueName, appDisplayName)) ui.line(`  ${stepLine}`);
+    for (const stepLine of manualSolutionAddSteps(solutionUniqueName, appDisplayName, appId)) ui.line(`  ${stepLine}`);
   }
   return result;
 }

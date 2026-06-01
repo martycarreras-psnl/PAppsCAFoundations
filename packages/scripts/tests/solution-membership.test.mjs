@@ -227,3 +227,18 @@ test('manualSolutionAddSteps guides an Add-existing flow (never delete/recreate)
   // It must reassure the user NOT to delete the app (the old #81 dead-end).
   assert.match(steps, /do NOT delete/i);
 });
+
+test('manualSolutionAddSteps fills in the real appId and warns about single-line paste', () => {
+  const appId = '9e92e698-df56-4a43-8bf1-02d5adc5b827';
+  const steps = manualSolutionAddSteps(SOLUTION, 'My App', appId).join('\n');
+  // The command must carry the real appId, not a <appId> placeholder.
+  assert.match(steps, new RegExp(`--component ${appId} --componentType 300`));
+  assert.doesNotMatch(steps, /<appId>/);
+  // It must warn the command has to be a single line (the zsh line-wrap trap).
+  assert.match(steps, /SINGLE line/i);
+});
+
+test('manualSolutionAddSteps falls back to <appId> when no appId is given', () => {
+  const steps = manualSolutionAddSteps(SOLUTION, 'My App').join('\n');
+  assert.match(steps, /--component <appId> --componentType 300/);
+});

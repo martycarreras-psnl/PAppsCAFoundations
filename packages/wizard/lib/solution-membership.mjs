@@ -177,14 +177,16 @@ export async function ensureAppInSolution({ pac, projectDir, appId, solutionUniq
 // confirmed. No delete/recreate is needed — the app keeps its appId and URL;
 // it just needs to be added to the solution (which the Maker Portal can do
 // directly because the canvasapp record already exists).
-export function manualSolutionAddSteps(solutionUniqueName, appDisplayName = 'the Code App') {
+export function manualSolutionAddSteps(solutionUniqueName, appDisplayName = 'the Code App', appId = '') {
+  const component = appId || '<appId>';
   return [
     `The Code App "${appDisplayName}" is deployed but could not be auto-added to solution "${solutionUniqueName}".`,
     'Add it manually (the app keeps its existing appId and URL — do NOT delete it):',
     `  1. In the Maker Portal, open Solutions → "${solutionUniqueName}".`,
     '  2. Add existing → App → Code app.',
     `  3. Select "${appDisplayName}" and add it.`,
-    'Or from a terminal with the same auth profile:',
-    `  pac solution add-solution-component --solutionUniqueName ${solutionUniqueName} --component <appId> --componentType 300`,
+    'Or run this in a terminal with the same auth profile — it MUST be a SINGLE line (a',
+    'pasted line break before --componentType makes zsh run it as two broken commands):',
+    `  pac solution add-solution-component --solutionUniqueName ${solutionUniqueName} --component ${component} --componentType 300`,
   ];
 }
