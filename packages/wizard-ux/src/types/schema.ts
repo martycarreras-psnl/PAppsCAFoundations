@@ -51,6 +51,10 @@ export interface StepMeta {
   readOnly?: boolean;
   optional?: boolean;
   needsSecret?: boolean;
+  /** Manual guidance step (no questions, no apply) — rendered as a guided panel. */
+  manual?: boolean;
+  /** When true, do not auto-advance to the next step after a successful run. */
+  noAutoAdvance?: boolean;
 }
 
 export interface StepInfo extends StepMeta {
@@ -68,6 +72,13 @@ export interface StateSnapshot {
     environmentUrl: string;
     launchUrl: string;
   } | null;
+  solution?: {
+    displayName: string;
+    uniqueName: string;
+    appName: string;
+    makerPortalUrl: string;
+    linkTarget: 'solution' | 'solutions' | 'portal';
+  };
 }
 
 export interface SystemInfo {

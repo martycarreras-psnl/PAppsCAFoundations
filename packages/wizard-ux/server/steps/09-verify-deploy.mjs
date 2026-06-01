@@ -118,6 +118,10 @@ export default {
     title: 'Verify & Deploy',
     description: 'Build the project, optionally push it to Power Platform, and surface the live app URL when available.',
     canRunInBrowser: true,
+    // Do NOT auto-advance away from the deploy step: the user needs time to read
+    // the pac code push log (solution association, app URL, warnings) before
+    // moving on to the manual "add to solution" step.
+    noAutoAdvance: true,
   },
 
   questions() {

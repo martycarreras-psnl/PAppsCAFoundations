@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { makeStyles, tokens, Caption1, Body2 } from '@fluentui/react-components';
-import { CheckmarkCircleFilled, CircleRegular, ArrowRightFilled, WindowConsoleRegular } from '@fluentui/react-icons';
+import { CheckmarkCircleFilled, CircleRegular, ArrowRightFilled, WindowConsoleRegular, OpenRegular } from '@fluentui/react-icons';
 import { StepInfo } from '../types/schema';
 
 const useStyles = makeStyles({
@@ -63,10 +63,12 @@ export function StepNav({ steps, current }: Props) {
         const active = step.number === current && loc.pathname.includes('/step/');
         const Icon = step.status === 'done' ? CheckmarkCircleFilled
           : step.status === 'current' ? ArrowRightFilled
+          : step.manual ? OpenRegular
           : !step.canRunInBrowser ? WindowConsoleRegular
           : CircleRegular;
         const iconClass = step.status === 'done' ? s.done
           : step.status === 'current' ? s.current
+          : step.manual ? s.current
           : !step.canRunInBrowser ? s.terminal
           : s.pending;
 

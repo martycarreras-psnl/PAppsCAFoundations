@@ -12,9 +12,10 @@ import {
   OpenRegular,
 } from '@fluentui/react-icons';
 
-import { useStepQuestions, useSteps } from '../hooks/useWizardData';
+import { useStepQuestions, useSteps, useWizardState } from '../hooks/useWizardData';
 import { useStepStream } from '../hooks/useStepStream';
 import { StepNav } from '../components/StepNav';
+import { AddToSolutionStep } from '../components/AddToSolutionStep';
 import { isQuestionHidden, QuestionCard, QuestionGroupCard } from '../components/QuestionCard';
 import { LiveLog } from '../components/LiveLog';
 import { api } from '../services/api';
@@ -159,11 +160,12 @@ const useStyles = makeStyles({
 export function StepRunner() {
   const s = useStyles();
   const params = useParams();
-  const stepNumber = Math.max(1, Math.min(9, parseInt(params.n || '1', 10)));
+  const stepNumber = Math.max(1, Math.min(10, parseInt(params.n || '1', 10)));
   const navigate = useNavigate();
   const qc = useQueryClient();
 
   const stepsQ = useSteps();
+  const stateQ = useWizardState();
   const questionsQ = useStepQuestions(stepNumber);
 
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -227,14 +229,18 @@ export function StepRunner() {
       // code push reported (solution association, app URL, warnings). The user
       // moves on by explicitly clicking "View summary".
       if (stepNumber >= total) return;
+      // Steps flagged noAutoAdvance (e.g. the deploy step) keep the user on the
+      // page so they can read the log before continuing to the next step.
+      if (questionsQ.data?.meta?.noAutoAdvance) return;
       autoAdvanceRef.current = setTimeout(() => {
         navigate(`/step/${stepNumber + 1}`);
       }, 1500);
     }
     return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
-  }, [stream.status, stepNumber, stepsQ.data?.totalSteps, navigate, hasWarnings]);
+  }, [stream.status, stepNumber, stepsQ.data?.totalSteps, navigate, hasWarnings, questionsQ.data?.meta?.noAutoAdvance]);
 
   const meta = questionsQ.data?.meta;
+  const isManual = meta?.manual === true;
   const questions = questionsQ.data?.questions ?? [];
   const { primaryBlocks, advancedBlocks } = useMemo(() => {
     const build = (qs: Question[]): QuestionBlock[] => {
@@ -334,6 +340,37 @@ export function StepRunner() {
       return;
     }
     submit();
+  }
+
+  // Manual guidance step (e.g. "Add app to solution") — no questions, no run.
+  // Render a dedicated guided panel with a Maker Portal deep link instead of
+  // the question/run machinery or the generic terminal note.
+  if (isManual) {
+    const sol = stateQ.data?.solution ?? {
+      displayName: '',
+      uniqueName: '',
+      appName: '',
+      makerPortalUrl: 'https://make.powerapps.com/',
+      linkTarget: 'portal' as const,
+    };
+    return (
+      <div className={s.root}>
+        {stepsQ.data && <StepNav steps={stepsQ.data.steps} current={stepNumber} />}
+        <div className={s.main}>
+          <div className={s.pane}>
+            <div className={s.formWrap}>
+              <AddToSolutionStep
+                solution={sol}
+                stepNumber={stepNumber}
+                totalSteps={total}
+                onBack={() => navigate(stepNumber <= 1 ? '/' : `/step/${stepNumber - 1}`)}
+                onFinish={() => navigate('/summary')}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -496,6 +533,7 @@ export function StepRunner() {
                     </Body1>
                     <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
                       {isLastStep ? 'Review the deploy log above, then click View summary when ready.'
+                        : meta?.noAutoAdvance ? 'Review the deploy log above, then continue to the final step.'
                         : hasWarnings ? 'Some items need attention. Continue when ready.'
                         : `Moving to step ${stepNumber + 1}…`}
                     </Caption1>

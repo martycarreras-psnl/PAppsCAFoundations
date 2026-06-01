@@ -13,8 +13,9 @@ import step6 from './06-solution.mjs';
 import step7 from './07-scaffold.mjs';
 import step8 from './08-connectors.mjs';
 import step9 from './09-verify-deploy.mjs';
+import step10 from './10-add-to-solution.mjs';
 
-export const STEPS = [step1, step2, step3, step4, step5, step6, step7, step8, step9];
+export const STEPS = [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10];
 export const TOTAL_STEPS = STEPS.length;
 
 export function getStep(n) {

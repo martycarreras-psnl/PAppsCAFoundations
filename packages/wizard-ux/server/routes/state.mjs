@@ -56,6 +56,52 @@ function readPowerAppInfo(rootDir, state) {
   };
 }
 
+// Read the Power Platform environment GUID from power.config.json so we can
+// build a Maker Portal deep link. The GUID is required by make.powerapps.com
+// URLs (the org URL like https://contoso.crm.dynamics.com is NOT accepted).
+function readEnvironmentId(rootDir, state) {
+  const projectDir = resolve(rootDir, String(state.PROJECT_DIR || '.'));
+  const powerConfigPath = join(projectDir, 'power.config.json');
+  if (!existsSync(powerConfigPath)) return '';
+  try {
+    const c = JSON.parse(readFileSync(powerConfigPath, 'utf-8'));
+    const direct = String(
+      c.environmentId || c.environment?.id || c.targetEnvironmentId || '',
+    ).trim().toLowerCase();
+    if (direct) return direct;
+    const appUrl = String(c.localAppUrl || c.appUrl || c.playUrl || '').trim();
+    const m = appUrl.match(/\/play\/e\/([0-9a-f-]{36})\/app\//i);
+    return m ? m[1].toLowerCase() : '';
+  } catch {
+    return '';
+  }
+}
+
+// Build the manual "add Code App to solution" guidance consumed by Step 10 in
+// WizardUX. Returns a direct Maker Portal deep link to the user's solution
+// (falling back to the environment's solutions list, then the portal root) so
+// the user can add the deployed Code App by hand. Never exposes raw GUIDs to
+// the UI — only the human-readable solution display name and app name.
+function readSolutionInfo(rootDir, state) {
+  const environmentId = readEnvironmentId(rootDir, state);
+  const solutionId = String(state.SOLUTION_ID || '').trim().toLowerCase();
+  const displayName = String(state.SOLUTION_DISPLAY_NAME || '').trim();
+  const uniqueName = String(state.SOLUTION_UNIQUE_NAME || '').trim();
+  const appName = String(state.APP_NAME || '').trim();
+
+  let makerPortalUrl = 'https://make.powerapps.com/';
+  let linkTarget = 'portal'; // 'solution' | 'solutions' | 'portal'
+  if (environmentId && solutionId) {
+    makerPortalUrl = `https://make.powerapps.com/environments/${environmentId}/solutions/${solutionId}`;
+    linkTarget = 'solution';
+  } else if (environmentId) {
+    makerPortalUrl = `https://make.powerapps.com/environments/${environmentId}/solutions`;
+    linkTarget = 'solutions';
+  }
+
+  return { displayName, uniqueName, appName, makerPortalUrl, linkTarget };
+}
+
 export default async function stateRoutes(app, opts) {
   const { rootDir } = opts;
 
@@ -63,12 +109,14 @@ export default async function stateRoutes(app, opts) {
     const state = readState(rootDir);
     const completed = getCompletedStep(state);
     const powerApp = readPowerAppInfo(rootDir, state);
+    const solution = readSolutionInfo(rootDir, state);
     return {
       state,
       completed,
       next: Math.min(completed + 1, TOTAL_STEPS),
       totalSteps: TOTAL_STEPS,
       powerApp,
+      solution,
     };
   });
 
