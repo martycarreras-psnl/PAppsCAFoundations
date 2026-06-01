@@ -1,5 +1,12 @@
 # @pacaf/wizard-ux
 
+## 3.3.5
+
+### Patch Changes
+
+- Updated dependencies [0affcdd]
+  - @pacaf/wizard@3.3.7
+
 ## 3.3.4
 
 ### Patch Changes
