@@ -100,7 +100,7 @@ This is the single most important rule for team development. Every Code App must
 
 ### Create the Solution Before Writing Any Code
 
-The solution comes first, before scaffolding, before `pac code init`. Here's why: `pac code init` registers your Code App in the currently active solution context. If you haven't created and selected a solution, the app lands in the default solution where it's effectively unmanageable.
+The solution comes first, before scaffolding, before `pac code init`. Here's why: the Code App is only added to your solution on the **first** `pac code push`, and only when you pass the solution's **unique** name via `-s`/`--solutionName`. `pac code init` does **not** have a solution flag and there is no "active solution context" for Code Apps — so the solution must already exist before that first push, and you must know its unique name.
 
 ```bash
 # 1. Create the solution in your dev environment (via the Power Apps Maker Portal or CLI)
@@ -108,6 +108,10 @@ pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
 
 # 2. Then proceed with Code App scaffolding (see Scaffolding section below)
 ```
+
+> **Critical — solution association happens on the FIRST push, not on init.** The Dataverse `canvasapps` record for a Code App is created by the first `pac code push`. If that first push omits `-s <UniqueName>`, the app is created **outside** any solution and a later `-s` re-push will **not** retroactively add it. Recovering means deleting the app in the environment and pushing again with `-s` from a clean state. Always push with `-s "<SolutionUniqueName>"` from the very first deploy. See `04-deployment.instructions.md`.
+
+> **`-s` requires the solution UNIQUE name, never the friendly display name.** `pac code push -s "AI PMO"` (display name) reports success but silently does nothing; the correct form is `pac code push -s "AIPMO"` (unique name). Resolve and verify the unique name with `pac solution list` before your first push.
 
 See `04-deployment.instructions.md` for full solution lifecycle management, including exporting, unpacking for source control, and promoting across environments.
 
@@ -290,12 +294,14 @@ Every project must define these scripts:
     "test:watch": "vitest",
     "test:smoke": "vitest run --reporter=verbose src/App.test.tsx",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && pac code push"
+    "deploy": "npm run build && pac code push -s \"YourSolutionUniqueName\""
   }
 }
 ```
 
 The `test:smoke` script runs the built-in smoke tests that ship with every scaffold. These pass immediately after setup — the wizard verifies this during Step 7 before declaring success. If smoke tests fail, the scaffold is broken.
+
+> **Never emit a bare `pac code push`.** Every push must carry `-s "<SolutionUniqueName>"` (the solution's **unique** name, not its friendly display name) so the Code App is registered as a component of your solution. A bare `pac code push` creates the app **outside** any solution — silently, with a `App pushed successfully` message — and that cannot be reliably fixed by a later re-push. The wizard generates this `deploy` script for you with the correct unique name baked in (via `pacaf-pac-safe`, which auto-injects `-s` from your saved solution name); the example above is the shape to follow if you write it by hand.
 
 > **Auth note for `deploy`:** The `pac code push` in the deploy script requires a **user (interactive) auth profile** to be active — SPN auth is rejected by the BAP API. Select your repo-scoped user profile before running `npm run deploy`. The wizard creates this profile automatically; for manual setup see `00-environment-setup.instructions.md`.
 
@@ -582,7 +588,7 @@ The scaffold's `package.json` declares both `tailwindcss` and `@tailwindcss/vite
 | Testing | `npm run test` | Vitest | Mock data via MSW |
 | E2E Testing | `npm run test:e2e` | Vite + Playwright | Mock data |
 | Production Build | `npm run build` | `tsc` + Vite build | N/A (static output) |
-| Deploy | `npm run deploy` | Build + `pac code push` | N/A |
+| Deploy | `npm run deploy` | Build + `pac code push -s "<SolutionUniqueName>"` | N/A |
 
 ### Troubleshooting Local Development
 

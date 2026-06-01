@@ -131,7 +131,7 @@ The agent runs the underlying commands — the same ones you could run yourself 
 ```bash
 pnpm dev          # local dev server on :3000
 pnpm build        # produce ./dist/
-pac code push     # upload ./dist/ to your Power Platform environment
+pac code push -s "<SolutionUniqueName>"   # upload ./dist/ and add the app to your solution
 ```
 
 > **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology. Your agent already has this loaded.

@@ -48,6 +48,7 @@ let targetKey = 'dev';
 let profileType = 'spn';
 let mutating = false;
 let cwd = process.cwd();
+let solutionName = '';
 const pacArgs = [];
 
 for (let index = 0; index < args.length; index += 1) {
@@ -67,6 +68,11 @@ for (let index = 0; index < args.length; index += 1) {
     index += 1;
     continue;
   }
+  if (arg === '--solution-name') {
+    solutionName = String(args[index + 1] || '').trim();
+    index += 1;
+    continue;
+  }
   if (arg === '--mutating') {
     mutating = true;
     continue;
@@ -75,7 +81,42 @@ for (let index = 0; index < args.length; index += 1) {
 }
 
 if (pacArgs.length === 0) {
-  fail('No pac command was provided. Example: node scripts/pac-safe.mjs --target dev --profile-type spn --mutating code push');
+  fail('No pac command was provided. Example: node scripts/pac-safe.mjs --target dev --profile-type user --mutating code push');
+}
+
+// ── Code App push hardening (see issue #81) ───────────────────────────────
+// `pac code push` is the only step that creates the Dataverse canvasapps
+// record. Solution membership is established ONLY on that first push, and ONLY
+// when the solution UNIQUE name is passed via -s/--solutionName. A bare push
+// silently creates the app outside any solution and cannot be retroactively
+// fixed by a later -s re-push. We therefore (1) force a user auth profile
+// (BAP rejects SPN tokens for code push) and (2) guarantee -s is present with
+// the solution's unique name, refusing to run a bare push.
+const isCodePush = pacArgs[0] === 'code' && pacArgs[1] === 'push';
+if (isCodePush) {
+  if (profileType === 'spn') {
+    console.warn('WARNING: pac code push requires a user auth profile (BAP rejects service principal tokens). Overriding --profile-type to "user".');
+    profileType = 'user';
+  }
+
+  const hasSolutionFlag = pacArgs.some((a) => a === '-s' || a === '--solutionName');
+  if (!hasSolutionFlag) {
+    const loadedForSolution = loadState();
+    const resolvedSolution =
+      solutionName ||
+      process.env.PP_SOLUTION_UNIQUE_NAME ||
+      loadedForSolution.SOLUTION_UNIQUE_NAME ||
+      '';
+    if (!resolvedSolution) {
+      fail(
+        'Refusing to run a bare `pac code push` — it would create the Code App OUTSIDE any solution ' +
+        '(a silent failure that a later -s re-push cannot fix). Pass --solution-name "<SolutionUniqueName>" ' +
+        '(the solution UNIQUE name, not its friendly display name) or set PP_SOLUTION_UNIQUE_NAME.'
+      );
+    }
+    pacArgs.push('-s', resolvedSolution);
+    console.log(`pac code push: associating app with solution "${resolvedSolution}" via -s.`);
+  }
 }
 
 const pacBin = resolvePacBin();

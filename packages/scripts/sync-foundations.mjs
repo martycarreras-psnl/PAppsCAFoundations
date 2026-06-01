@@ -108,6 +108,12 @@ function mergeRequiredScripts() {
     ? 'set VITE_USE_MOCK=true && vite --port 3000'
     : 'VITE_USE_MOCK=true vite --port 3000';
 
+  // Preserve any solution unique name already baked into the existing deploy
+  // script (issue #81) so re-syncing does not strip the -s association.
+  const existingDeploy = (pkg.scripts && pkg.scripts.deploy) || '';
+  const solutionMatch = existingDeploy.match(/--solution-name\s+("[^"]+"|\S+)/);
+  const solutionArg = solutionMatch ? ` --solution-name ${solutionMatch[1]}` : '';
+
   const required = {
     dev: 'concurrently "vite --port 3000" "pac code run"',
     'dev:local': devLocal,
@@ -115,7 +121,7 @@ function mergeRequiredScripts() {
     typecheck: 'tsc --noEmit',
     prebuild: 'node scripts/patch-datasources-info.mjs',
     build: 'npm run typecheck && vite build',
-    deploy: 'npm run build && node scripts/pac-safe.mjs --target dev --profile-type spn --mutating code push',
+    deploy: `npm run build && node scripts/pac-safe.mjs --target dev --profile-type user --mutating${solutionArg} code push`,
     'setup:auth': 'node scripts/setup-auth.mjs',
     pac: 'node scripts/op-pac.mjs',
     'solution:export': 'node scripts/export-solution.mjs --name YourSolutionName --target dev',

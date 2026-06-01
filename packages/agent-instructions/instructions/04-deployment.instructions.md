@@ -100,6 +100,8 @@ For quick iteration during development, deploy directly from your machine.
 
 > **SPN auth does not work for `pac code push`.** The BAP checkAccess API rejects service principal tokens. You need a **user** auth profile instead. The wizard creates one automatically during steps 7–9. **This is a one-time setup** — after the initial device-code sign-in, PAC CLI caches a refresh token that auto-renews (~90 days), so subsequent pushes work silently with no browser prompt.
 
+> **Always push with `-s "<SolutionUniqueName>"` — and get it right on the FIRST push.** A bare `pac code push` creates the Code App **outside** any solution. The failure is silent: PAC prints `App pushed successfully` even though the app never becomes a solution component. The Dataverse `canvasapps` record is created only on the first push, so a later `-s` re-push will **not** retroactively associate an app that was first pushed without it — recovery requires deleting and re-pushing with `-s` from a clean state. The value of `-s` must be the solution's **unique** name (e.g. `AIPMO`), never the friendly display name (e.g. `AI PMO`); a display name is accepted but silently no-ops. Resolve and verify the unique name with `pac solution list` before pushing.
+
 ```bash
 # One-time: create a user auth profile for your dev environment
 pac auth create --name pp-myrepo-d-u-abcd1234 --environment https://your-org-dev.crm.dynamics.com --deviceCode
@@ -110,9 +112,17 @@ pac auth select --name pp-myrepo-d-u-abcd1234
 # Verify you're connected to the right environment
 pac org who
 
-# Build and deploy — no sign-in prompt after the profile is created
+# Confirm the solution UNIQUE name (the left-hand "Unique Name" column, not the friendly name)
+pac solution list
+
+# Build and deploy — pass the solution UNIQUE name so the app lands in the solution
 npm run build
-pac code push
+pac code push -s "YourSolutionUniqueName"
+
+# Verify the app is actually a solution component (do not trust the success message):
+# export the solution and confirm the Code App appears in customizations.xml, or query
+# /api/data/v9.2/solutioncomponents?$filter=_solutionid_value eq <solutionGuid>
+pac solution export --name YourSolutionUniqueName --path ./out.zip --overwrite
 ```
 
 The SPN profile you created during initial setup is still used for `pac solution export/import`, `pac org who`, and other non-`pac code` operations. Keep both profiles — switch between them as needed.
@@ -296,7 +306,7 @@ Maintain at least three environments:
 
 | Environment | Purpose | Deployment |
 |-------------|---------|------------|
-| **Development** | Day-to-day coding, experimentation | `pac code push` (user profile, silent) |
+| **Development** | Day-to-day coding, experimentation | `pac code push -s "<SolutionUniqueName>"` (user profile, silent) |
 | **Test/QA** | Validation, UAT, stakeholder demos | Power Platform Pipelines (managed) |
 | **Production** | End users | Power Platform Pipelines (managed, with approval) |
 
@@ -468,7 +478,7 @@ The standard deployment cycle:
 ```bash
 # Step 1: Push the Code App to dev (user profile — one-time setup, silent after)
 npm run build
-pac code push
+pac code push -s "YourSolutionUniqueName"
 
 # Step 2: Export the full solution from dev (SPN profile) — auto-bumps version
 pacaf-export-solution --name YourSolutionName
