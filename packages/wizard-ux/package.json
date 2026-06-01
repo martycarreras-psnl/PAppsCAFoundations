@@ -1,6 +1,6 @@
 {
   "name": "@pacaf/wizard-ux",
-  "version": "3.4.3",
+  "version": "3.5.0",
   "private": false,
   "type": "module",
   "description": "Browser-based setup wizard for Power Apps Code Apps (parallel to @pacaf/wizard CLI).",
