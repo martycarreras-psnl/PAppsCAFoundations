@@ -52,24 +52,16 @@ const PAIRED_STEPS = [
         re: /\.push\(\s*['"]-s['"]/,
       },
       {
-        label: 'verifies solution membership after push (verifyAppInSolution)',
-        re: /verifyAppInSolution\s*\(/,
-      },
-      {
-        label: 'uses the shared authoritative membership check (checkAppInSolution)',
-        re: /checkAppInSolution\b/,
+        label: 'ensures solution membership after push (ensureAppInSolution)',
+        re: /ensureAppInSolution\s*\(/,
       },
       {
         label: 'imports the shared solution-membership lib (no per-copy drift)',
         re: /solution-membership(\.mjs)?/,
       },
       {
-        label: 'has a pre-push orphan guard (an UPDATE cannot associate an orphan)',
-        re: /pre-push/,
-      },
-      {
-        label: 'surfaces orphan recovery steps (orphanRecoverySteps)',
-        re: /orphanRecoverySteps\b/,
+        label: 'surfaces the manual add fallback (manualSolutionAddSteps)',
+        re: /manualSolutionAddSteps\b/,
       },
       {
         label: 'warns that -s must be the UNIQUE name, not the display name',
@@ -80,26 +72,34 @@ const PAIRED_STEPS = [
         re: /#81/,
       },
     ],
-    // NOTE: both files intentionally KEEP a prose comment explaining why the old
-    // `solution add-solution-component -ct 300` path was broken. We only ban the
-    // EXECUTABLE form (quoted CLI args passed to pac), never the documentation —
-    // so the patterns below match `'add-solution-component'` / `'-ct', '300'`,
-    // not the backticked prose in the rationale comments.
+    // NOTE: both files intentionally KEEP a prose comment explaining the #81
+    // history. The read+repair logic lives ONLY in the shared lib
+    // (solution-membership.mjs); the step copies must call ensureAppInSolution,
+    // never run `pac solution add-solution-component` / `-ct 300` themselves.
+    // Banning the EXECUTABLE form here keeps repair in one place and prevents
+    // per-copy drift. The patterns match quoted CLI args, not backticked prose.
     forbiddenInBoth: [
       {
-        label: 'an executable `solution add-solution-component` call (issue #81)',
+        label: 'an executable `solution add-solution-component` call in a step copy (belongs in the shared lib)',
         re: /['"]add-solution-component['"]/i,
       },
       {
-        label: 'an executable `-ct 300` component-type argument (issue #81)',
+        label: 'an executable `-ct 300` component-type argument in a step copy (belongs in the shared lib)',
         re: /['"]-ct['"]\s*,\s*['"]?300/,
       },
       {
         label: 'the FALSE-POSITIVE `solution list` membership check (regressed orphan bug)',
         // The old broken check ran `pac solution list` and regex-matched the
         // unique name — proving only that the solution exists, not that the app
-        // is a component. Membership MUST go through checkAppInSolution instead.
+        // is a component. Membership MUST go through ensureAppInSolution instead.
         re: /\[\s*['"]solution['"]\s*,\s*['"]list['"]\s*\]/i,
+      },
+      {
+        label: 'the malformed `pac solution export --managed false` membership read (false negatives)',
+        // The old read exported the solution and counted type-300 components,
+        // but `--managed` is a boolean switch so `false` was a stray token,
+        // producing unreliable exports. Membership now reads via `pac org fetch`.
+        re: /['"]--managed['"]\s*,\s*['"]false['"]/i,
       },
     ],
   },

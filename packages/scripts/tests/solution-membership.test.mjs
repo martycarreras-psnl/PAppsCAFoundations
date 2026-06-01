@@ -1,149 +1,229 @@
-// Unit tests for the shared authoritative solution-membership check.
+// Unit tests for the shared solution-membership read + repair.
 //
 // These lock the core logic that decides whether a Code App is actually a
-// component of its solution (issue #81 orphaned-app bug): the dependency-free
-// zip reader, the Canvas App (type 300) component counter, and the three
-// membership statuses returned by checkAppInSolution (member / absent /
-// unknown). The check is the safety net that turns the silent "create did not
-// associate to the solution" failure into a hard, recoverable stop.
+// component of its solution (issue #81 orphaned-app bug) and repairs it when it
+// is not. Membership is read via `pac org fetch` (auth-agnostic — works for
+// user AND SPN profiles) on the solutioncomponent table, and repaired via
+// `pac solution add-solution-component` because the appId in power.config.json
+// IS the canvasapp record GUID (verified). Both reads and the repair run under
+// the active auth profile, so no client secret is required.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deflateRawSync } from 'node:zlib';
-import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LIB = join(__dirname, '..', '..', 'wizard', 'lib', 'solution-membership.mjs');
-const { unzipEntries, countCanvasComponents, checkAppInSolution, orphanRecoverySteps } =
-  await import(pathToFileURL(LIB).href);
+const {
+  buildMembershipFetchXml,
+  checkAppInSolution,
+  addAppToSolution,
+  ensureAppInSolution,
+  manualSolutionAddSteps,
+} = await import(pathToFileURL(LIB).href);
 
-// Build a minimal but real .zip (central directory + local headers) so the
-// reader is exercised against the exact structure pac solution export produces.
-function buildZip(files) {
-  const chunks = [];
-  const central = [];
-  let offset = 0;
-  for (const [name, content] of Object.entries(files)) {
-    const nameBuf = Buffer.from(name, 'utf8');
-    const raw = Buffer.from(content, 'utf8');
-    const comp = deflateRawSync(raw);
-    const lfh = Buffer.alloc(30);
-    lfh.writeUInt32LE(0x04034b50, 0);
-    lfh.writeUInt16LE(8, 8); // method: deflate
-    lfh.writeUInt32LE(comp.length, 18);
-    lfh.writeUInt32LE(raw.length, 22);
-    lfh.writeUInt16LE(nameBuf.length, 26);
-    const localOffset = offset;
-    chunks.push(lfh, nameBuf, comp);
-    offset += lfh.length + nameBuf.length + comp.length;
+const APP_ID = 'dcdbb905-5068-4d40-9212-7f89a17460c3';
+const SOLUTION = 'MySolution';
 
-    const cdh = Buffer.alloc(46);
-    cdh.writeUInt32LE(0x02014b50, 0);
-    cdh.writeUInt16LE(8, 10); // method
-    cdh.writeUInt32LE(comp.length, 20);
-    cdh.writeUInt32LE(raw.length, 24);
-    cdh.writeUInt16LE(nameBuf.length, 28);
-    cdh.writeUInt32LE(localOffset, 42);
-    central.push(cdh, nameBuf);
-  }
-  const cdStart = offset;
-  let cdSize = 0;
-  for (const c of central) cdSize += c.length;
-  const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(Object.keys(files).length, 8);
-  eocd.writeUInt16LE(Object.keys(files).length, 10);
-  eocd.writeUInt32LE(cdSize, 12);
-  eocd.writeUInt32LE(cdStart, 16);
-  return Buffer.concat([...chunks, ...central, eocd]);
-}
+// pac org fetch prints the selected attributes; a returned solutioncomponentid
+// GUID means the app IS a component of the queried solution.
+const FETCH_MEMBER = `Connected to... carrema Code Apps\nsolutioncomponentid\n11112222-3333-4444-5555-666677778888\n`;
+const FETCH_ABSENT = `Connected to... carrema Code Apps\nsolutioncomponentid\n(no rows)\n`;
 
-const SOLUTION_XML_WITH_APP = `<?xml version="1.0"?>
-<ImportExportXml>
-  <SolutionManifest>
-    <RootComponents>
-      <RootComponent type="300" schemaName="myprefix_myapp_a1b2c" behavior="0" />
-    </RootComponents>
-  </SolutionManifest>
-</ImportExportXml>`;
+// ─────────── buildMembershipFetchXml ───────────
 
-const SOLUTION_XML_EMPTY = `<?xml version="1.0"?>
-<ImportExportXml>
-  <SolutionManifest>
-    <RootComponents />
-  </SolutionManifest>
-</ImportExportXml>`;
-
-test('countCanvasComponents detects a type 300 Canvas App component', () => {
-  assert.equal(countCanvasComponents(SOLUTION_XML_WITH_APP), 1);
+test('buildMembershipFetchXml scopes the query to the appId, type 300, and solution', () => {
+  const xml = buildMembershipFetchXml(APP_ID, SOLUTION);
+  assert.match(xml, /entity name="solutioncomponent"/);
+  assert.match(xml, new RegExp(`objectid"\\s+operator="eq"\\s+value="${APP_ID}"`));
+  assert.match(xml, /componenttype"\s+operator="eq"\s+value="300"/);
+  assert.match(xml, /link-entity name="solution"/);
+  assert.match(xml, new RegExp(`uniquename"\\s+operator="eq"\\s+value="${SOLUTION}"`));
 });
 
-test('countCanvasComponents returns 0 for an empty solution', () => {
-  assert.equal(countCanvasComponents(SOLUTION_XML_EMPTY), 0);
-  assert.equal(countCanvasComponents(''), 0);
+test('buildMembershipFetchXml escapes XML-special characters in values', () => {
+  const xml = buildMembershipFetchXml(APP_ID, 'A & B "quoted" <tag>');
+  assert.match(xml, /A &amp; B &quot;quoted&quot; &lt;tag&gt;/);
 });
 
-test('countCanvasComponents ignores non-canvas (non-300) components', () => {
-  const xml = '<RootComponent type="1" /> <RootComponent type="80" />';
-  assert.equal(countCanvasComponents(xml), 0);
-});
+// ─────────── checkAppInSolution ───────────
 
-test('unzipEntries round-trips a deflated solution.xml entry', () => {
-  const zip = buildZip({ 'solution.xml': SOLUTION_XML_WITH_APP, 'other.txt': 'noise' });
-  const entries = unzipEntries(zip, ['solution.xml']);
-  assert.ok(entries['solution.xml'].includes('type="300"'));
-  assert.equal(entries['other.txt'], undefined);
-});
-
-test('checkAppInSolution => member when the export contains a Canvas App', async () => {
+test('checkAppInSolution => member when pac org fetch returns a GUID row', async () => {
   const res = await checkAppInSolution({
     pac: 'pac',
     projectDir: process.cwd(),
-    solutionUniqueName: 'MySolution',
-    runCapture: makeFakeExport(SOLUTION_XML_WITH_APP),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: () => ({ ok: true, stdout: FETCH_MEMBER, stderr: '' }),
   });
   assert.equal(res.status, 'member');
-  assert.equal(res.canvasComponentCount, 1);
 });
 
-test('checkAppInSolution => absent (orphan) when the export has zero Canvas Apps', async () => {
+test('checkAppInSolution => absent when pac org fetch returns no GUID row', async () => {
   const res = await checkAppInSolution({
     pac: 'pac',
     projectDir: process.cwd(),
-    solutionUniqueName: 'MySolution',
-    runCapture: makeFakeExport(SOLUTION_XML_EMPTY),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: () => ({ ok: true, stdout: FETCH_ABSENT, stderr: '' }),
   });
   assert.equal(res.status, 'absent');
-  assert.equal(res.canvasComponentCount, 0);
 });
 
-test('checkAppInSolution => unknown when the export command fails', async () => {
+test('checkAppInSolution => unknown when the fetch command fails', async () => {
   const res = await checkAppInSolution({
     pac: 'pac',
     projectDir: process.cwd(),
-    solutionUniqueName: 'MySolution',
-    runCapture: () => ({ ok: false, stdout: '', stderr: 'export failed' }),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: () => ({ ok: false, stdout: '', stderr: 'no active auth profile' }),
   });
   assert.equal(res.status, 'unknown');
 });
 
-test('orphanRecoverySteps tells the user to clear appId and re-create', () => {
-  const steps = orphanRecoverySteps('MySolution', 'My App').join('\n');
-  assert.match(steps, /appId/);
-  assert.match(steps, /MySolution/);
-  assert.match(steps, /My App/);
+test('checkAppInSolution => unknown when appId is missing (app not pushed yet)', async () => {
+  const res = await checkAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: '',
+    solutionUniqueName: SOLUTION,
+    runCapture: () => { throw new Error('should not run'); },
+  });
+  assert.equal(res.status, 'unknown');
 });
 
-// Returns a runCapture stub that "exports" by writing a real zip to the --path
-// the lib requested, mimicking pac solution export.
-function makeFakeExport(solutionXml) {
-  return (_file, args) => {
-    const pathIdx = args.indexOf('--path');
-    const zipPath = pathIdx >= 0 ? args[pathIdx + 1] : join(mkdtempSync(join(tmpdir(), 'x-')), 's.zip');
-    writeFileSync(zipPath, buildZip({ 'solution.xml': solutionXml }));
-    return { ok: true, stdout: 'Solution exported', stderr: '' };
-  };
-}
+test('checkAppInSolution => unknown when the solution unique name is missing', async () => {
+  const res = await checkAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: '',
+    runCapture: () => { throw new Error('should not run'); },
+  });
+  assert.equal(res.status, 'unknown');
+});
+
+test('checkAppInSolution writes FetchXML to a temp file and calls `org fetch --xmlFile`', async () => {
+  const calls = [];
+  await checkAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => { calls.push(args); return { ok: true, stdout: FETCH_MEMBER, stderr: '' }; },
+  });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 3), ['org', 'fetch', '--xmlFile']);
+  assert.ok(calls[0][3] && calls[0][3].length > 0, 'expected a temp file path argument');
+});
+
+// ─────────── addAppToSolution ───────────
+
+test('addAppToSolution issues add-solution-component with the appId and type 300', async () => {
+  const calls = [];
+  const res = await addAppToSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => { calls.push(args); return { ok: true, stdout: 'added', stderr: '' }; },
+  });
+  assert.equal(res.ok, true);
+  assert.deepEqual(calls[0], [
+    'solution', 'add-solution-component',
+    '--solutionUniqueName', SOLUTION,
+    '--component', APP_ID,
+    '--componentType', '300',
+  ]);
+});
+
+test('addAppToSolution fails cleanly when appId is missing', async () => {
+  const res = await addAppToSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: '',
+    solutionUniqueName: SOLUTION,
+    runCapture: () => { throw new Error('should not run'); },
+  });
+  assert.equal(res.ok, false);
+});
+
+// ─────────── ensureAppInSolution ───────────
+
+test('ensureAppInSolution: member => no repair attempted', async () => {
+  let addCalled = false;
+  const res = await ensureAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => {
+      if (args[0] === 'solution' && args[1] === 'add-solution-component') { addCalled = true; return { ok: true, stdout: '', stderr: '' }; }
+      return { ok: true, stdout: FETCH_MEMBER, stderr: '' };
+    },
+  });
+  assert.equal(res.status, 'member');
+  assert.equal(res.repaired, false);
+  assert.equal(addCalled, false);
+});
+
+test('ensureAppInSolution: absent => adds the app, then confirms membership (repaired)', async () => {
+  let added = false;
+  const res = await ensureAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => {
+      if (args[0] === 'solution' && args[1] === 'add-solution-component') { added = true; return { ok: true, stdout: 'added', stderr: '' }; }
+      // First fetch (pre-add) absent; after add, fetch reports member.
+      return { ok: true, stdout: added ? FETCH_MEMBER : FETCH_ABSENT, stderr: '' };
+    },
+  });
+  assert.equal(added, true);
+  assert.equal(res.status, 'member');
+  assert.equal(res.repaired, true);
+});
+
+test('ensureAppInSolution: absent but add fails => not repaired', async () => {
+  const res = await ensureAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => {
+      if (args[0] === 'solution' && args[1] === 'add-solution-component') return { ok: false, stdout: '', stderr: 'privilege error' };
+      return { ok: true, stdout: FETCH_ABSENT, stderr: '' };
+    },
+  });
+  assert.equal(res.repaired, false);
+});
+
+test('ensureAppInSolution: unknown read => skips repair, never throws', async () => {
+  let addCalled = false;
+  const res = await ensureAppInSolution({
+    pac: 'pac',
+    projectDir: process.cwd(),
+    appId: APP_ID,
+    solutionUniqueName: SOLUTION,
+    runCapture: (_file, args) => {
+      if (args[0] === 'solution' && args[1] === 'add-solution-component') { addCalled = true; return { ok: true, stdout: '', stderr: '' }; }
+      return { ok: false, stdout: '', stderr: 'no active auth profile' };
+    },
+  });
+  assert.equal(res.status, 'unknown');
+  assert.equal(res.repaired, false);
+  assert.equal(addCalled, false);
+});
+
+// ─────────── manualSolutionAddSteps ───────────
+
+test('manualSolutionAddSteps guides an Add-existing flow (never delete/recreate)', () => {
+  const steps = manualSolutionAddSteps(SOLUTION, 'My App').join('\n');
+  assert.match(steps, /MySolution/);
+  assert.match(steps, /My App/);
+  assert.match(steps, /Add existing/i);
+  // It must reassure the user NOT to delete the app (the old #81 dead-end).
+  assert.match(steps, /do NOT delete/i);
+});

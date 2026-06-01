@@ -14,7 +14,7 @@ import {
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
-import { checkAppInSolution, orphanRecoverySteps } from '../lib/solution-membership.mjs';
+import { ensureAppInSolution as ensureAppInSolutionLib, manualSolutionAddSteps } from '../lib/solution-membership.mjs';
 
 export default async function stepVerifyAndDeploy() {
   ui.stepHeader(9, TOTAL_STEPS, 'Build, Verify & Deploy');
@@ -92,20 +92,23 @@ export default async function stepVerifyAndDeploy() {
       // ALL pac code push calls require user auth — SPN is always rejected
       const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
       if (profileReady) {
-        // PRE-PUSH MEMBERSHIP CHECK (informational only). The documented
-        // contract is `pac code push --solutionName <name>` — association is
-        // handled by that push. We surface a best-effort membership hint but
-        // NEVER block the deploy on it (the export+type-300 cross-check is not
-        // authoritative).
+        // Membership is confirmed (and repaired if needed) AFTER the push via a
+        // Dataverse read on solutioncomponent. An UPDATE push ignores -s, but
+        // that is no longer a dead-end: appId === canvasappid, so the app can be
+        // added to the solution post-push regardless of CREATE vs UPDATE (#81).
         if (!isFirstPush && solUniqueName) {
-          await verifyAppInSolution(pac, projectDir, solUniqueName, false, 'pre-push', appName);
+          ui.line(`Existing appId detected — this push is an UPDATE. Solution membership will be confirmed (and repaired if needed) after the push.`);
         }
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
         const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solUniqueName, credentialValues);
         if (success) {
           ui.ok(isFirstPush ? 'Deployed! Your app is live.' : 'Deployed! Your app is updated.');
-          if (isFirstPush) await verifyAppInSolution(pac, projectDir, solUniqueName, true, 'post-create', appName);
+          // Read the appId the push wrote, then ensure the app is a component of
+          // the selected solution (adding it automatically if absent).
+          let pushedAppId = '';
+          try { pushedAppId = (loadPowerConfigInfo(powerConfigPath) || {}).appId || ''; } catch { /* ignore */ }
+          await ensureAppInSolution(pac, projectDir, pushedAppId, solUniqueName, appName);
         }
       } else {
         const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
@@ -353,54 +356,45 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
 // ─────────── Verify App Joined Solution ───────────
 
 /**
- * Verify the deployed Code App is a component of the selected solution.
+ * Ensure the deployed Code App is a component of the selected solution.
  *
- * Association happens during `pac code push -s <UNIQUE name>` on the FIRST
- * push — it is what creates the Dataverse `canvasapps` record inside the
- * solution. A later `-s` re-push does NOT retroactively associate an app that
- * was first pushed bare. There is no reliable post-hoc CLI fix (the old
- * `solution add-solution-component -ct 300` path passed the Code App appId
- * where the canvasapp record GUID is expected and silently failed — issue
- * #81), so when verification fails the only correct remedy is to delete the
- * orphaned app and push again WITH -s. We surface that clearly rather than
- * pretend to repair it.
+ * `pac code push -s <UNIQUE name>` associates the app on the FIRST push, but a
+ * unique-name mismatch (or a later -s re-push, which is an ignored UPDATE) can
+ * leave it OUTSIDE the chosen solution. The old #81 design treated that as
+ * unrecoverable and told the user to delete + recreate, because it believed
+ * `solution add-solution-component` needed a different GUID than the appId.
+ * That is wrong: appId === canvasappid, so the app can be added after the fact.
  *
- * This is an AUTHORITATIVE check: it exports the solution and counts Canvas App
- * (type 300) components. The old `pac solution list` check was a FALSE POSITIVE
- * — it only proved the solution exists, not that the app is inside it, which is
- * exactly how an app could be left orphaned while the wizard reported success.
+ * READ + REPAIR run through the shared lib (auth-agnostic):
+ *   • READ  — `pac org fetch` on solutioncomponent (componenttype 300) under
+ *             the active profile (user OR SPN), no client secret needed.
+ *   • REPAIR — `pac solution add-solution-component --component <appId>
+ *             --componentType 300 --solutionUniqueName <name>` when absent.
+ * The old `pac solution export --managed false` + type-300 count read was
+ * malformed (false negatives) and the `pac solution list` check was a false
+ * positive (it only proved the solution exists). Both are gone.
  *
- * Returns true when it is safe to proceed (member, or undeterminable), false
- * when the app is confirmed orphaned (caller should stop / surface recovery).
+ * Returns the final membership result (never throws) — membership is
+ * informative, not a deploy gate.
  */
-async function verifyAppInSolution(pac, projectDir, solutionUniqueName, isFirstPush, phase = 'post-create', appDisplayName = 'this Code App') {
-  if (!pac || !solutionUniqueName) return true;
+async function ensureAppInSolution(pac, projectDir, appId, solutionUniqueName, appDisplayName = 'this Code App') {
+  if (!pac || !solutionUniqueName) return { status: 'unknown' };
+  if (!appId) {
+    ui.warn(`No appId in power.config.json — cannot confirm membership in "${solutionUniqueName}". Verify in the Maker Portal.`);
+    return { status: 'unknown' };
+  }
 
   ui.line('');
-  ui.line(`Verifying app is a component of solution "${solutionUniqueName}" (exporting solution to inspect components)...`);
+  ui.line(`Confirming the app is in solution "${solutionUniqueName}" (and adding it if missing)...`);
   const runCapture = (file, args, opts) => runSafeCapture(file, args, opts);
-  const membership = await checkAppInSolution({ pac, projectDir, solutionUniqueName, runCapture });
+  const log = { line: (m) => ui.line(m), ok: (m) => ui.ok(m), warn: (m) => ui.warn(m) };
+  const result = await ensureAppInSolutionLib({ pac, projectDir, appId, solutionUniqueName, runCapture, log });
 
-  if (membership.status === 'member') {
-    ui.ok(`Confirmed: the app is a component of solution "${solutionUniqueName}" (${membership.canvasComponentCount} Canvas App component(s)).`);
-    return true;
-  }
-  if (membership.status === 'absent') {
-    // INFORMATIONAL ONLY — never block the deploy on this signal. The documented
-    // contract (learn.microsoft.com/power-apps/developer/code-apps/how-to/alm)
-    // is simply `pac code push --solutionName <name>`; association happens as
-    // part of that push. The export+type-300 component count is a best-effort
-    // cross-check, NOT authoritative — a clean export with zero Canvas App
-    // components does NOT reliably mean the app is orphaned. Surface a hint and
-    // continue rather than aborting a legitimate push.
+  if (result.status === 'absent') {
     ui.line('');
-    ui.warn(`Could not see this app as a component of solution "${solutionUniqueName}" via export.`);
-    ui.line(`  If it is missing in the Maker Portal, add it with: Solutions → ${solutionUniqueName} → Add existing → App → Code app.`);
-    return true;
+    for (const stepLine of manualSolutionAddSteps(solutionUniqueName, appDisplayName)) ui.line(`  ${stepLine}`);
   }
-  ui.warn(`Could not confirm solution membership for "${solutionUniqueName}" (${membership.detail}).`);
-  ui.line('  Verify in Maker Portal → Solutions → ' + solutionUniqueName + ' → Apps.');
-  return true;
+  return result;
 }
 
 // ─────────── Interactive Auth Helper ───────────
