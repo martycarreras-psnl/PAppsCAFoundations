@@ -56,6 +56,22 @@ const PAIRED_STEPS = [
         re: /verifyAppInSolution\s*\(/,
       },
       {
+        label: 'uses the shared authoritative membership check (checkAppInSolution)',
+        re: /checkAppInSolution\b/,
+      },
+      {
+        label: 'imports the shared solution-membership lib (no per-copy drift)',
+        re: /solution-membership(\.mjs)?/,
+      },
+      {
+        label: 'has a pre-push orphan guard (an UPDATE cannot associate an orphan)',
+        re: /pre-push/,
+      },
+      {
+        label: 'surfaces orphan recovery steps (orphanRecoverySteps)',
+        re: /orphanRecoverySteps\b/,
+      },
+      {
         label: 'warns that -s must be the UNIQUE name, not the display name',
         re: /UNIQUE name/,
       },
@@ -77,6 +93,13 @@ const PAIRED_STEPS = [
       {
         label: 'an executable `-ct 300` component-type argument (issue #81)',
         re: /['"]-ct['"]\s*,\s*['"]?300/,
+      },
+      {
+        label: 'the FALSE-POSITIVE `solution list` membership check (regressed orphan bug)',
+        // The old broken check ran `pac solution list` and regex-matched the
+        // unique name — proving only that the solution exists, not that the app
+        // is a component. Membership MUST go through checkAppInSolution instead.
+        re: /\[\s*['"]solution['"]\s*,\s*['"]list['"]\s*\]/i,
       },
     ],
   },

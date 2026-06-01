@@ -11,6 +11,7 @@ const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
 const PROJECT_DIR = process.cwd();
 const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
 const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+const SOLUTION_MEMBERSHIP = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'solution-membership.mjs')).href);
 
 function hasCommand(name) {
   try {
@@ -114,18 +115,29 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 // play-URL appId where the canvasapp record GUID is expected and always failed
 // with "...because it does not exist" (issue #81). So we verify and guide
 // recovery instead of pretending to repair.
-async function verifyAppInSolution(log, pac, projectDir, solutionUniqueName) {
-  if (!solutionUniqueName) return;
-  log.info(`Verifying app is a component of solution "${solutionUniqueName}"...`);
-  const { ok, stdout, stderr } = await runFileCapture(log, pac, ['solution', 'list'], { cwd: projectDir });
-  const combined = `${stdout}\n${stderr}`;
-  if (ok && new RegExp(`\\b${solutionUniqueName}\\b`, 'i').test(combined)) {
-    log.ok(`Solution "${solutionUniqueName}" exists and the push carried -s — the app should now appear under it.`);
-    log.info(`Confirm in Maker Portal → Solutions → ${solutionUniqueName} → Apps.`);
-  } else {
-    log.warn(`Could not confirm solution "${solutionUniqueName}". Verify in the Maker Portal that the app is listed under it.`);
+//
+// This is an AUTHORITATIVE check: it exports the solution and counts Canvas App
+// (type 300) components. The old `pac solution list` check was a FALSE POSITIVE
+// — it only proved the solution exists, not that the app is inside it, which is
+// exactly how an app could be left orphaned while the wizard reported success.
+async function verifyAppInSolution(log, pac, projectDir, solutionUniqueName, { phase, appDisplayName } = {}) {
+  if (!solutionUniqueName) return { status: 'unknown' };
+  log.info(`Verifying app is a component of solution "${solutionUniqueName}" (exporting solution to inspect components)...`);
+  const runCapture = (file, args, opts) => runFileCapture(log, file, args, opts);
+  const membership = await SOLUTION_MEMBERSHIP.checkAppInSolution({ pac, projectDir, solutionUniqueName, runCapture });
+  if (membership.status === 'member') {
+    log.ok(`Confirmed: the app is a component of solution "${solutionUniqueName}" (${membership.canvasComponentCount} Canvas App component(s)).`);
+    return membership;
   }
-  log.info('If the app is NOT listed under the solution, it was pushed without a valid solution unique name. A later -s re-push will NOT fix it — delete the orphaned Code App in the Maker Portal, then re-push with the UNIQUE name.');
+  if (membership.status === 'absent') {
+    const steps = SOLUTION_MEMBERSHIP.orphanRecoverySteps(solutionUniqueName, appDisplayName || 'this Code App');
+    for (const line of steps) log.fail(line);
+    // A confirmed orphan is a hard error in BOTH phases: pre-push (an UPDATE
+    // cannot fix it) and post-create (the create silently failed to associate).
+    throw new Error(`Code App is orphaned — NOT a component of solution "${solutionUniqueName}". ${phase === 'pre-push' ? 'A re-push will not fix this.' : 'The create did not associate it.'} See the recovery steps above.`);
+  }
+  log.warn(`Could not confirm solution membership for "${solutionUniqueName}" (${membership.detail}). Verify in the Maker Portal that the app is listed under it.`);
+  return membership;
 }
 
 export default {
@@ -193,12 +205,27 @@ export default {
     // the solution — association only happens on the first push WITH the unique
     // name, and a later -s re-push cannot fix it (issue #81).
     const solutionUniqueName = String(state.SOLUTION_UNIQUE_NAME || '').trim();
+    const appDisplayName = String(state.APP_NAME || 'this Code App').trim();
     const pushArgs = ['code', 'push'];
     if (solutionUniqueName) {
       pushArgs.push('-s', solutionUniqueName);
     } else {
       throw new Error('No solution unique name (SOLUTION_UNIQUE_NAME) is available. Refusing to run a bare `pac code push`, which would create the Code App outside any solution (a silent failure a later -s re-push cannot fix). Re-run the wizard solution step so the unique name is captured before deploying.');
     }
+
+    // PRE-PUSH ORPHAN GUARD. Solution membership is decided ONLY on the CREATE
+    // (first push, when power.config.json has no appId). If an appId already
+    // exists this push is an UPDATE and -s is ignored — so if the app is not
+    // already a component of the selected solution, NO push can ever fix it.
+    // Catch that here and hard-stop with recovery instructions instead of
+    // wasting an update that silently leaves the app orphaned.
+    const preInfo = PAC_TARGET.loadPowerConfigInfo(powerConfigPath);
+    const isFirstPush = !preInfo.appId;
+    if (!isFirstPush && solutionUniqueName) {
+      log.info(`Existing appId detected (${preInfo.appId}) — this push is an UPDATE. Confirming the app is already in solution "${solutionUniqueName}" before pushing...`);
+      await verifyAppInSolution(log, pac, projectDir, solutionUniqueName, { phase: 'pre-push', appDisplayName });
+    }
+
     const pushResult = await runFileCapture(log, pac, pushArgs, { cwd: projectDir });
     const pushOutput = `${pushResult.stdout}\n${pushResult.stderr}`;
     if (!pushResult.ok || PAC_HTTP_ERROR_RE.test(pushOutput)) throw new Error('pac code push failed. Check the live output above, then retry.');
@@ -220,7 +247,13 @@ export default {
       log.warn('Could not detect deployed app URL in pac output. Open the app from Power Apps Maker Portal.');
     }
 
-    await verifyAppInSolution(log, pac, projectDir, solutionUniqueName);
+    // POST-CREATE VERIFICATION. On a first push (CREATE) the -s flag is what
+    // associates the app. Authoritatively confirm it actually landed in the
+    // solution; if not, the create silently failed to associate and we hard-stop
+    // rather than report a false success (the bug that orphaned AI-PMOv3).
+    if (isFirstPush) {
+      await verifyAppInSolution(log, pac, projectDir, solutionUniqueName, { phase: 'post-create', appDisplayName });
+    }
 
     return { stateUpdate, completedStep: 9 };
   },

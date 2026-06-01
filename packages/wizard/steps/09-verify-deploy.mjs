@@ -8,11 +8,13 @@ import { join } from 'node:path';
 import {
   buildPacProfileName,
   getWizardStateSnapshot,
+  loadPowerConfigInfo,
   quarantinePowerConfig,
   repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
+import { checkAppInSolution, orphanRecoverySteps } from '../lib/solution-membership.mjs';
 
 export default async function stepVerifyAndDeploy() {
   ui.stepHeader(9, TOTAL_STEPS, 'Build, Verify & Deploy');
@@ -90,12 +92,21 @@ export default async function stepVerifyAndDeploy() {
       // ALL pac code push calls require user auth — SPN is always rejected
       const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
       if (profileReady) {
+        // PRE-PUSH ORPHAN GUARD. Solution membership is decided ONLY on the
+        // CREATE (first push). If an appId already exists this push is an
+        // UPDATE and -s is ignored — so if the app is not already in the
+        // solution, NO push can fix it. Hard-stop with recovery instead of
+        // wasting an update that silently leaves the app orphaned.
+        if (!isFirstPush && solUniqueName) {
+          const guardOk = await verifyAppInSolution(pac, projectDir, solUniqueName, false, 'pre-push', appName);
+          if (!guardOk) return; // orphaned — recovery steps already printed
+        }
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
         const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solUniqueName, credentialValues);
         if (success) {
           ui.ok(isFirstPush ? 'Deployed! Your app is live.' : 'Deployed! Your app is updated.');
-          await verifyAppInSolution(pac, projectDir, solUniqueName, isFirstPush);
+          if (isFirstPush) await verifyAppInSolution(pac, projectDir, solUniqueName, true, 'post-create', appName);
         }
       } else {
         const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
@@ -354,33 +365,37 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
  * #81), so when verification fails the only correct remedy is to delete the
  * orphaned app and push again WITH -s. We surface that clearly rather than
  * pretend to repair it.
+ *
+ * This is an AUTHORITATIVE check: it exports the solution and counts Canvas App
+ * (type 300) components. The old `pac solution list` check was a FALSE POSITIVE
+ * — it only proved the solution exists, not that the app is inside it, which is
+ * exactly how an app could be left orphaned while the wizard reported success.
+ *
+ * Returns true when it is safe to proceed (member, or undeterminable), false
+ * when the app is confirmed orphaned (caller should stop / surface recovery).
  */
-async function verifyAppInSolution(pac, projectDir, solutionUniqueName, isFirstPush) {
-  if (!pac || !solutionUniqueName) return;
+async function verifyAppInSolution(pac, projectDir, solutionUniqueName, isFirstPush, phase = 'post-create', appDisplayName = 'this Code App') {
+  if (!pac || !solutionUniqueName) return true;
 
   ui.line('');
-  ui.line(`Verifying app is a component of solution "${solutionUniqueName}"...`);
-  const { ok, stdout, stderr } = runSafeCapture(pac, [
-    'solution', 'list',
-  ]);
-  const combined = `${stdout}\n${stderr}`;
+  ui.line(`Verifying app is a component of solution "${solutionUniqueName}" (exporting solution to inspect components)...`);
+  const runCapture = (file, args, opts) => runSafeCapture(file, args, opts);
+  const membership = await checkAppInSolution({ pac, projectDir, solutionUniqueName, runCapture });
 
-  // `pac solution list` confirms the solution exists; the authoritative check
-  // is whether the app shows up under the solution in the Maker Portal. We
-  // cannot enumerate canvasapps components via a stable CLI command across pac
-  // versions, so we assert on the push having carried -s and guide the user to
-  // confirm in the portal.
-  if (ok && new RegExp(`\\b${solutionUniqueName}\\b`, 'i').test(combined)) {
-    ui.ok(`Solution "${solutionUniqueName}" exists and the push carried -s — the app should now appear under it.`);
-    ui.line('  Confirm in Maker Portal → Solutions → ' + solutionUniqueName + ' → Apps.');
-  } else {
-    ui.warn(`Could not confirm solution "${solutionUniqueName}".`);
+  if (membership.status === 'member') {
+    ui.ok(`Confirmed: the app is a component of solution "${solutionUniqueName}" (${membership.canvasComponentCount} Canvas App component(s)).`);
+    return true;
   }
-  ui.line('');
-  ui.line('If the app is NOT listed under the solution, it was pushed without a valid');
-  ui.line('solution unique name. A later -s re-push will NOT fix it. To recover:');
-  ui.line('  1. Delete the orphaned Code App in the Maker Portal (Apps list).');
-  ui.line(`  2. Re-push with the UNIQUE name: pac code push -s "${solutionUniqueName}"`);
+  if (membership.status === 'absent') {
+    ui.line('');
+    if (phase === 'pre-push') ui.warn('Pre-push check: the existing app is NOT in the selected solution. A re-push (UPDATE) cannot fix this.');
+    else ui.warn('The create did NOT associate the app to the solution.');
+    for (const line of orphanRecoverySteps(solutionUniqueName, appDisplayName)) ui.line(`  ${line}`);
+    return false;
+  }
+  ui.warn(`Could not confirm solution membership for "${solutionUniqueName}" (${membership.detail}).`);
+  ui.line('  Verify in Maker Portal → Solutions → ' + solutionUniqueName + ' → Apps.');
+  return true;
 }
 
 // ─────────── Interactive Auth Helper ───────────
