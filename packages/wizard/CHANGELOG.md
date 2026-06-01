@@ -1,5 +1,57 @@
 # @pacaf/wizard
 
+## 3.3.8
+
+### Patch Changes
+
+- 83f2d16: Fix Code App not being associated with its solution on deploy (issue #81). A
+  by-the-book deploy ran a bare `pac code push`, which silently created the app
+  **outside** its solution — PAC prints `App pushed successfully` even though the
+  app never becomes a solution component, and a later `-s` re-push cannot
+  retroactively fix it.
+
+  - `@pacaf/scripts` `pac-safe.mjs` now hardens `code push`: it forces a user
+    auth profile (BAP rejects SPN tokens), injects `-s <SolutionUniqueName>` from
+    a new `--solution-name` flag / `PP_SOLUTION_UNIQUE_NAME` / wizard state, and
+    refuses to run a bare push (exits non-zero with a clear message) when no
+    unique name can be resolved.
+  - `@pacaf/scripts` `sync-foundations.mjs` preserves any `--solution-name`
+    already baked into the project's `deploy` script when re-syncing.
+  - `@pacaf/wizard` `scaffold-foundations.mjs` bakes the solution unique name into
+    the generated `deploy` script via `--solution-name`, and Step 9
+    (`09-verify-deploy.mjs`) now passes the solution **unique** name (not the
+    friendly display name) to `pac code push -s`, replaces the broken
+    `add-solution-component -ct 300` fallback with a verification + recovery gate,
+    and removes every bare-push fallback hint.
+  - `@pacaf/wizard-ux` carried a **second, independent copy** of Step 9
+    (`server/steps/09-verify-deploy.mjs`) that the browser wizard
+    (`npx @pacaf/wizard-ux@latest`, the default scaffolder) actually executes. It
+    still pushed with the friendly **display name** and still ran the broken
+    `add-solution-component -ct 300` fallback, so the fix never reached the most
+    common deploy path. It now mirrors the CLI wizard exactly: push with the
+    solution **unique** name, refuse a bare push when no unique name is resolvable,
+    and verify solution membership instead of attempting the broken component add.
+  - `@pacaf/agent-instructions`: `01-scaffold`, `04-deployment`, and
+    `00-environment-setup` drop the false "init registers the app in the active
+    solution context" claim and replace all bare `pac code push` examples with
+    `pac code push -s "<SolutionUniqueName>"`, documenting the first-push-critical
+    and unique-vs-display-name rules.
+
+- 83f2d16: Fix orphaned Code Apps: authoritatively verify solution membership and hard-stop before a doomed push (issue #81).
+
+  A Code App's solution membership is written exactly once — on the first `pac code push -s <UNIQUE name>` (the CREATE). Once an `appId` exists, every push is an UPDATE and `-s` is silently ignored, so an app that was first pushed without a valid unique name can never be associated afterward. The old verification only ran `pac solution list` and checked the name appeared, which proves the solution exists but NOT that the app is inside it — a false positive that let apps ship orphaned while the wizard reported success.
+
+  - New shared `packages/wizard/lib/solution-membership.mjs`: dependency-free `pac solution export` + Canvas App (type 300) component count gives an authoritative `member` / `absent` / `unknown` membership signal. Imported by BOTH deploy-step copies so they cannot drift.
+  - Pre-push orphan guard: when an `appId` already exists and a solution is selected, membership is verified BEFORE pushing. If the app is `absent`, the deploy hard-stops with recovery steps instead of wasting an UPDATE that cannot fix the orphan.
+  - Real post-create verification: after the first push, the app's membership is confirmed by export rather than the false-positive `solution list` check; a create that failed to associate now fails loudly with recovery steps.
+  - Tests: new `solution-membership.test.mjs` unit tests for the zip reader, component counter, and the three statuses; deploy-step parity test extended to force both copies to keep the shared check, pre-push guard, and recovery steps, and to ban the false-positive `solution list` membership check.
+
+- Updated dependencies [83f2d16]
+- Updated dependencies [2469cbe]
+- Updated dependencies [83f2d16]
+  - @pacaf/agent-instructions@3.5.6
+  - @pacaf/scripts@3.0.7
+
 ## 3.3.7
 
 ### Patch Changes
