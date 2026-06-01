@@ -11,7 +11,6 @@ const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
 const PROJECT_DIR = process.cwd();
 const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
 const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
-const SOLUTION_MEMBERSHIP = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'solution-membership.mjs')).href);
 
 function hasCommand(name) {
   try {
@@ -107,40 +106,11 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 
 // Ensure the deployed Code App is a component of the selected solution.
 //
-// `pac code push -s <UNIQUE name>` associates the app on the FIRST push (the
-// CREATE). But several real-world paths leave it OUTSIDE the chosen solution:
-// a unique-name mismatch makes pac fall back to the env's preferred/default
-// solution, or the app was first pushed bare and a later -s re-push (an UPDATE)
-// is ignored. The earlier #81 design treated that as unrecoverable and told the
-// user to delete + recreate. That is wrong: appId === canvasappid, so the
-// app can be added to the solution after the fact.
-//
-// READ + REPAIR (auth-agnostic, via the shared lib):
-//   • READ  — `pac org fetch` on solutioncomponent (componenttype 300) under
-//             the active profile (user OR SPN), so no client secret is needed.
-//   • REPAIR — `pac solution add-solution-component --component <appId>
-//             --componentType 300 --solutionUniqueName <name>` when absent.
-// The old `pac solution export --managed false` + type-300 count read was
-// malformed and produced false negatives; the old `pac solution list` check
-// was a false positive (it only proved the solution exists). Both are gone.
-async function ensureAppInSolution(log, pac, projectDir, appId, solutionUniqueName, { appDisplayName } = {}) {
-  if (!solutionUniqueName) return { status: 'unknown' };
-  if (!appId) {
-    log.warn(`No appId found in power.config.json — cannot confirm membership in "${solutionUniqueName}". Verify in the Maker Portal.`);
-    return { status: 'unknown' };
-  }
-  log.info(`Confirming the app is in solution "${solutionUniqueName}" (and adding it if missing)...`);
-  const runCapture = (file, args, opts) => runFileCapture(log, file, args, opts);
-  const result = await SOLUTION_MEMBERSHIP.ensureAppInSolution({
-    pac, projectDir, appId, solutionUniqueName, runCapture, log,
-  });
-  if (result.status !== 'member' && result.status === 'absent') {
-    for (const line of SOLUTION_MEMBERSHIP.manualSolutionAddSteps(solutionUniqueName, appDisplayName || 'this Code App', appId)) {
-      log.warn(line);
-    }
-  }
-  return result;
-}
+// The first `pac code push -s <UNIQUE name>` (the CREATE) both creates the
+// canvasapp record AND makes it a component of the chosen solution in one shot
+// — the documented golden path. We REFUSE a bare push below, so the app can
+// never be created OUTSIDE its solution (a silent failure a later -s re-push,
+// which is an ignored UPDATE, cannot fix). No post-push repair is needed (#81).
 
 export default {
   meta: {
@@ -207,7 +177,6 @@ export default {
     // the solution — association only happens on the first push WITH the unique
     // name, and a later -s re-push cannot fix it (issue #81).
     const solutionUniqueName = String(state.SOLUTION_UNIQUE_NAME || '').trim();
-    const appDisplayName = String(state.APP_NAME || 'this Code App').trim();
     const pushArgs = ['code', 'push'];
     if (solutionUniqueName) {
       pushArgs.push('-s', solutionUniqueName);
@@ -215,14 +184,14 @@ export default {
       throw new Error('No solution unique name (SOLUTION_UNIQUE_NAME) is available. Refusing to run a bare `pac code push`, which would create the Code App outside any solution (a silent failure a later -s re-push cannot fix). Re-run the wizard solution step so the unique name is captured before deploying.');
     }
 
-    // PRE-PUSH NOTE. On an UPDATE push (appId already present) `-s` is ignored,
-    // but that is no longer a dead-end: after the push we read membership from
-    // Dataverse and add the app to the solution if needed (appId === canvasappid),
-    // which works regardless of whether this was a CREATE or an UPDATE.
+    // The first push with -s (the CREATE) both creates the canvasapp record and
+    // makes it a component of the chosen solution in one shot. An UPDATE push
+    // (appId already present) just republishes the existing app in place; -s is
+    // a no-op but the app stays in the solution it was created in (#81).
     const preInfo = PAC_TARGET.loadPowerConfigInfo(powerConfigPath);
     const isFirstPush = !preInfo.appId;
     if (!isFirstPush) {
-      log.info(`Existing appId detected (${preInfo.appId}) — this push is an UPDATE. Solution membership will be confirmed (and repaired if needed) after the push.`);
+      log.info(`Existing appId detected (${preInfo.appId}) — this push is an UPDATE (republish in place).`);
     }
 
     const pushResult = await runFileCapture(log, pac, pushArgs, { cwd: projectDir });
@@ -245,15 +214,6 @@ export default {
     } else {
       log.warn('Could not detect deployed app URL in pac output. Open the app from Power Apps Maker Portal.');
     }
-
-    // POST-PUSH MEMBERSHIP ENSURE. Read the appId the push wrote into
-    // power.config.json, confirm the app is a component of the selected
-    // solution via a Dataverse read, and add it automatically if it is not.
-    // This covers BOTH a CREATE that silently fell back to the preferred/default
-    // solution AND an UPDATE of an app that was first pushed bare (issue #81),
-    // without ever deleting or recreating the app.
-    const postInfo = PAC_TARGET.loadPowerConfigInfo(powerConfigPath);
-    await ensureAppInSolution(log, pac, projectDir, postInfo.appId, solutionUniqueName, { appDisplayName });
 
     return { stateUpdate, completedStep: 9 };
   },

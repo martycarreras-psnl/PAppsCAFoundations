@@ -8,13 +8,11 @@ import { join } from 'node:path';
 import {
   buildPacProfileName,
   getWizardStateSnapshot,
-  loadPowerConfigInfo,
   quarantinePowerConfig,
   repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
-import { ensureAppInSolution as ensureAppInSolutionLib, manualSolutionAddSteps } from '../lib/solution-membership.mjs';
 
 export default async function stepVerifyAndDeploy() {
   ui.stepHeader(9, TOTAL_STEPS, 'Build, Verify & Deploy');
@@ -92,23 +90,19 @@ export default async function stepVerifyAndDeploy() {
       // ALL pac code push calls require user auth — SPN is always rejected
       const profileReady = await ensureInteractiveAuth(pac, rootDir, targetKey, wizardState, projectDir, credentialValues);
       if (profileReady) {
-        // Membership is confirmed (and repaired if needed) AFTER the push via a
-        // Dataverse read on solutioncomponent. An UPDATE push ignores -s, but
-        // that is no longer a dead-end: appId === canvasappid, so the app can be
-        // added to the solution post-push regardless of CREATE vs UPDATE (#81).
+        // The first push with -s (the CREATE) both creates the canvasapp record
+        // AND makes it a component of the chosen solution in one shot — the
+        // documented golden path. An UPDATE push (appId already present) just
+        // republishes the existing app in place; -s is a no-op but the app stays
+        // in the solution it was created in (#81).
         if (!isFirstPush && solUniqueName) {
-          ui.line(`Existing appId detected — this push is an UPDATE. Solution membership will be confirmed (and repaired if needed) after the push.`);
+          ui.line('Existing appId detected — this push is an UPDATE (republish in place).');
         }
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
         const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solUniqueName, credentialValues);
         if (success) {
           ui.ok(isFirstPush ? 'Deployed! Your app is live.' : 'Deployed! Your app is updated.');
-          // Read the appId the push wrote, then ensure the app is a component of
-          // the selected solution (adding it automatically if absent).
-          let pushedAppId = '';
-          try { pushedAppId = (loadPowerConfigInfo(powerConfigPath) || {}).appId || ''; } catch { /* ignore */ }
-          await ensureAppInSolution(pac, projectDir, pushedAppId, solUniqueName, appName);
         }
       } else {
         const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
@@ -187,13 +181,19 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
   const envUrl = wizardState.PP_ENV_DEV;
   const profileName = buildPacProfileName({ rootDir, targetKey, profileType, url: envUrl });
   const pushArgs = ['code', 'push'];
-  // -s MUST be the solution UNIQUE name. Passing the friendly display name
-  // silently no-ops and leaves the app outside the solution (issue #81).
-  if (solUniqueName) {
-    pushArgs.push('-s', solUniqueName);
-  } else {
-    ui.warn('No solution unique name available — pushing without -s. The app will NOT be associated with a solution.');
+  // The first `pac code push -s <UNIQUE name>` (the CREATE) both creates the
+  // canvasapp record and makes it a component of the chosen solution — the
+  // documented golden path. We REFUSE a bare push: a bare first push creates
+  // the app OUTSIDE any solution, and no later -s re-push (an ignored UPDATE)
+  // can move it in. -s MUST be the solution UNIQUE name, never the friendly
+  // display name (issue #81).
+  if (!solUniqueName) {
+    ui.warn('No solution unique name available — refusing to run a bare `pac code push`.');
+    ui.line('  A bare push creates the Code App OUTSIDE any solution, which a later -s re-push cannot fix.');
+    ui.line('  Re-run the wizard solution step so the UNIQUE name is captured, then deploy.');
+    return false;
   }
+  pushArgs.push('-s', solUniqueName);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     verifyPacContext(pac, rootDir, projectDir, credentialValues, profileType, true, true);
@@ -351,50 +351,6 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
   ui.warn(`Push failed after ${maxRetries} attempts.`);
   ui.line('  Retry later: node wizard/index.mjs --from 9');
   return false;
-}
-
-// ─────────── Verify App Joined Solution ───────────
-
-/**
- * Ensure the deployed Code App is a component of the selected solution.
- *
- * `pac code push -s <UNIQUE name>` associates the app on the FIRST push, but a
- * unique-name mismatch (or a later -s re-push, which is an ignored UPDATE) can
- * leave it OUTSIDE the chosen solution. The old #81 design treated that as
- * unrecoverable and told the user to delete + recreate, because it believed
- * `solution add-solution-component` needed a different GUID than the appId.
- * That is wrong: appId === canvasappid, so the app can be added after the fact.
- *
- * READ + REPAIR run through the shared lib (auth-agnostic):
- *   • READ  — `pac org fetch` on solutioncomponent (componenttype 300) under
- *             the active profile (user OR SPN), no client secret needed.
- *   • REPAIR — `pac solution add-solution-component --component <appId>
- *             --componentType 300 --solutionUniqueName <name>` when absent.
- * The old `pac solution export --managed false` + type-300 count read was
- * malformed (false negatives) and the `pac solution list` check was a false
- * positive (it only proved the solution exists). Both are gone.
- *
- * Returns the final membership result (never throws) — membership is
- * informative, not a deploy gate.
- */
-async function ensureAppInSolution(pac, projectDir, appId, solutionUniqueName, appDisplayName = 'this Code App') {
-  if (!pac || !solutionUniqueName) return { status: 'unknown' };
-  if (!appId) {
-    ui.warn(`No appId in power.config.json — cannot confirm membership in "${solutionUniqueName}". Verify in the Maker Portal.`);
-    return { status: 'unknown' };
-  }
-
-  ui.line('');
-  ui.line(`Confirming the app is in solution "${solutionUniqueName}" (and adding it if missing)...`);
-  const runCapture = (file, args, opts) => runSafeCapture(file, args, opts);
-  const log = { line: (m) => ui.line(m), ok: (m) => ui.ok(m), warn: (m) => ui.warn(m) };
-  const result = await ensureAppInSolutionLib({ pac, projectDir, appId, solutionUniqueName, runCapture, log });
-
-  if (result.status === 'absent') {
-    ui.line('');
-    for (const stepLine of manualSolutionAddSteps(solutionUniqueName, appDisplayName, appId)) ui.line(`  ${stepLine}`);
-  }
-  return result;
 }
 
 // ─────────── Interactive Auth Helper ───────────

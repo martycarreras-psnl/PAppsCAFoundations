@@ -52,16 +52,14 @@ const PAIRED_STEPS = [
         re: /\.push\(\s*['"]-s['"]/,
       },
       {
-        label: 'ensures solution membership after push (ensureAppInSolution)',
-        re: /ensureAppInSolution\s*\(/,
-      },
-      {
-        label: 'imports the shared solution-membership lib (no per-copy drift)',
-        re: /solution-membership(\.mjs)?/,
-      },
-      {
-        label: 'surfaces the manual add fallback (manualSolutionAddSteps)',
-        re: /manualSolutionAddSteps\b/,
+        label: 'REFUSES a bare push when no solution unique name is available',
+        // The docs golden path requires the FIRST `pac code push` to carry
+        // `-s <UNIQUE name>` — that single push both creates the canvasapp
+        // record and adds it to the solution. A bare first push creates the app
+        // OUTSIDE any solution and no later -s re-push (an ignored UPDATE) can
+        // move it in. Both copies must REFUSE (throw / return false), never
+        // warn-and-push-bare.
+        re: /[Rr]efus(?:e|ing) to run a bare/,
       },
       {
         label: 'warns that -s must be the UNIQUE name, not the display name',
@@ -72,19 +70,33 @@ const PAIRED_STEPS = [
         re: /#81/,
       },
     ],
-    // NOTE: both files intentionally KEEP a prose comment explaining the #81
-    // history. The read+repair logic lives ONLY in the shared lib
-    // (solution-membership.mjs); the step copies must call ensureAppInSolution,
-    // never run `pac solution add-solution-component` / `-ct 300` themselves.
-    // Banning the EXECUTABLE form here keeps repair in one place and prevents
-    // per-copy drift. The patterns match quoted CLI args, not backticked prose.
+    // NOTE: there is NO post-push membership repair anymore. The documented
+    // golden path is the whole fix — the first push with `-s` creates the app
+    // already inside its solution, and a bare push is refused. The old
+    // read+repair machinery (ensureAppInSolution / manualSolutionAddSteps /
+    // solution-membership.mjs / `add-solution-component` / `-ct 300`) was built
+    // on the disproven belief that the flow couldn't solution-bind in one shot;
+    // it is banned in BOTH copies so it cannot creep back. The patterns match
+    // quoted CLI args / identifiers, not backticked prose.
     forbiddenInBoth: [
       {
-        label: 'an executable `solution add-solution-component` call in a step copy (belongs in the shared lib)',
+        label: 'the removed post-push membership helper (ensureAppInSolution)',
+        re: /ensureAppInSolution\s*\(/,
+      },
+      {
+        label: 'the removed manual-add fallback (manualSolutionAddSteps)',
+        re: /manualSolutionAddSteps\b/,
+      },
+      {
+        label: 'an import of the deleted shared solution-membership lib',
+        re: /solution-membership/,
+      },
+      {
+        label: 'an executable `solution add-solution-component` call (post-push repair is gone)',
         re: /['"]add-solution-component['"]/i,
       },
       {
-        label: 'an executable `-ct 300` component-type argument in a step copy (belongs in the shared lib)',
+        label: 'an executable `-ct 300` component-type argument (post-push repair is gone)',
         re: /['"]-ct['"]\s*,\s*['"]?300/,
       },
       {
