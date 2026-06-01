@@ -1,5 +1,5 @@
 // Step 9 - Verify & Deploy. Browser-native build and optional pac code push.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -33,22 +33,6 @@ function runCommand(log, command, opts = {}) {
     child.stderr.on('data', (chunk) => log.warn(String(chunk).trimEnd()));
     child.on('error', (error) => {
       log.fail(`Failed to start command: ${error.message}`);
-      resolvePromise(false);
-    });
-    child.on('close', (code) => resolvePromise(code === 0));
-  });
-}
-
-function runFile(log, file, args, opts = {}) {
-  return new Promise((resolvePromise) => {
-    log.info(`$ ${SHELL.formatCommandForLog(file, args)}`);
-    const child = SHELL.spawnSafe(file, args, { cwd: opts.cwd || PROJECT_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
-    child.stdout.setEncoding('utf-8');
-    child.stderr.setEncoding('utf-8');
-    child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
-    child.stderr.on('data', (chunk) => log.warn(String(chunk).trimEnd()));
-    child.on('error', (error) => {
-      log.fail(`Failed to start ${file}: ${error.message}`);
       resolvePromise(false);
     });
     child.on('close', (code) => resolvePromise(code === 0));
@@ -120,21 +104,28 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
   });
 }
 
-async function addAppToSolution(log, pac, projectDir, solutionName) {
-  if (!solutionName) return;
-  let appId = '';
-  try {
-    appId = JSON.parse(readFileSync(join(projectDir, 'power.config.json'), 'utf-8')).appId || '';
-  } catch {
-    // ignore
+// Verify the deployed Code App joined the selected solution.
+//
+// Association happens during `pac code push -s <UNIQUE name>` on the FIRST
+// push — it is what creates the Dataverse `canvasapps` record inside the
+// solution. A later `-s` re-push does NOT retroactively associate an app that
+// was first pushed bare, and there is no reliable post-hoc CLI fix: the old
+// `solution add-solution-component -ct 300` path passed the Code App's
+// play-URL appId where the canvasapp record GUID is expected and always failed
+// with "...because it does not exist" (issue #81). So we verify and guide
+// recovery instead of pretending to repair.
+async function verifyAppInSolution(log, pac, projectDir, solutionUniqueName) {
+  if (!solutionUniqueName) return;
+  log.info(`Verifying app is a component of solution "${solutionUniqueName}"...`);
+  const { ok, stdout, stderr } = await runFileCapture(log, pac, ['solution', 'list'], { cwd: projectDir });
+  const combined = `${stdout}\n${stderr}`;
+  if (ok && new RegExp(`\\b${solutionUniqueName}\\b`, 'i').test(combined)) {
+    log.ok(`Solution "${solutionUniqueName}" exists and the push carried -s — the app should now appear under it.`);
+    log.info(`Confirm in Maker Portal → Solutions → ${solutionUniqueName} → Apps.`);
+  } else {
+    log.warn(`Could not confirm solution "${solutionUniqueName}". Verify in the Maker Portal that the app is listed under it.`);
   }
-  if (!appId) {
-    log.warn('Could not read appId from power.config.json; skipping solution component registration.');
-    return;
-  }
-  const ok = await runFile(log, pac, ['solution', 'add-solution-component', '-sn', solutionName, '-c', appId, '-ct', '300'], { cwd: projectDir });
-  if (ok) log.ok(`App added to solution ${solutionName}`);
-  else log.warn(`Could not add app to solution ${solutionName}. It may already be present, or you can add it manually.`);
+  log.info('If the app is NOT listed under the solution, it was pushed without a valid solution unique name. A later -s re-push will NOT fix it — delete the orphaned Code App in the Maker Portal, then re-push with the UNIQUE name.');
 }
 
 export default {
@@ -197,8 +188,17 @@ export default {
     const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
     log.ok(`Verified user profile ${verification.profileName}`);
 
+    // -s MUST be the solution UNIQUE name. Passing the friendly display name
+    // (e.g. "AI PMO" with a space) silently no-ops and leaves the app OUTSIDE
+    // the solution — association only happens on the first push WITH the unique
+    // name, and a later -s re-push cannot fix it (issue #81).
+    const solutionUniqueName = String(state.SOLUTION_UNIQUE_NAME || '').trim();
     const pushArgs = ['code', 'push'];
-    if (state.SOLUTION_DISPLAY_NAME) pushArgs.push('-s', state.SOLUTION_DISPLAY_NAME);
+    if (solutionUniqueName) {
+      pushArgs.push('-s', solutionUniqueName);
+    } else {
+      throw new Error('No solution unique name (SOLUTION_UNIQUE_NAME) is available. Refusing to run a bare `pac code push`, which would create the Code App outside any solution (a silent failure a later -s re-push cannot fix). Re-run the wizard solution step so the unique name is captured before deploying.');
+    }
     const pushResult = await runFileCapture(log, pac, pushArgs, { cwd: projectDir });
     const pushOutput = `${pushResult.stdout}\n${pushResult.stderr}`;
     if (!pushResult.ok || PAC_HTTP_ERROR_RE.test(pushOutput)) throw new Error('pac code push failed. Check the live output above, then retry.');
@@ -220,7 +220,7 @@ export default {
       log.warn('Could not detect deployed app URL in pac output. Open the app from Power Apps Maker Portal.');
     }
 
-    await addAppToSolution(log, pac, projectDir, state.SOLUTION_UNIQUE_NAME || '');
+    await verifyAppInSolution(log, pac, projectDir, solutionUniqueName);
 
     return { stateUpdate, completedStep: 9 };
   },
