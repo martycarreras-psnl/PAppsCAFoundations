@@ -238,7 +238,7 @@ Any command wrapped with `op run --env-file=.env --` will have its `op://` refer
 op run --env-file=.env -- pac org who
 
 # Deploy with secrets injected
-op run --env-file=.env -- pac code push
+op run --env-file=.env -- pac code push -s "YourSolutionUniqueName"
 
 # Export a solution with secrets injected
 op run --env-file=.env -- pac solution export --path ./solution.zip --name YourSolution
@@ -265,7 +265,7 @@ Add npm scripts that use it:
 {
   "scripts": {
     "pac": "pacaf-pac",
-    "deploy": "npm run build && pacaf-pac code push",
+    "deploy": "npm run build && pacaf-pac-safe --target dev --profile-type user --mutating code push",
       "solution:export": "pacaf-export-solution --name YourSolutionName --auth-profile Dev",
       "solution:export:unmanaged": "pacaf-export-solution --name YourSolutionName --auth-profile Dev --unmanaged-only",
     "solution:import": "pacaf-pac solution import --path ./solution/solution-managed.zip"

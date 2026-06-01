@@ -92,29 +92,29 @@ export default async function stepVerifyAndDeploy() {
       if (profileReady) {
         ui.line('');
         ui.line(isFirstPush ? 'Deploying (first push — creating app)...' : 'Deploying...');
-        const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solDisplayName, credentialValues);
+        const success = await attemptPushWithRetry(pac, rootDir, targetKey, 'user', projectDir, solUniqueName, credentialValues);
         if (success) {
           ui.ok(isFirstPush ? 'Deployed! Your app is live.' : 'Deployed! Your app is updated.');
-          await addAppToSolution(pac, projectDir, solUniqueName);
+          await verifyAppInSolution(pac, projectDir, solUniqueName, isFirstPush);
         }
       } else {
         const profileName = buildPacProfileName({ rootDir, targetKey, profileType: 'user', url: devUrl });
         ui.warn('Could not establish user auth. Deploy manually:');
         ui.line(`  ${pac} auth create --name ${profileName} --environment ${devUrl} --deviceCode`);
         ui.line(`  ${pac} auth select --name ${profileName}`);
-        ui.line(`  cd ${projectDir} && ${pac} code push`);
+        ui.line(`  cd ${projectDir} && ${pac} code push -s "${solUniqueName}"`);
       }
     } else {
       ui.line('');
       const profileName = buildPacProfileName({ rootDir, targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'), profileType: 'user', url: devUrl });
       ui.line('Deploy later (requires user auth profile):');
       ui.line(`  ${pac} auth select --name ${profileName}`);
-      ui.line(`  cd ${projectDir} && ${pac} code push`);
+      ui.line(`  cd ${projectDir} && ${pac} code push -s "${solUniqueName}"`);
     }
   } else if (!buildOk || !distExists) {
     ui.line('');
     ui.line('Skipping deploy — build did not succeed. Fix errors, then:');
-    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push`);  ui.line('  (reminder: pac code push requires a user auth profile — create once, works silently afterward)');  }
+    ui.line(`  cd ${projectDir} && npm run build && ${pac || 'pac'} code push -s "${solUniqueName}"`);  ui.line('  (reminder: pac code push requires a user auth profile, and -s must be the solution UNIQUE name so the app joins the solution on first push)');  }
 
   // ── Summary ──
   ui.completeBanner();
@@ -136,7 +136,7 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  review dataverse/prototype-feedback.md and update the planning payload');
   ui.line('  node wizard/index.mjs --from 8  <- bind real connectors when ready');
   ui.line('  npm run dev             <- connected mode once real providers exist');
-  ui.line('  pac code push           <- deploy (uses cached user auth — no sign-in needed)');
+  ui.line(`  pac code push -s "${solUniqueName}"  <- deploy (cached user auth; -s keeps the app in its solution)`);
   ui.line('');
   ui.line('To add connectors later:');
   ui.line('  node wizard/index.mjs --from 8    (re-run connector setup)');
@@ -169,12 +169,18 @@ const PAC_HTTP_ERROR_RE = /HTTP error status:\s*[45]\d\d/i;
  * Attempt pac code push, detect known errors, and offer guided retry.
  * Returns true on success, false on permanent failure.
  */
-async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projectDir, solDisplayName, credentialValues, maxRetries = 3) {
+async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projectDir, solUniqueName, credentialValues, maxRetries = 3) {
   const wizardState = getWizardStateSnapshot(stateGet);
   const envUrl = wizardState.PP_ENV_DEV;
   const profileName = buildPacProfileName({ rootDir, targetKey, profileType, url: envUrl });
   const pushArgs = ['code', 'push'];
-  if (solDisplayName) pushArgs.push('-s', solDisplayName);
+  // -s MUST be the solution UNIQUE name. Passing the friendly display name
+  // silently no-ops and leaves the app outside the solution (issue #81).
+  if (solUniqueName) {
+    pushArgs.push('-s', solUniqueName);
+  } else {
+    ui.warn('No solution unique name available — pushing without -s. The app will NOT be associated with a solution.');
+  }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     verifyPacContext(pac, rootDir, projectDir, credentialValues, profileType, true, true);
@@ -325,7 +331,7 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
     ui.line('     or System Customizer role in the target environment.');
     ui.line('  2. Verify power.config.json is in the same directory as package.json.');
     ui.line('  3. Retry manually:');
-    ui.line(`     cd ${projectDir} && ${pac} code push`);
+    ui.line(`     cd ${projectDir} && ${pac} code push -s "${solUniqueName}"`);
     return false;
   }
 
@@ -334,53 +340,47 @@ async function attemptPushWithRetry(pac, rootDir, targetKey, profileType, projec
   return false;
 }
 
-// ─────────── Add App to Solution ───────────
+// ─────────── Verify App Joined Solution ───────────
 
 /**
- * Add the deployed Code App to the selected solution.
- * pac code push creates the app in the environment but does NOT add it
- * to a solution. We use pac solution add-solution-component to do this.
- * Component type 300 = Canvas App (Code Apps are canvas apps internally).
+ * Verify the deployed Code App is a component of the selected solution.
+ *
+ * Association happens during `pac code push -s <UNIQUE name>` on the FIRST
+ * push — it is what creates the Dataverse `canvasapps` record inside the
+ * solution. A later `-s` re-push does NOT retroactively associate an app that
+ * was first pushed bare. There is no reliable post-hoc CLI fix (the old
+ * `solution add-solution-component -ct 300` path passed the Code App appId
+ * where the canvasapp record GUID is expected and silently failed — issue
+ * #81), so when verification fails the only correct remedy is to delete the
+ * orphaned app and push again WITH -s. We surface that clearly rather than
+ * pretend to repair it.
  */
-async function addAppToSolution(pac, projectDir, solutionName) {
-  if (!pac || !solutionName) return;
-
-  // Read appId from power.config.json (populated by pac code push)
-  const configPath = join(projectDir, 'power.config.json');
-  let appId;
-  try {
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'));
-    appId = config.appId;
-  } catch { /* ignore */ }
-
-  if (!appId) {
-    ui.warn('Could not read appId from power.config.json — skipping solution registration.');
-    ui.line('  Add manually: pac solution add-solution-component -sn ' + solutionName + ' -c <appId> -ct 300');
-    return;
-  }
+async function verifyAppInSolution(pac, projectDir, solutionUniqueName, isFirstPush) {
+  if (!pac || !solutionUniqueName) return;
 
   ui.line('');
-  ui.line(`Adding app to solution "${solutionName}"...`);
+  ui.line(`Verifying app is a component of solution "${solutionUniqueName}"...`);
   const { ok, stdout, stderr } = runSafeCapture(pac, [
-    'solution', 'add-solution-component',
-    '-sn', solutionName,
-    '-c', appId,
-    '-ct', '300',
+    'solution', 'list',
   ]);
+  const combined = `${stdout}\n${stderr}`;
 
-  if (ok) {
-    ui.ok(`App added to solution "${solutionName}"`);
+  // `pac solution list` confirms the solution exists; the authoritative check
+  // is whether the app shows up under the solution in the Maker Portal. We
+  // cannot enumerate canvasapps components via a stable CLI command across pac
+  // versions, so we assert on the push having carried -s and guide the user to
+  // confirm in the portal.
+  if (ok && new RegExp(`\\b${solutionUniqueName}\\b`, 'i').test(combined)) {
+    ui.ok(`Solution "${solutionUniqueName}" exists and the push carried -s — the app should now appear under it.`);
+    ui.line('  Confirm in Maker Portal → Solutions → ' + solutionUniqueName + ' → Apps.');
   } else {
-    const combined = `${stdout}\n${stderr}`;
-    // If already in the solution, that's fine
-    if (/already exists|already added/i.test(combined)) {
-      ui.ok(`App is already in solution "${solutionName}"`);
-    } else {
-      ui.warn(`Could not add app to solution "${solutionName}".`);
-      if (stderr) ui.line(`  ${stderr.split('\n').filter(l => l.trim())[0] || ''}`);
-      ui.line(`  Add manually: ${pac} solution add-solution-component -sn ${solutionName} -c ${appId} -ct 300`);
-    }
+    ui.warn(`Could not confirm solution "${solutionUniqueName}".`);
   }
+  ui.line('');
+  ui.line('If the app is NOT listed under the solution, it was pushed without a valid');
+  ui.line('solution unique name. A later -s re-push will NOT fix it. To recover:');
+  ui.line('  1. Delete the orphaned Code App in the Maker Portal (Apps list).');
+  ui.line(`  2. Re-push with the UNIQUE name: pac code push -s "${solutionUniqueName}"`);
 }
 
 // ─────────── Interactive Auth Helper ───────────

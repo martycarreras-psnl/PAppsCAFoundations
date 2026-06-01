@@ -85,12 +85,20 @@ const REMOVED_DEV_PACKAGES = [
 // Standard scripts written by the wizard. All references to legacy
 // in-repo helper scripts (node scripts/foo.mjs) are now <prefix>-* bins
 // provided by the scripts package.
-function buildRequiredScripts(config = loadPacafConfig()) {
+function buildRequiredScripts(config = loadPacafConfig(), solutionUniqueName = '') {
   const crossPlatformDevLocal = IS_WIN
     ? 'set VITE_USE_MOCK=true && vite --port 3000'
     : 'VITE_USE_MOCK=true vite --port 3000';
 
   const b = (suffix) => binName(suffix, config);
+
+  // Bake the solution UNIQUE name into the deploy command so `npm run deploy`
+  // associates the Code App with its solution on first push (issue #81). When
+  // the name is unknown at scaffold time, pac-safe falls back to
+  // PP_SOLUTION_UNIQUE_NAME / wizard state and refuses a bare push.
+  const solutionArg = solutionUniqueName
+    ? ` --solution-name "${solutionUniqueName}"`
+    : '';
 
   return {
     dev: 'concurrently "vite --port 3000" "pac code run"',
@@ -110,7 +118,7 @@ function buildRequiredScripts(config = loadPacafConfig()) {
     pac: b('pac'),
     'solution:export': `${b('export-solution')} --name YourSolutionName --target dev`,
     'solution:export:unmanaged': `${b('export-solution')} --name YourSolutionName --target dev --unmanaged-only`,
-    deploy: `npm run build && ${b('pac-safe')} --target dev --profile-type spn --mutating code push`,
+    deploy: `npm run build && ${b('pac-safe')} --target dev --profile-type user --mutating${solutionArg} code push`,
     'validate:schema-plan': `${b('validate')} dataverse/planning-payload.json`,
     'generate:dataverse-plan': `${b('generate')} dataverse/planning-payload.json`,
     'register:dataverse': `${b('register')} dataverse/register-datasources.plan.json`,
@@ -176,7 +184,7 @@ export function normalizePackageJsonDependencies(dir, logger = noopLogger) {
   logger.ok('package.json dependencies normalized');
 }
 
-export function createMinimalProject(dir, appName) {
+export function createMinimalProject(dir, appName, solutionUniqueName = '') {
   mkdirSync(join(dir, 'src'), { recursive: true });
   mkdirSync(join(dir, 'public'), { recursive: true });
 
@@ -207,7 +215,7 @@ export function createMinimalProject(dir, appName) {
     type: 'module',
     dependencies: REQUIRED_RUNTIME_PACKAGES,
     devDependencies: REQUIRED_DEV_PACKAGES,
-    scripts: buildRequiredScripts(),
+    scripts: buildRequiredScripts(loadPacafConfig(), solutionUniqueName),
     // Pre-approve the build scripts pnpm blocks by default so installs don't
     // require the interactive `pnpm approve-builds` step. See issue #76.
     pnpm: {

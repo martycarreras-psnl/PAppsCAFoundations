@@ -90,7 +90,7 @@ export default async function stepScaffold() {
   ui.line('');
   ui.line('Writing starter project...');
   mkdirSync(projectDir, { recursive: true });
-  createMinimalProject(projectDir, appName);
+  createMinimalProject(projectDir, appName, stateGet('SOLUTION_UNIQUE_NAME', ''));
   ui.ok('Starter project written');
   normalizePackageJsonDependencies(projectDir, ui);
 
