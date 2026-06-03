@@ -55,6 +55,8 @@ You also need a [Power Platform environment](https://admin.powerplatform.microso
 | **Python Launcher (`py`)** | **Windows only.** On Windows, `python3` usually resolves to the Microsoft Store stub (which exits non‑zero and prompts to install). The wizard's prereq check falls back to `py -3` via the launcher. You get it automatically when you check **"Add python.exe to PATH"** in the python.org installer. | **Required on Windows** — irrelevant on macOS/Linux |
 
 > **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy‑pasteable commands and verification checks. Takes about 10 minutes.
+>
+> **Setting up the agent's Dataverse access?** The [Dataverse-skills Setup Guide](docs/dataverse-skills-setup.md) is the single linear walkthrough for Python, the `PowerPlatform-Dataverse-Client` SDK, PAC auth, and the `/plugin install dataverse` step — each with a verify command and the most common failure/fix.
 
 ### Step 1. Create your repo from the starter template
 

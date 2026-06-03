@@ -262,6 +262,8 @@ pac help   # should show the PAC CLI help screen
 
 Python powers the [Dataverse-skills plugin](https://github.com/microsoft/Dataverse-skills), which teaches your coding agent how to provision Dataverse schema, import data, and manage solutions. The wizard will run without Python, but you'll want it soon after.
 
+> **Installing the full Dataverse-skills chain?** This section covers only Python itself. For the complete linear walkthrough — Python → `pip` → `PowerPlatform-Dataverse-Client` + `pandas` → PAC auth → `/plugin install dataverse` → MCP verification → smoke test, each with a verify command and failure/fix — follow [docs/dataverse-skills-setup.md](dataverse-skills-setup.md).
+
 ### Check
 
 ```

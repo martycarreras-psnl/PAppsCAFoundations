@@ -129,6 +129,8 @@ The instruction files in this repo (`07-dataverse-schema.instructions.md`) still
 
 The plugin requires **Python 3** and the **PowerPlatform-Dataverse-Client** SDK (`pip install PowerPlatform-Dataverse-Client pandas`). The setup wizard checks for these.
 
+For the complete, linear, OS-specific install walkthrough — Python → `pip` → SDK + pandas → PAC auth → `/plugin install dataverse` → MCP verification → end-to-end smoke test, each with a verify command and the most common failure/fix — point the user to [docs/dataverse-skills-setup.md](docs/dataverse-skills-setup.md). That file is the single source of truth; do not restate its steps inline or invent alternative install commands.
+
 ## When In Doubt
 
 If the user's request is ambiguous about whether they want a Code App or a generic web app, **ask**. Do not silently produce a generic app. The entire value of this template is its Code-App specificity.
