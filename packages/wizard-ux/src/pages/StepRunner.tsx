@@ -364,7 +364,23 @@ export function StepRunner() {
                 stepNumber={stepNumber}
                 totalSteps={total}
                 onBack={() => navigate(stepNumber <= 1 ? '/' : `/step/${stepNumber - 1}`)}
-                onFinish={() => navigate('/summary')}
+                onFinish={async () => {
+                  // This manual step has no apply() to persist COMPLETED_STEP,
+                  // so mark it complete here. Without this, completed stays at 9
+                  // while total is 10, the Summary reads isDone=false, and the
+                  // launch card with the deployed App URL never renders — the
+                  // user lands on a "still in progress" page instead. Persist
+                  // first, then invalidate so the Summary refetches the done
+                  // state, then navigate.
+                  try {
+                    await api.saveState({ COMPLETED_STEP: stepNumber });
+                    await qc.invalidateQueries({ queryKey: ['state'] });
+                    await qc.invalidateQueries({ queryKey: ['steps'] });
+                  } catch {
+                    /* best effort — still show the summary */
+                  }
+                  navigate('/summary');
+                }}
               />
             </div>
           </div>
