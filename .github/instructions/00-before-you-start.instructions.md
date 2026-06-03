@@ -190,6 +190,8 @@ The `dv-connect` skill walks through tool checks, authentication, and MCP server
 
 > The setup wizard detects your coding agent and provides the correct install command. If you haven't run the wizard yet, it will prompt you during setup.
 
+> **Stuck on any prerequisite?** [`docs/dataverse-skills-setup.md`](../../docs/dataverse-skills-setup.md) is the single linear walkthrough for the entire Dataverse-skills chain — Python, `pip`, the `PowerPlatform-Dataverse-Client` SDK, PAC auth, the `/plugin install dataverse` step, MCP verification, and an end-to-end smoke test — each with an official reference, a verify command, and the most common failure/fix. Send the user there rather than improvising install commands.
+
 ---
 
 ## Project Values — Fill This In Before Committing

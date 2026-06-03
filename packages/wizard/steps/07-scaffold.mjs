@@ -562,8 +562,10 @@ This project includes a \`.foundations-version.json\` file copied from the templ
 
 // ─────────── Connector / Connection Reference Setup ───────────
 
+// Dataverse is intentionally NOT in this list. Every Code App is bound to Dataverse at the
+// environment level (the mandatory Dataverse URL). It is never an opt-in connector choice —
+// see bindDataverse() for the always-on handling.
 const COMMON_CONNECTORS = [
-  { apiId: 'shared_commondataserviceforapps', name: 'Dataverse', hasTable: false },
   { apiId: 'shared_office365users', name: 'Office 365 Users', hasTable: false },
   { apiId: 'shared_sharepointonline', name: 'SharePoint', hasTable: false },
   { apiId: 'shared_office365', name: 'Office 365 Outlook', hasTable: false },
@@ -571,6 +573,52 @@ const COMMON_CONNECTORS = [
   { apiId: 'shared_sql', name: 'SQL Server', hasTable: false },
   { apiId: 'shared_azureblob', name: 'Azure Blob Storage', hasTable: false },
 ];
+
+// Read planned Dataverse tables produced by the planning workflow
+// (dataverse/register-datasources.plan.json). Missing/invalid plan = no tables yet.
+function readPlannedDataverseTables(projectDir) {
+  const planPath = join(projectDir, 'dataverse', 'register-datasources.plan.json');
+  if (!existsSync(planPath)) return [];
+  try {
+    const plan = JSON.parse(readFileSync(planPath, 'utf-8'));
+    return Array.isArray(plan.dataverseTables) ? plan.dataverseTables.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Dataverse is always bound to a Code App — never optional. When planned tables exist and a
+// verified user PAC profile is available, register them now; otherwise print clear,
+// non-optional status. Never prompts for a "Dataverse connection" — there isn't one; the
+// binding is the environment URL captured earlier in the wizard.
+export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canRegister }) {
+  ui.line('');
+  ui.line('Dataverse is always bound to this Code App at the environment level');
+  ui.line('(the Dataverse URL you confirmed earlier). It is never optional.');
+  const tables = readPlannedDataverseTables(projectDir);
+  if (tables.length === 0) {
+    ui.line('No Dataverse tables are planned yet. Once your planning payload defines');
+    ui.line('tables, register them with: npm run register:dataverse');
+    return;
+  }
+  if (!canRegister || !pac) {
+    ui.line(`${tables.length} planned Dataverse table(s) found. Register them with:`);
+    ui.line('  npm run register:dataverse');
+    ui.line('  (or pac code add-data-source -a dataverse -t <table>)');
+    return;
+  }
+  for (const table of tables) {
+    const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table];
+    ui.line(`  Running: pac ${args.join(' ')}`);
+    const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
+    if (ok) {
+      ui.ok(`Dataverse table ${table} — data source added`);
+    } else {
+      ui.warn(`Dataverse table ${table} — failed. Try manually:`);
+      ui.line(`    pac code add-data-source -a dataverse -t ${table}`);
+    }
+  }
+}
 
 export async function setupConnectors(pac, projectDir) {
   const rootDir = getRootDir();
@@ -685,9 +733,8 @@ export async function setupConnectors(pac, projectDir) {
   ui.line('');
 
   if (selected.length === 0) {
-    ui.line('No connectors selected. You can add them later.');
+    ui.line('No additional connectors selected. Dataverse is still bound automatically.');
     ui.line('');
-    return;
   }
 
   // ── 3. Create connection references for new selections ──
@@ -741,21 +788,18 @@ export async function setupConnectors(pac, projectDir) {
     if (!authSwitched) {
       ui.warn('Cannot add data sources without user auth.');
       ui.line('  Switch to user auth and re-run: node wizard/index.mjs --from 8');
+      // Dataverse is still bound at the environment level — surface its status.
+      bindDataverse(pac, rootDir, projectDir, credentialValues, { canRegister: false });
       ui.line('');
       return;
     }
 
     ui.line('Adding data sources to your Code App...');
 
-    // Dataverse table registration is handled by the coding agent
-    // at development time (pac code add-data-source -a dataverse -t <table>).
-    // The wizard only handles non-Dataverse connectors that need a Connection ID.
-
-    // Add non-Dataverse connectors as data sources.
-    // Non-Dataverse connectors REQUIRE a Connection ID (-c flag).
-    // A connection ID comes from an actual connection created in the
-    // Maker Portal — it is NOT the same as a connection reference.
-    const nonDvSelected = selected.filter((id) => id !== 'shared_commondataserviceforapps');
+    // Non-Dataverse connectors REQUIRE a Connection ID (-c flag). A connection ID comes from
+    // an actual connection created in the Maker Portal — it is NOT the same as a connection
+    // reference. Dataverse is handled separately by bindDataverse() (always-on, -t flag).
+    const nonDvSelected = selected;
     if (nonDvSelected.length > 0) {
       ui.line('');
       ui.line('Non-Dataverse connectors require a Connection ID to register');
@@ -806,9 +850,12 @@ export async function setupConnectors(pac, projectDir) {
         }
       }
     }
+
+    // Dataverse is ALWAYS present — register planned tables now that user auth is verified.
+    bindDataverse(pac, rootDir, projectDir, credentialValues, { canRegister: true });
   } else {
-    ui.warn('PAC CLI not found. Add data sources manually after installing pac:');
-    ui.line('  pac code add-data-source -a dataverse -t <table_name>');
+    ui.warn('PAC CLI not found. Install pac, then register data sources manually.');
+    bindDataverse(pac, rootDir, projectDir, credentialValues, { canRegister: false });
   }
 
   ui.line('');

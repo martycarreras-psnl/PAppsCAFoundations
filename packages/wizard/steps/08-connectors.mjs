@@ -1,8 +1,8 @@
 import { confirm } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
-import { stateGet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
+import { stateGet, setCompletedStep, TOTAL_STEPS, getRootDir } from '../lib/state.mjs';
 import { pacPath } from '../lib/shell.mjs';
-import { setupConnectors } from './07-scaffold.mjs';
+import { setupConnectors, bindDataverse } from './07-scaffold.mjs';
 
 export default async function stepConnectors() {
   ui.stepHeader(8, TOTAL_STEPS, 'Bind Connectors & Data Sources');
@@ -14,6 +14,9 @@ export default async function stepConnectors() {
   ui.line('Use it after the planning payload and prototype are stable enough');
   ui.line('to bind real systems and create solution-aware connection references.');
   ui.line('');
+  ui.line('Dataverse is always bound to this Code App at the environment level —');
+  ui.line('it is never optional. This step only adds additional connectors.');
+  ui.line('');
   ui.line('Recommended sequence:');
   ui.line('  1. Plan the workflow');
   ui.line('  2. Prototype with mock providers');
@@ -22,12 +25,14 @@ export default async function stepConnectors() {
   ui.line('');
 
   const bindNow = await confirm({
-    message: 'Bind real connectors and data sources now?',
+    message: 'Bind additional (non-Dataverse) connectors and data sources now?',
     default: false,
   });
 
   if (!bindNow) {
-    ui.line('Skipping connector binding for now.');
+    ui.line('Skipping additional connector binding for now.');
+    // Dataverse remains bound regardless — surface its status before exiting.
+    bindDataverse(pac, getRootDir(), projectDir, null, { canRegister: false });
     ui.line('Re-run later with:');
     ui.line('  node wizard/index.mjs --from 8');
     setCompletedStep(8);

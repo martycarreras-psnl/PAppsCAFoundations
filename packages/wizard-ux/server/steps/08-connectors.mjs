@@ -1,5 +1,7 @@
 // Step 8 - Connectors. Browser-native connector selection and optional data-source binding.
-import { existsSync } from 'node:fs';
+// Dataverse is NOT in this list and is never an opt-in toggle: every Code App is bound to
+// Dataverse at the environment level via the mandatory Dataverse URL captured in Step 2.
+import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -19,8 +21,9 @@ const CREATE_MANUAL = '__manual__';
 const SKIP_CONNECTION = '__skip__';
 const BAP_PERMISSION_RE = /does not have permission to access|checkAccess|HTTP error status: 403/i;
 
+// Dataverse is intentionally excluded: it is mandatory and bound at the environment level,
+// not chosen here. See bindDataverse() for the always-on handling.
 const COMMON_CONNECTORS = [
-  { apiId: 'shared_commondataserviceforapps', name: 'Dataverse' },
   { apiId: 'shared_office365users', name: 'Office 365 Users' },
   { apiId: 'shared_sharepointonline', name: 'SharePoint' },
   { apiId: 'shared_office365', name: 'Office 365 Outlook' },
@@ -156,6 +159,46 @@ function runFileCapture(log, file, args, opts = {}) {
   });
 }
 
+// Read the planned Dataverse tables produced by the planning workflow
+// (dataverse/register-datasources.plan.json). Missing/invalid plan = no tables yet.
+function dataverseRegistrationPlan(projectDir) {
+  const planPath = join(projectDir, 'dataverse', 'register-datasources.plan.json');
+  if (!existsSync(planPath)) return { planPath, tables: [] };
+  try {
+    const plan = JSON.parse(readFileSync(planPath, 'utf-8'));
+    const tables = Array.isArray(plan.dataverseTables) ? plan.dataverseTables.filter(Boolean) : [];
+    return { planPath, tables };
+  } catch {
+    return { planPath, tables: [] };
+  }
+}
+
+// Dataverse is always bound to a Code App — never optional. When planned tables exist and we
+// have a verified user PAC profile, register them now; otherwise emit clear, non-optional status.
+async function bindDataverse(log, { pac, projectDir, canRegister }) {
+  log.info('Dataverse is always bound to this Code App at the environment level (the Dataverse URL you confirmed in Step 2). It is never optional.');
+  const { tables } = dataverseRegistrationPlan(projectDir);
+  if (tables.length === 0) {
+    log.info('No Dataverse tables are planned yet. Once your planning payload defines tables, register them with: npm run register:dataverse');
+    return [];
+  }
+  if (!canRegister || !pac) {
+    log.info(`${tables.length} planned Dataverse table(s) found. Register them with: npm run register:dataverse (or pac code add-data-source -a dataverse -t <table>).`);
+    return [];
+  }
+  const registered = [];
+  for (const table of tables) {
+    const result = await runFileCapture(log, pac, ['code', 'add-data-source', '-a', 'dataverse', '-t', table], { cwd: projectDir });
+    if (!result.ok || BAP_PERMISSION_RE.test(result.stderr)) {
+      log.warn(`Dataverse table ${table} - registration failed. Retry later with: pac code add-data-source -a dataverse -t ${table}`);
+    } else {
+      log.ok(`Dataverse table ${table} - data source registered`);
+      registered.push(table);
+    }
+  }
+  return registered;
+}
+
 function parseCustomConnectors(rawEntries) {
   const connectors = [];
   const seen = new Set();
@@ -204,7 +247,7 @@ export default {
   meta: {
     number: 8,
     title: 'Bind Connectors',
-    description: 'Choose connector references and optionally register connector data sources for the Code App.',
+    description: 'Dataverse is always bound at the environment level (Step 2). Here you optionally choose additional connector references and register their data sources.',
     canRunInBrowser: true,
     optional: true,
     needsSecret: true,
@@ -266,8 +309,6 @@ export default {
         showIf: { id: 'DEFER_CONNECTORS', equals: false },
       });
 
-      if (connector.apiId === 'shared_commondataserviceforapps') continue;
-
       const discovered = discoverConnections(pac, connector.apiId);
       const savedConnectionId = state.CONNECTOR_CONNECTION_IDS?.[connector.apiId] || '';
       const defaultValue = savedConnectionId || (discovered.length === 1 ? discovered[0].connectionId : SKIP_CONNECTION);
@@ -324,6 +365,12 @@ export default {
     if (answers.DEFER_CONNECTORS !== false) {
       log.ok('Connector binding deferred until prototype validation is complete');
       if (customRaw.length > 0) log.info(`Recorded connector notes: ${customRaw.join(', ')}`);
+      // Dataverse is never deferred — it is bound at the environment level regardless.
+      await bindDataverse(log, {
+        pac: null,
+        projectDir: resolve(String(state.PROJECT_DIR || PROJECT_DIR)),
+        canRegister: false,
+      });
       return {
         stateUpdate: {
           CONNECTOR_BINDING_DEFERRED: true,
@@ -347,59 +394,55 @@ export default {
       ...customConnectors.map((connector) => connector.apiId),
     ])).filter((apiId) => connectorMap.has(apiId));
 
-    if (selectedApiIds.length === 0) {
-      log.warn('No connectors selected. Nothing to bind.');
-      return {
-        stateUpdate: {
-          CONNECTOR_BINDING_DEFERRED: false,
-          CONNECTOR_API_IDS: [],
-          CUSTOM_CONNECTORS: customRaw,
-        },
-        completedStep: 8,
-      };
-    }
-
+    const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
     const prefix = state.PUBLISHER_PREFIX || '';
     const solutionName = state.SOLUTION_UNIQUE_NAME || '';
-    if (!prefix) throw new Error('Publisher prefix is missing. Complete Step 5 before binding connectors.');
-    if (!solutionName) throw new Error('Solution unique name is missing. Complete Step 6 before binding connectors.');
 
-    log.info('Checking existing connection references...');
-    let existingRefs = [];
-    if (!isUserAuth) {
-      try {
-        existingRefs = await listConnectionReferences(prefix);
-      } catch (err) {
-        log.warn(`Could not query connection references: ${err.message}`);
-      }
-    }
-
-    if (isUserAuth) {
-      log.warn('User auth does not support automated connection reference creation via the Dataverse API.');
-      log.info('Create connection references manually in the Maker Portal:');
-      log.info(`  1. Go to make.powerapps.com → your Dev environment → Solutions → ${solutionName}`);
-      log.info('  2. Add existing → Connection reference → for each connector');
-      log.info('  3. Or create them during pac code add-data-source.');
+    if (selectedApiIds.length === 0) {
+      log.info('No additional connectors selected. Dataverse is still bound automatically.');
     } else {
-      log.info('Creating missing connection references in the selected solution...');
-      for (const apiId of selectedApiIds) {
-        const connector = connectorMap.get(apiId);
+      if (!prefix) throw new Error('Publisher prefix is missing. Complete Step 5 before binding connectors.');
+      if (!solutionName) throw new Error('Solution unique name is missing. Complete Step 6 before binding connectors.');
+
+      log.info('Checking existing connection references...');
+      let existingRefs = [];
+      if (!isUserAuth) {
         try {
-          const created = await createConnectionReference(log, connector, prefix, solutionName, existingRefs);
-          existingRefs.push(created);
+          existingRefs = await listConnectionReferences(prefix);
         } catch (err) {
-          if (/already exists|database constraint/i.test(err.message)) log.ok(`${connector.name} - connection reference already exists`);
-          else log.warn(`${connector.name} - connection reference failed: ${err.message}`);
+          log.warn(`Could not query connection references: ${err.message}`);
+        }
+      }
+
+      if (isUserAuth) {
+        log.warn('User auth does not support automated connection reference creation via the Dataverse API.');
+        log.info('Create connection references manually in the Maker Portal:');
+        log.info(`  1. Go to make.powerapps.com → your Dev environment → Solutions → ${solutionName}`);
+        log.info('  2. Add existing → Connection reference → for each connector');
+        log.info('  3. Or create them during pac code add-data-source.');
+      } else {
+        log.info('Creating missing connection references in the selected solution...');
+        for (const apiId of selectedApiIds) {
+          const connector = connectorMap.get(apiId);
+          try {
+            const created = await createConnectionReference(log, connector, prefix, solutionName, existingRefs);
+            existingRefs.push(created);
+          } catch (err) {
+            if (/already exists|database constraint/i.test(err.message)) log.ok(`${connector.name} - connection reference already exists`);
+            else log.warn(`${connector.name} - connection reference failed: ${err.message}`);
+          }
         }
       }
     }
 
     const connectionIds = {};
+    let dataversePac = null;
+    let dataverseCanRegister = false;
+
     if (answers.REGISTER_DATA_SOURCES === true) {
       const pac = SHELL.pacPath();
       if (!pac) throw new Error('PAC CLI was not found. Install PAC CLI before registering data sources.');
 
-      const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
       if (!existsSync(join(projectDir, 'power.config.json'))) {
         throw new Error(`power.config.json was not found in ${projectDir}. Complete Step 7 before registering data sources.`);
       }
@@ -407,8 +450,10 @@ export default {
       const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
       const verification = verifyUserProfile(pac, projectDir, state, credentialValues);
       log.ok(`Verified user profile ${verification.profileName}`);
+      dataversePac = pac;
+      dataverseCanRegister = true;
 
-      for (const apiId of selectedApiIds.filter((id) => id !== 'shared_commondataserviceforapps')) {
+      for (const apiId of selectedApiIds) {
         const connector = connectorMap.get(apiId);
         const connectionId = connectionIdFromAnswers(answers, connector);
         if (!connectionId) {
@@ -425,8 +470,11 @@ export default {
         }
       }
     } else {
-      log.info('Data-source registration skipped. Connection references were handled in the solution.');
+      log.info('Connector data-source registration skipped. Connection references were handled in the solution.');
     }
+
+    // Dataverse is ALWAYS present — registered here when planned tables and a verified profile exist.
+    await bindDataverse(log, { pac: dataversePac, projectDir, canRegister: dataverseCanRegister });
 
     return {
       stateUpdate: {
