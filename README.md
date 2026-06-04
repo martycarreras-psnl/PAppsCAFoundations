@@ -5,155 +5,35 @@
 [![npm: @pacaf/wizard-ux](https://img.shields.io/npm/v/@pacaf/wizard-ux?label=%40pacaf%2Fwizard-ux)](https://www.npmjs.com/package/@pacaf/wizard-ux)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**The fastest way to scaffold, deploy, and maintain a [Power Apps Code App](https://learn.microsoft.com/en-us/power-platform/power-apps/maker/canvas-apps/code-apps/overview).**
+**The source factory for the toolchain that scaffolds, deploys, and maintains a [Power Apps Code App](https://learn.microsoft.com/en-us/power-platform/power-apps/maker/canvas-apps/code-apps/overview).**
 
-This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com/org/pacaf) family of npm packages — the setup wizard, helper scripts, and agent guidance that turn an empty repository into a deployable Power Apps Code App. The packages install as devDependencies, so each project you create stays light: only a small amount of metadata and configuration lives in your repo; the tooling lives in npm and updates like any other package.
+> ### 👉 Building an app? You don't start here.
+> Create your project from the **[PowerAppsCodeApp-Starter](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter)** template and follow its README. **This** repository only builds and publishes the `@pacaf/*` packages that the Starter and your app consume.
+
+This repository is the central source for the [`@pacaf/*`](https://www.npmjs.com/org/pacaf) family of npm packages — the setup wizard, helper scripts, and agent guidance that turn an empty repository into a deployable Power Apps Code App. The packages install as devDependencies, so each project stays light: only a small amount of metadata and configuration lives in the app repo; the tooling lives in npm and updates like any other package.
 
 ---
 
 ## 🚀 I just want to build a Code App
 
-You'll do everything from inside **VS Code with a coding agent enabled** (GitHub Copilot Chat in Agent mode, Claude Code, Cursor, or similar). The agent reads the guidance shipped by `@pacaf/agent-instructions` and drives the wizard, the deploy, and day-two changes for you.
+**You're in the wrong repo for that — and that's by design.**
 
-> ### 🛑 Brand-new machine? Do this first — the agent cannot.
->
-> The wizard runs via `npx`, which means **Node.js must already be installed**. Likewise, the agent cannot install the .NET SDK, the PAC CLI, Python, or Git for you — those need installers with admin rights and PATH changes that no terminal command in a coding-agent session can reliably do, especially on Windows.
->
-> **If this is a fresh laptop, follow [docs/prerequisite-setup.md](docs/prerequisite-setup.md) first.** It takes about 10 minutes. Then come back here.
->
-> A 30‑second self-test you can paste into the VS Code terminal **before** asking your agent to run the wizard:
->
-> ```bash
-> node --version && npm --version && git --version && dotnet --version && pac help
-> ```
->
-> On **Windows**, also run `py -V`. On **macOS / Linux**, also run `python3 --version`.
->
-> If any of those print *"command not found"* / *"is not recognized"* / opens the Microsoft Store, **do not ask the agent to run the wizard yet** — open [the prerequisite guide](docs/prerequisite-setup.md) and install the missing piece. Close and reopen the VS Code terminal after each install so the new PATH takes effect.
->
-> **Common Windows gotchas** that look like PACAF bugs but are not:
-> - `python3` opens the Microsoft Store → test with `py -V` instead.
-> - VS Code terminal defaults to `cmd.exe`, not PowerShell → Command Palette → **Terminal: Select Default Profile** → **PowerShell**.
-> - `pac help` fails right after `dotnet tool install` → close and reopen the terminal; it's a PATH refresh, not a reinstall.
-> - `npx` returns exit code 9009 → Node.js is missing or the terminal needs restarting.
->
-> If you skip this step and ask the agent to "just run the wizard", the wizard will fail with a cryptic error that looks like a bug. It isn't — the prerequisites are missing. Your agent is also instructed (via [`.github/instructions/00-prereq-gate.instructions.md`](.github/instructions/00-prereq-gate.instructions.md)) to detect this and stop with a clear list of what to install, but the cleanest experience is to do the precheck yourself first.
+This repository is the **tooling factory**. It builds and publishes the `@pacaf/*` npm packages (the wizard, the `pacaf-*` CLIs, and the agent guidance). It is **not** where you start your own app, and you should not clone or template it to build one — its `pnpm-workspace.yaml` and `packages/` tree will be pulled into your app and break the install.
 
-### Prerequisites
+👉 **Start from the [PowerAppsCodeApp-Starter](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter) template instead.**
 
-You also need a [Power Platform environment](https://admin.powerplatform.microsoft.com) you can deploy to (developer/sandbox is fine) and a GitHub account. Everything else is a local tool:
+1. Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter/generate)**.
+2. Clone your new repo and open it in **VS Code with a coding agent enabled** (GitHub Copilot Chat in Agent mode, Claude Code, Cursor, …).
+3. Follow the Starter's README.
 
-| Tool | When & why you need it | Required? |
-|---|---|---|
-| **[VS Code](https://code.visualstudio.com/)** | Hosts the coding agent (GitHub Copilot Chat, Claude Code, Cursor, …) that drives the wizard, planning workflow, schema provisioning, and day‑two edits. The whole UX assumes an agent‑capable editor. | **Required** |
-| **[Git](https://git-scm.com/)** | Clones the template, tracks changes, lets the wizard auto‑commit scaffolded files, and powers the upstream‑sync workflow when new PACAF versions ship. | **Required** |
-| **[GitHub CLI (`gh`)](https://cli.github.com/)** | Convenience only — no PACAF tool invokes `gh` directly. Useful if you prefer creating the repo from the template (`gh repo create --template …`) and managing PRs from the terminal instead of the browser. | Optional |
-| **[Node.js 20+](https://nodejs.org/)** | Runs the wizard (`npx @pacaf/wizard-ux`), the Vite dev server on port 3000, `pnpm build`, and every `pacaf-*` CLI. Also installs `npm` and (via `corepack`) `pnpm`. | **Required** |
-| **[.NET SDK 8+](https://dotnet.microsoft.com/download)** | Sole purpose: the PAC CLI is a .NET global tool. Without .NET you can't run `dotnet tool install -g Microsoft.PowerApps.CLI.Tool`. You never write .NET code in this template. | **Required** |
-| **[Power Platform CLI (`pac`)](https://learn.microsoft.com/power-platform/developer/cli/introduction)** | The only bridge to Power Platform. Used by the wizard and agent for `pac auth`, `pac solution`, `pac code init`, `pac code add-data-source`, and `pac code push` (the actual deploy). | **Required** |
-| **[Python 3](https://www.python.org/downloads/)** | Powers the [Dataverse‑skills plugin](https://github.com/microsoft/Dataverse-skills) (`dv-connect`, `dv-metadata`, `dv-data`, `dv-solution`, …) that the agent uses to provision tables, import data, and manage solutions. The wizard runs without it, but the agent will hit a wall on the first Dataverse step. | **Required** for the full agent flow |
-| **Python Launcher (`py`)** | **Windows only.** On Windows, `python3` usually resolves to the Microsoft Store stub (which exits non‑zero and prompts to install). The wizard's prereq check falls back to `py -3` via the launcher. You get it automatically when you check **"Add python.exe to PATH"** in the python.org installer. | **Required on Windows** — irrelevant on macOS/Linux |
+The **Starter README** is the single home for everything an app builder needs:
 
-> **First time on this machine?** Follow the [Prerequisite Setup Guide](docs/prerequisite-setup.md) — it walks you through installing each tool step by step on macOS or Windows, with copy‑pasteable commands and verification checks. Takes about 10 minutes.
->
-> **Setting up the agent's Dataverse access?** The [Dataverse-skills Setup Guide](docs/dataverse-skills-setup.md) is the single linear walkthrough for Python, the `PowerPlatform-Dataverse-Client` SDK, PAC auth, and the `/plugin install dataverse` step — each with a verify command and the most common failure/fix.
+- ✅ Prerequisites and the fresh-machine setup checklist
+- ✅ Running the setup wizard (`npx @pacaf/wizard-ux@latest`)
+- ✅ The plan-first → prototype → build workflow your agent follows
+- ✅ Keeping your project up to date (`npx pacaf-update`)
 
-### Step 1. Create your repo from the starter template
-
-Click **[Use this template → Create a new repository](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter/generate)** on the [**PowerAppsCodeApp-Starter**](https://github.com/martycarreras-psnl/PowerAppsCodeApp-Starter) repo. You'll get a clean repo containing a starter README, `.gitignore`, `.env.template`, and a `.github/copilot-instructions.md` pointer that tells your agent where to load the foundations guidance from. Clone the new repo and open it in VS Code.
-
-> **This repository (PAppsCAFoundations) is the tooling/source factory** — it builds and publishes the `@pacaf/*` npm packages. Do **not** start an app by cloning or templating this monorepo; its `pnpm-workspace.yaml` and `packages/` will be pulled into your app and break the install. Always start from the clean **PowerAppsCodeApp-Starter** template above.
->
-> **Prefer no template repo?** Start from an empty folder instead:
-> ```bash
-> mkdir my-code-app && cd my-code-app && git init
-> npx @pacaf/wizard-ux@latest
-> # then publish it:  gh repo create my-code-app --public --source=. --push
-> ```
-
-### Step 2. Ask your agent to run the wizard
-
-Open the agent chat panel in VS Code and say something like:
-
-> **"Set up this Code App using the PACAF wizard."**
-
-The agent will:
-
-1. Detect that this is a starter repo (it sees `.env.template` and the empty `src/` tree).
-2. Launch the wizard for you — preferring the browser-based UX:
-   ```bash
-   npx @pacaf/wizard-ux@latest
-   ```
-   This opens a wizard at `http://127.0.0.1:5174` in your browser. (If you prefer to stay in the terminal, ask the agent for the CLI version: `npx @pacaf/wizard@latest`.)
-3. Walk you through the 10 wizard steps — prerequisite checks, App Registration, auth, solution creation, code scaffolding, data source registration, first smoke test — answering questions in plain English while you pick values in the UI for the steps that need your decisions (publisher prefix, environment URL, solution name, etc.).
-4. Commit the scaffolded files (`src/`, `package.json`, `vite.config.ts`, `power.config.json`, `.github/instructions/`, …) once the wizard finishes.
-
-You don't need to run anything by hand. If the agent gets stuck, paste the wizard's error output into chat and it will diagnose using the guidance in `.github/instructions/`.
-
-### Step 3. Plan first, then build
-
-Don't jump straight into "add a table and a page." Your agent has been pre-loaded with a **planning workflow** — a sequence of instruction files that walk you from a fuzzy business problem to a validated Dataverse model and a working app, in deliberate order:
-
-1. **`00a` Business problem decomposition** — what are we actually solving, for whom, with what outcomes?
-2. **`00b` Scope refinement and solution shaping** — workflows, approvals, exceptions, reporting, governance, automation placement
-3. **`00c` Solution concept to Dataverse plan** — translate refined scope into candidate entities, relationships, lifecycle states
-4. **`00d` Prototype validation** — exercise the UX with mock data before schema hardens
-5. Then schema, components, connectors, deployment
-
-#### Switch your agent into Plan mode and start the conversation
-
-| Agent | How to enter Plan mode |
-|---|---|
-| **GitHub Copilot Chat** | In the chat panel, switch the mode dropdown from *Ask* / *Edit* to **Agent**, then prefix your first message with `[[PLAN]]` |
-| **Claude Code** | Toggle Plan mode with `⌘+Shift+P` → *Claude: Toggle Plan Mode*, or start your message with `/plan` |
-| **Cursor** | Use **Composer → Plan** before *Apply* |
-| **Other agents** | Tell it explicitly: *"Stay in plan mode. Don't write code yet."* |
-
-Then describe what you want to build — in business terms, not technical ones:
-
-> **"I want to manage equipment loans across our field offices. Multiple regions, approvers, and an audit trail when assets go missing. Help me plan this out properly before we touch any code or schema."**
-
-Your agent will work through `00a → 00b → 00c → 00d`, asking the questions that matter (who approves, what triggers reassignment, what reports the operations lead needs, what happens when an asset is reported lost). It produces:
-
-- A refined scope narrative
-- A draft conceptual model
-- A `dataverse/planning-payload.json` you can validate with `pacaf-validate`
-- A prototype UX that exercises the model with mock data
-
-You review and refine. Only after the plan is stable does the agent move to schema provisioning, real connectors, and deploy.
-
-#### Then exit Plan mode and let the agent build
-
-Once you're happy with the plan, switch out of Plan mode and say:
-
-> **"Looks good. Provision the Dataverse schema, generate the connectors, and deploy to my dev environment."**
-
-The agent runs the underlying commands — the same ones you could run yourself if you wanted:
-
-```bash
-pnpm dev          # local dev server on :3000
-pnpm build        # produce ./dist/
-pac code push -s "<SolutionUniqueName>"   # upload ./dist/ and add the app to your solution
-```
-
-> **First time on Power Apps Code Apps?** Read [docs/glossary.md](docs/glossary.md) for a one-page primer on Power Platform terminology. Your agent already has this loaded.
->
-> **Curious about the planning workflow?** See [docs/prototype-golden-path.md](docs/prototype-golden-path.md) — the end-to-end recipe your agent is following.
-
-### Keeping your project up to date
-
-When new `@pacaf/*` versions ship, ask your agent:
-
-> **"Update the PACAF tooling and refresh the agent instructions."**
-
-It runs:
-
-```bash
-npx pacaf-update              # refresh @pacaf/scripts, @pacaf/agent-instructions, and instruction files
-npx pacaf-update --check      # preview drift only, write nothing
-```
-
-Your tooling lives in npm and updates like any other dependency.
+> Everything below this line is for people **building, forking, or contributing to the tooling itself** — not for building an app.
 
 ---
 
