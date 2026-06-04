@@ -1,4 +1,4 @@
-// Step 7 - Scaffold. Browser-native long-running scaffold with live logs.
+// Step 8 - Scaffold. Browser-native long-running scaffold with live logs.
 import { existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -187,13 +187,13 @@ pac code push
 |-------------|-----|
 ${envRows}
 
-Connector binding is intentionally deferred until the prototype is stable. Use WizardUX step 8 or \`pac code add-data-source\` when you are ready for real data.
+Connector binding is intentionally deferred until the prototype is stable. Use WizardUX step 9 or \`pac code add-data-source\` when you are ready for real data.
 `, 'utf-8');
 }
 
 export default {
   meta: {
-    number: 7,
+    number: 8,
     title: 'Scaffold the Code App',
     description: 'Generate the project, install dependencies, register with Power Platform, and run smoke tests.',
     canRunInBrowser: true,
@@ -290,7 +290,7 @@ export default {
     if (pnpm) {
       log.info('Detected pnpm — using it for faster installs and shared dependency cache.');
     } else {
-      log.info('pnpm not found — using npm. Tip: `corepack enable && corepack prepare pnpm@latest --activate` makes Step 7 noticeably faster.');
+      log.info('pnpm not found — using npm. Tip: `corepack enable && corepack prepare pnpm@latest --activate` makes Step 8 noticeably faster.');
     }
 
     // pnpm refuses `pnpm add` at a workspace root (pnpm-workspace.yaml present)
@@ -342,7 +342,7 @@ export default {
       try {
         verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: false, requirePowerConfigTarget: false });
       } catch (error) {
-        throw new Error(`${error.message}\n\npac code init requires the repo-scoped interactive PAC profile. Return to Step 4, enable user profile creation, complete browser/device sign-in, then retry Step 7.`);
+        throw new Error(`${error.message}\n\npac code init requires the repo-scoped interactive PAC profile. Return to Step 4, enable user profile creation, complete browser/device sign-in, then retry Step 8.`);
       }
       const powerConfigPath = join(projectDir, 'power.config.json');
       let skipInit = false;
@@ -366,7 +366,7 @@ export default {
           '--fileEntryPoint', 'index.html',
         ], { cwd: projectDir });
         if (!initOk) throw new Error('pac code init failed. Check the live output above, then retry this step.');
-        if (!existsSync(powerConfigPath)) throw new Error('pac code init completed without creating power.config.json. Check the PAC output above, then retry Step 7 after resolving that PAC error.');
+        if (!existsSync(powerConfigPath)) throw new Error('pac code init completed without creating power.config.json. Check the PAC output above, then retry Step 8 after resolving that PAC error.');
         const repair = PAC_TARGET.repairPowerConfigDisplayNames(powerConfigPath);
         if (repair.changed) log.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
       }
@@ -376,7 +376,7 @@ export default {
       log.warn('PAC CLI not found; skipping pac code init.');
     }
 
-    log.info('Connector binding is deferred to step 8 after prototype validation.');
+    log.info('Connector binding is deferred to step 9 after prototype validation.');
 
     log.info('Running smoke tests...');
     if (await runCommand(log, 'npm run test:smoke', { cwd: projectDir })) log.ok('Smoke tests passed');
@@ -426,7 +426,7 @@ export default {
         PROJECT_DIR: projectDir,
         GIT_REMOTE: finalRemoteUrl || state.GIT_REMOTE || '',
       },
-      completedStep: 7,
+      completedStep: 8,
     };
   },
 };

@@ -266,8 +266,7 @@ Add npm scripts that use it:
   "scripts": {
     "pac": "pacaf-pac",
     "deploy": "npm run build && pacaf-pac-safe --target dev --profile-type user --mutating code push",
-      "solution:export": "pacaf-export-solution --name YourSolutionName --auth-profile Dev",
-      "solution:export:unmanaged": "pacaf-export-solution --name YourSolutionName --auth-profile Dev --unmanaged-only",
+    "solution:export": "pacaf-pac solution export --name YourSolutionName --path ./solution/solution-unmanaged.zip --managed false --overwrite",
     "solution:import": "pacaf-pac solution import --path ./solution/solution-managed.zip"
   }
 }
@@ -279,15 +278,14 @@ Now developers can run:
 npm run deploy                    # Build + deploy, secrets injected automatically
 npm run pac -- org who            # Any pac command with secrets
 npm run pac -- auth list          # Check auth profiles
-npm run solution:export           # Export unmanaged + unpack source + pack managed
-npm run solution:export:unmanaged # Export unmanaged + refresh solution-source only
+npm run solution:export           # Export the unmanaged solution from dev
 ```
 
-The export helper is the canonical on-demand workflow for storing a solution in source control. It does three things in one command:
+> **Agent-driven export / import / promotion is owned by the Dataverse-skills plugin's `dv-solution` skill** — drive it interactively instead of a bespoke script. The `solution:export` npm script above is a thin convenience wrapper over native `pac solution export` for CI and headless use; there is no `pacaf-export-solution` helper. To store a solution in source control on demand:
 
-1. Exports `./solution/solution-unmanaged.zip` from the selected dev environment
-2. Rebuilds `./solution-source/` from that unmanaged zip
-3. Packs `./solution/solution-managed.zip` from `solution-source/` unless `--unmanaged-only` is passed
+1. Export `./solution/solution-unmanaged.zip` from the selected dev environment (`npm run solution:export`)
+2. Unpack it into `./solution-source/` with `pac solution unpack --zipfile ./solution/solution-unmanaged.zip --folder ./solution-source/ --process-canvas-apps`
+3. Pack `./solution/solution-managed.zip` from `solution-source/` when you need a managed build
 
 Commit `solution-source/`. Do not commit `solution/*.zip`; those files are binary build artifacts and are gitignored.
 

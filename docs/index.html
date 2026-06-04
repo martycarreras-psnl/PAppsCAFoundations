@@ -2931,16 +2931,16 @@ h4 { font-size: 1.1rem; }
 
       <div class="accordion-item">
         <button class="accordion-trigger" onclick="toggleAccordion(this)">
-          <span>Dataverse Helper Script Chain</span>
+          <span>Dataverse via the Dataverse-skills Plugin</span>
           <span class="accordion-icon">▼</span>
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            Three composable scripts that form the Dataverse execution pipeline:
+            Dataverse schema, data, query, solution, and export operations are owned by the <a href="https://github.com/microsoft/Dataverse-skills">Dataverse-skills plugin</a>. The agent drives its specialist skills in sequence:
             <ul>
-              <li><code>validate-schema-plan.mjs</code> — validates the planning payload before any provisioning</li>
-              <li><code>generate-dataverse-plan.mjs</code> — emits normalized execution plans for tables, relationships, and registration</li>
-              <li><code>register-dataverse-data-sources.mjs</code> — runs <code>pac code add-data-source</code> in order, regenerating the SDK for each table</li>
+              <li><code>list_tables</code> / <code>describe_table</code> — discover existing schema before proposing anything new</li>
+              <li><code>dv-metadata</code> — provision tables, columns, relationships, and option sets</li>
+              <li><code>pac code add-data-source</code> — register each table as a Code App data source, regenerating the SDK</li>
             </ul>
           </div>
         </div>

@@ -4,14 +4,13 @@ alwaysApply: true
 <!-- Generated from .github/instructions/00-before-you-start.instructions.md — do not edit directly -->
 # Before You Start
 
-Complete these manual steps in the Power Platform Admin Center and Maker Portal before any code:
-
-1. **Publisher prefix** — 2–8 lowercase letters, no numbers/hyphens. Record as `PP_PUBLISHER_PREFIX`.
-2. **Create the publisher** in Maker Portal → Solutions → Publishers → New Publisher.
-3. **Create environments** — Dev (required), Test, Prod. Each must have Dataverse enabled.
-4. **Create the solution** in the dev environment linked to your publisher.
-5. **Create connections** in each environment for every connector the app uses.
-6. **Register the App Registration** as an Application User in each environment.
-7. **Verify** with `pac auth select`, `pac org who`, `pac solution list`.
+1. **Step 1 (HARD GATE) — Install the Dataverse-skills plugin.** Every Dataverse operation is delegated to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin — first-class, only-supported path. Do this first; the agent stops on any Dataverse work until it's installed and MCP tools are reachable. Needs Python 3 + `pip install PowerPlatform-Dataverse-Client pandas`. Install (Copilot **CLI** ≠ VS Code Copilot chat): Copilot CLI → `/plugin install dataverse@awesome-copilot`; Claude → `claude plugin install dataverse@claude-plugins-official`. Restart editor, then verify.
+2. **Step 2 — Publisher prefix** (2–8 lowercase letters, no numbers/hyphens). Namespace for everything; cannot change after data exists. Record as `PUBLISHER_PREFIX`.
+3. **Step 3 — Create the publisher (not by hand in Maker Portal).** Wizard's **Solution & Publisher** step or the **dv-solution** skill creates it (reuse over duplication).
+4. **Step 4 — Create environments** — Dev (required), Test, Prod, each Dataverse-enabled. Record each URL.
+5. **Step 5 — Create the solution (also created for you, not hand-built)** bound to the publisher, via the wizard or **dv-solution**. Added to the solution on first `pac code push` (`-s`).
+6. **Step 6 — Create connections** in each environment for every connector, **before** importing the solution.
+7. **Step 7 — Register the App Registration** as an Application User in each environment.
+8. **Step 8 — Verify** with `pac auth select`, `pac org who`, `pac solution list`.
 
 Full details: `.github/instructions/00-before-you-start.instructions.md`

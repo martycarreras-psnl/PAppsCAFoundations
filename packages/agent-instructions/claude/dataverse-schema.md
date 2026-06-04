@@ -9,10 +9,8 @@ paths:
 
 Key rules:
 - Every table, column, and option set must use the publisher prefix (e.g., `yourprefix_tablename`)
-- Schema changes happen through the planning artifact workflow: validate → generate plan → provision
-- Use `scripts/validate-schema-plan.mjs` before provisioning
-- Use `scripts/generate-dataverse-plan.mjs` to create execution plans
-- Use `scripts/register-dataverse-data-sources.mjs` to register tables with the Code App
+- Dataverse schema, data, query, and solution operations are owned by the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin — there are no `pacaf-validate` / `pacaf-generate` / `pacaf-register` scripts
+- Discover existing schema first (`07a`), then provision with `dv-metadata`, then register with `pac code add-data-source`
 - Option set integer values start at `{CHOICE_VALUE_PREFIX}0000`
 - Schema mistakes are the most expensive to fix after data exists — plan first
 - If the planning artifact is not yet stable, return to upstream planning instructions

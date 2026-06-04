@@ -116,12 +116,7 @@ function buildRequiredScripts(config = loadPacafConfig(), solutionUniqueName = '
     'test:e2e': 'playwright test',
     'setup:auth': b('setup-auth'),
     pac: b('pac'),
-    'solution:export': `${b('export-solution')} --name YourSolutionName --target dev`,
-    'solution:export:unmanaged': `${b('export-solution')} --name YourSolutionName --target dev --unmanaged-only`,
     deploy: `npm run build && ${b('pac-safe')} --target dev --profile-type user --mutating${solutionArg} code push`,
-    'validate:schema-plan': `${b('validate')} dataverse/planning-payload.json`,
-    'generate:dataverse-plan': `${b('generate')} dataverse/planning-payload.json`,
-    'register:dataverse': `${b('register')} dataverse/register-datasources.plan.json`,
     'sync:foundations': b('update'),
     'sync:foundations:check': `${b('update')} --check`,
   };

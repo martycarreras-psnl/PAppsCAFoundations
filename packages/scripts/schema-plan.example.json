@@ -87,5 +87,34 @@
       "path": "dataverse/register-datasources.plan.json",
       "purpose": "Register Dataverse tables with pac code add-data-source and regenerate the SDK"
     }
-  ]
+  ],
+  "orgStructure": {
+    "businessUnits": [
+      { "name": "Field Operations", "parentName": null },
+      { "name": "West Region", "parentName": "Field Operations" }
+    ],
+    "securityGroups": [
+      {
+        "displayName": "Field Operations - West",
+        "mailNickname": "field-ops-west",
+        "entraObjectId": null
+      }
+    ],
+    "teams": [
+      {
+        "name": "Field Operations - West",
+        "businessUnitName": "West Region",
+        "teamType": "Owner",
+        "membershipSource": "EntraGroup",
+        "securityGroupDisplayName": "Field Operations - West"
+      }
+    ],
+    "roleMappings": [
+      {
+        "teamName": "Field Operations - West",
+        "roleName": "Project Tracker Collaborator",
+        "scope": "BusinessUnit"
+      }
+    ]
+  }
 }

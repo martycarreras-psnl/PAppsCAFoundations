@@ -11,13 +11,9 @@ const dryRun = args.includes('--dry-run');
 const LEGACY_DIRS = ['wizard', 'wizard-ux', 'scripts', 'docs'];
 
 const SCRIPT_REPLACEMENTS = {
-  'node scripts/validate-schema-plan.mjs':           'pacaf-validate',
-  'node scripts/generate-dataverse-plan.mjs':        'pacaf-generate',
-  'node scripts/register-dataverse-data-sources.mjs':'pacaf-register',
   'node scripts/seed-prototype-assets.mjs':          'pacaf-seed',
   'node scripts/patch-datasources-info.mjs':         'pacaf-patch-datasources',
   'node scripts/discover-copilot-connection.mjs':    'pacaf-discover-connection',
-  'node scripts/export-solution.mjs':                'pacaf-export-solution',
   'node scripts/op-pac.mjs':                         'pacaf-pac',
   'node scripts/pac-safe.mjs':                       'pacaf-pac-safe',
   'node scripts/setup-auth.mjs':                     'pacaf-setup-auth',

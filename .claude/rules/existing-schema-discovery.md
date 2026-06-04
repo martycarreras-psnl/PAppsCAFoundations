@@ -51,10 +51,10 @@ If the developer overrides, write to `dataverse/planning-payload.json`:
   "overrideApprovedAt": "<ISO timestamp>"
 }
 ```
-The `pacaf-validate` reserved-name and reserved-column guards still apply — overrides cannot bypass them.
+The reserved-name and reserved-column guards (agent-enforced prose in `07a`) still apply — an override clears the OOB-recommendation pause, not the reserved-name rule.
 
 ## Discovery commands
-Preferred: `dv-metadata list-tables --include-system`, `dv-metadata describe-table --table systemuser`.
+Preferred: the Dataverse-skills plugin's `list_tables` and `describe_table systemuser` MCP tools (env resolved from the active PAC profile).
 Fallback: `GET {env}/api/data/v9.2/EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity`.
 
 ## Lookup gotchas

@@ -84,6 +84,11 @@ Then stop. Do not auto-`winget`/`brew`/`choco`/`apt` — those have their own el
 - Homebrew on Apple Silicon = `/opt/homebrew`; Intel = `/usr/local`. Must `eval "$(/opt/homebrew/bin/brew shellenv)"`.
 - **`PATH` entries with literal `~` are silently broken in zsh/bash.** Use `$HOME/.dotnet/tools`, not `~/.dotnet/tools`. The canonical-path probe above catches this.
 
+## Dataverse intent? HARD GATE on the Dataverse-skills plugin
+All Dataverse work is delegated to the **[microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills)** plugin — first-class, only-supported, **not optional**. Any Dataverse intent (provision/modify/query tables, columns, relationships, option sets, forms, views; import/seed/export/bulk-edit data; solution lifecycle; org structure) + plugin not installed/verified ⇒ **STOP** before any Dataverse op. Does not fire for pure Code App scaffold, non-Dataverse connectors, or planning 00a–00e before schema.
+
+Detect (read-only): (1) files — `[ -d "$HOME/.copilot/installed-plugins/awesome-copilot/dataverse/skills" ]` (Copilot) / `~/.claude*` cache (Claude); (2) `python3 -c "import pandas, PowerPlatform_Dataverse_Client"`; (3) a `list_tables` MCP call succeeds (tools load only after an editor/CLI **restart**). If missing, STOP; branch install by agent (`packages/scripts/detect-agent.mjs`): Copilot `/plugin install dataverse@awesome-copilot`; Claude `claude plugin install dataverse@claude-plugins-official`; then `pip install PowerPlatform-Dataverse-Client pandas`, restart, say "ready". Don't hand-roll Web API/FetchXML or script the plugin install (interactive).
+
 ## If this IS the PACAF monorepo source tree — gate on `pnpm install` + build
 
 The checks above only cover **consumers** running `npx @pacaf/wizard-ux@latest` (published artifact, self-contained). They do **not** cover **contributors** working inside the PACAF source repo who try to run the wizard / scripts / rebrand tool from source. In that case the workspace `node_modules` and built artifacts are missing and the wizard crashes with `Cannot find package 'fastify'` (or similar) which looks like a PACAF bug. It isn't.

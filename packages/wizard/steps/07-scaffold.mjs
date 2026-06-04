@@ -511,9 +511,6 @@ See \`docs/agent-support.md\` for the full support matrix and verification steps
 | \`npm run lint\` | Lint with ESLint |
 | \`npm run setup:auth\` | Create PAC auth profiles from 1Password or .env.local |
 | \`npm run pac -- <args>\` | Run pac with 1Password-injected credentials when using op:// references |
-| \`npm run validate:schema-plan\` | Validate the Dataverse planning artifact before provisioning |
-| \`npm run generate:dataverse-plan\` | Generate normalized Dataverse execution plans from the planning artifact |
-| \`npm run register:dataverse\` | Register planned Dataverse tables with pac code add-data-source and refresh generated connector output |
 | \`npm run sync:foundations\` | Pull latest instruction files, wizard, and scripts from the template repo |
 | \`npm run guidance:generate\` | Regenerate agent-native guidance from canonical instructions |
 | \`npm run guidance:check\` | Verify projected guidance files match canonical source |
@@ -598,13 +595,14 @@ export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canR
   const tables = readPlannedDataverseTables(projectDir);
   if (tables.length === 0) {
     ui.line('No Dataverse tables are planned yet. Once your planning payload defines');
-    ui.line('tables, register them with: npm run register:dataverse');
+    ui.line('tables, provision them with the Dataverse-skills plugin (dv-metadata),');
+    ui.line('then register each with: pac code add-data-source -a dataverse -t <table>');
     return;
   }
   if (!canRegister || !pac) {
-    ui.line(`${tables.length} planned Dataverse table(s) found. Register them with:`);
-    ui.line('  npm run register:dataverse');
-    ui.line('  (or pac code add-data-source -a dataverse -t <table>)');
+    ui.line(`${tables.length} planned Dataverse table(s) found. Provision them with the`);
+    ui.line('Dataverse-skills plugin (dv-metadata), then register each with:');
+    ui.line('  pac code add-data-source -a dataverse -t <table>');
     return;
   }
   for (const table of tables) {

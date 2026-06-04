@@ -33,7 +33,7 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 
 - Bug fixes in wizard steps or helper scripts
 - Improvements to coding-agent instruction files (`.github/instructions/`, `.claude/rules/`, `.cursor/rules/`)
-- New validation checks in `validate-schema-plan.mjs`
+- Sharper guidance for delegating Dataverse work to the Dataverse-skills plugin
 - Better error messages and recovery guidance
 - Documentation clarity and typo fixes
 - Cross-platform compatibility improvements (Windows, macOS, Linux)
