@@ -1,6 +1,6 @@
 {
   "name": "@pacaf/scripts",
-  "version": "3.0.11",
+  "version": "4.0.0",
   "private": false,
   "type": "module",
   "description": "Helper scripts for Power Apps Code App projects: prototype seeding, auth setup, deployment safety, and migration tooling. Dataverse schema, data, solution, and export operations are owned by the Dataverse-skills plugin.",
