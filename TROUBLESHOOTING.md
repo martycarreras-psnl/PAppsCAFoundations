@@ -304,7 +304,7 @@ rm power.config.json
 
 **Cause:** `pac code push` was done but the solution wasn't re-exported.
 
-**Fix:** After pushing code changes, always re-export:
+**Fix:** After pushing code changes, always re-export the solution. Agent-driven export is owned by the Dataverse-skills plugin's `dv-solution` skill; to export directly, use the native PAC CLI:
 ```bash
-npm run solution:export
+pac solution export --name <SolutionUniqueName> --path ./solution/solution-unmanaged.zip --managed false --overwrite
 ```

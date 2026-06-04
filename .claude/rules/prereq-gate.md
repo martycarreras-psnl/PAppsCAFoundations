@@ -93,6 +93,16 @@ Then **stop**. Do not suggest `winget`, `brew`, `choco`, or `apt` one-liners unl
 ## When the user says "ready"
 Re-run **only** the previously-failing commands. Confirm each one passes before proceeding. Repeat the stop block with the still-missing items if anything is still failing.
 
+## Dataverse intent? HARD GATE on the Dataverse-skills plugin
+All Dataverse work in this template is delegated to the **[microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills)** plugin — it is the first-class, only-supported path, **not optional**. If the user has any Dataverse intent (provision/modify/query tables, columns, relationships, option sets, forms, views; import/seed/export/bulk-edit data; solution lifecycle; org structure) and the plugin is **not installed and verified**, **STOP** before any Dataverse operation. Does **not** fire for pure Code App scaffold, non-Dataverse connector binding, or planning phases 00a–00e before schema design.
+
+Detect (read-only — do not try to install):
+1. **Files present** — `[ -d "$HOME/.copilot/installed-plugins/awesome-copilot/dataverse/skills" ]` (Copilot) or the `~/.claude*` `dataverse@claude-plugins-official` cache; `~/.copilot/config.json` `installedPlugins[]` entry `name=="dataverse"`, `enabled`, existing `cache_path`.
+2. **Python SDK** — `python3 -c "import pandas, PowerPlatform_Dataverse_Client"`.
+3. **MCP verified** — a `list_tables` call actually succeeds (MCP tools only load **after an editor/CLI restart**).
+
+If missing, STOP with a single block; branch the install command by detected agent (`packages/scripts/detect-agent.mjs`). Copilot: run `copilot`, then `/plugin install dataverse@awesome-copilot`, then `pip install PowerPlatform-Dataverse-Client pandas`, restart editor. Claude: `claude plugin marketplace add <claude-plugins-official repo>` → `claude plugin install dataverse@claude-plugins-official` → same pip → restart. Do **not** hand-roll Web API / FetchXML as a workaround or script the plugin install (it's interactive). The `pip install` step is safe to run for the user. Re-detect on "ready"; if MCP still unreachable, the cause is usually a missing restart.
+
 ## Only if the user explicitly invokes the wizard *from source*, gate on `pnpm install` + build
 
 When the user says "run the wizard", "start the wizard", "set me up" — or any similar bootstrap intent — your default action is `npx @pacaf/wizard-ux@latest`. That artifact is **self-contained from npm**: it does not read the local workspace, it does not need `pnpm install`, and it does not need anything to be built. It runs the same in an empty folder, in a downstream Code App, or inside the PACAF monorepo itself. **Do not gate on workspace install just because the cwd looks like the source tree.**

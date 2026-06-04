@@ -329,6 +329,8 @@ Configure in GitHub: Settings → Environments → production → Add required r
 
 ## Solution Management & ALM
 
+> **Agent-driven solution export / import / promotion is owned by the Dataverse-skills plugin's `dv-solution` skill.** When you (the agent) need to export an unmanaged solution, import into a higher environment, or promote across dev → test → prod interactively, drive `dv-solution` rather than hand-rolling a script. There is no `pacaf-export-solution` / `export-solution.mjs` helper — it was removed in favor of `dv-solution`. The **CI/CD pipeline below intentionally uses native `pac solution export`** with service-principal auth, because GitHub Actions runs headless and does not load the plugin's MCP tools; keep that native flow as-is.
+
 ### The Foundational Rule: Everything Lives in a Solution
 
 Code Apps, and every Dataverse artifact they depend on, must live in a dedicated Power Platform solution. This is not optional — it is the foundation that makes deployment, versioning, and environment promotion possible. See `01-scaffold.instructions.md` for the complete list of what must be in the solution and why.
@@ -413,27 +415,31 @@ Your solution should be exported and stored in source control alongside your Cod
 
 **Canonical on-demand workflow:**
 
-```bash
-# Export from dev, bump version, rebuild solution-source/
-pacaf-export-solution --name YourSolutionName
+Agent-driven export is owned by the Dataverse-skills plugin's `dv-solution` skill — drive it interactively. For a scriptable/headless export, use native PAC CLI:
 
-# If you also need a managed zip (not needed if using Power Platform Pipelines)
-pacaf-export-solution --name YourSolutionName --include-managed
+```bash
+# Export the unmanaged solution from your dev environment
+pac auth select --name "Dev"
+pac solution export --path ./solution/solution-unmanaged.zip --name YourSolutionName --managed false --overwrite
+
+# Unpack into individual files so stale files are removed and git diffs are meaningful
+rm -rf ./solution-source/
+pac solution unpack --zipfile ./solution/solution-unmanaged.zip --folder ./solution-source/ --process-canvas-apps
 ```
 
-This script is the preferred entry point because it keeps the repo state consistent:
+Keep the repo state consistent:
 
 1. `solution/solution-unmanaged.zip` is exported from dev
 2. `solution-source/` is rebuilt from that unmanaged zip so stale files are removed
-3. Build version is auto-incremented in `Solution.xml`
-4. `solution/solution-managed.zip` is packed only if `--include-managed` is set
+3. Bump the build version in `Solution.xml` (the deploy pipeline does this automatically; see below)
+4. Pack `solution/solution-managed.zip` only when you need a managed build
 
 **What goes into Git:**
 
 - Commit `solution-source/`
 - Leave `solution/*.zip` uncommitted; those binary artifacts are gitignored
 
-**Equivalent manual PAC flow:**
+**Full PAC flow with managed packaging:**
 
 ```bash
 # Export the unmanaged solution from your dev environment
@@ -480,8 +486,9 @@ The standard deployment cycle:
 npm run build
 pac code push -s "YourSolutionUniqueName"
 
-# Step 2: Export the full solution from dev (SPN profile) — auto-bumps version
-pacaf-export-solution --name YourSolutionName
+# Step 2: Export the full solution from dev (SPN profile)
+pac solution export --path ./solution/solution-unmanaged.zip --name YourSolutionName --managed false --overwrite
+pac solution unpack --zipfile ./solution/solution-unmanaged.zip --folder ./solution-source/ --process-canvas-apps
 
 # Step 3: Commit the refreshed solution source
 git add solution-source/
@@ -673,7 +680,7 @@ pac connection-reference update \
 
 ### Solution Versioning
 
-The **build** segment (3rd number) is auto-incremented on every export — both by the deploy pipeline and by the local `export-solution.mjs` script. You never need to bump it manually.
+The **build** segment (3rd number) is auto-incremented on every export by the deploy pipeline (see the `Unpack and bump version` step in `deploy.yml`). For local exports, bump it explicitly when you need to.
 
 For **major** or **minor** changes, bump those segments manually before exporting:
 
@@ -683,10 +690,7 @@ For **major** or **minor** changes, bump those segments manually before exportin
 pac solution version --strategy solution --value 2.0.0.0 --solutionPath ./solution-source
 ```
 
-To skip the auto-bump (e.g., re-export without incrementing):
-```bash
-pacaf-export-solution --name YourSolutionName --skip-version-bump
-```
+To re-export without incrementing, simply run `pac solution export` again — native export does not bump the version on its own.
 
 | Change Type | Segment | Who Bumps | Example |
 |-------------|---------|-----------|---------|

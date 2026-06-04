@@ -95,18 +95,21 @@ These are enforced by the detailed instruction files but must be respected even 
 
 ## Dataverse-skills Plugin Integration
 
-For Dataverse schema provisioning, data operations, solution lifecycle, and environment administration, this template defers to the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin. That plugin teaches coding agents to use the Dataverse MCP server, Python SDK, and PAC CLI through specialist skills (`dv-metadata`, `dv-data`, `dv-query`, `dv-solution`, `dv-admin`, `dv-security`).
+For Dataverse schema provisioning, data operations, solution lifecycle, and environment administration, this template **requires** the [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin. That plugin teaches coding agents to use the Dataverse MCP server, Python SDK, and PAC CLI through specialist skills (`dv-metadata`, `dv-data`, `dv-query`, `dv-solution`, `dv-admin`, `dv-security`). Any Dataverse work is gated on the plugin being installed and verified — see `.github/instructions/00-prereq-gate.instructions.md`.
 
 ### Scope split
 
 | Responsibility | Owner |
 |---|---|
 | Schema provisioning (tables, columns, relationships, option sets) | **Dataverse-skills plugin** (`dv-metadata`) |
+| Existing-schema discovery & OOB-first decision | **This repo** (`07a`) drives plugin `list_tables` / `describe_table` |
 | Data operations (CRUD, bulk import, sample data) | **Dataverse-skills plugin** (`dv-data`, `dv-query`) |
-| Solution lifecycle (export, import, deploy) | **Dataverse-skills plugin** (`dv-solution`) |
+| Solution lifecycle (export, import, deploy) | **Dataverse-skills plugin** (`dv-solution`); CI/CD pipeline keeps native `pac solution export` |
+| Publisher & solution creation | **Dataverse-skills plugin** (`dv-solution`); the wizard also drives create via its Node Dataverse bridge |
 | Environment admin (bulk delete, settings, security roles) | **Dataverse-skills plugin** (`dv-admin`, `dv-security`) |
+| Business units, owner teams, Entra security groups, role mappings | **This repo** (`07b`) — plugin gap; agent drives the plugin's Python SDK + `az ad group` |
 | Business planning workflow (00a → 00b → 00c → 00d) | **This repo** |
-| Planning artifact validation & generation | **This repo** (`validate-schema-plan.mjs`, `generate-dataverse-plan.mjs`) |
+| Planning artifact (`dataverse/planning-payload.json`) — re-runnable source of truth | **This repo** (no `pacaf-validate`/`pacaf-generate`/`pacaf-register` scripts; the agent reads the payload and drives the plugin + PAC CLI directly) |
 | Code App scaffold (`pac code init`, Vite, Fluent UI) | **This repo** |
 | Connector adapter pattern & `pac code add-data-source` | **This repo** |
 | Form field metadata pattern (`DataverseFieldLabel`) | **This repo** |
@@ -116,9 +119,13 @@ For Dataverse schema provisioning, data operations, solution lifecycle, and envi
 
 If the Dataverse-skills plugin is installed, prefer it for all Dataverse environment operations. The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
 
+### Organizational structure & security (plugin gap)
+
+The plugin does not ship documented skills for **business units, owner teams, or Entra-group-linked teams**. When the planning payload's `orgStructure` section defines data-isolation boundaries, the agent provisions them itself per `.github/instructions/07b-org-structure-and-security.instructions.md` — driving the plugin's bundled Python SDK (`businessunit` / `team` records) plus `az ad group` for Entra security groups. Skip this entirely for flat, org-wide visibility; never custom-model org structure or authorization (`07a` enforces reuse of OOB `businessunit` / `team` / `role`).
+
 ### When the plugin is NOT installed
 
-The instruction files in this repo (`07-dataverse-schema.instructions.md`) still contain enough guidance for agents to provision schema via the Web API directly. The plugin is strongly recommended but not a hard requirement.
+The plugin is a **hard requirement** for Dataverse work — `00-prereq-gate.instructions.md` blocks until it is installed and verified. As a last-resort fallback only, the instruction files in this repo (`07-dataverse-schema.instructions.md`) still contain enough Web API guidance for an agent to provision schema directly, but the supported path is the plugin.
 
 ### Install commands
 

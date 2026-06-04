@@ -1,4 +1,4 @@
-// Step 9 - Verify & Deploy. Browser-native build and optional pac code push.
+// Step 10 - Verify & Deploy. Browser-native build and optional pac code push.
 import { existsSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -114,7 +114,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 
 export default {
   meta: {
-    number: 9,
+    number: 10,
     title: 'Verify & Deploy',
     description: 'Build the project, optionally push it to Power Platform, and surface the live app URL when available.',
     canRunInBrowser: true,
@@ -146,20 +146,20 @@ export default {
 
   async apply(answers, state, log) {
     const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
-    if (!existsSync(join(projectDir, 'package.json'))) throw new Error(`No package.json found in ${projectDir}. Run Step 7 first.`);
+    if (!existsSync(join(projectDir, 'package.json'))) throw new Error(`No package.json found in ${projectDir}. Run Step 8 first.`);
 
     log.info('Building project...');
     const buildOk = await runCommand(log, 'npm run build', { cwd: projectDir });
     const distExists = existsSync(join(projectDir, 'dist', 'index.html'));
     if (!buildOk || !distExists) {
       log.warn('Build did not produce dist/index.html. Fix build errors before deploying.');
-      return { stateUpdate: { PROJECT_DIR: projectDir }, completedStep: 9 };
+      return { stateUpdate: { PROJECT_DIR: projectDir }, completedStep: 10 };
     }
     log.ok('Build succeeded and dist/index.html exists');
 
     if (answers.PUSH_TO_POWER_PLATFORM !== true) {
       log.info('Push skipped. You can deploy later from WizardUX or with pac code push.');
-      return { stateUpdate: { PROJECT_DIR: projectDir }, completedStep: 9 };
+      return { stateUpdate: { PROJECT_DIR: projectDir }, completedStep: 10 };
     }
 
     if (answers.CODE_APPS_FEATURES_ENABLED !== true) {
@@ -240,6 +240,6 @@ export default {
       log.warn('Could not detect deployed app URL in pac output. Open the app from Power Apps Maker Portal.');
     }
 
-    return { stateUpdate, completedStep: 9 };
+    return { stateUpdate, completedStep: 10 };
   },
 };

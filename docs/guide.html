@@ -1493,7 +1493,7 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">3</div>
           <h3>Convert to a technical plan</h3>
-          <p>Once scope is stable, your agent derives candidate entities, relationships, ownership patterns, and lifecycle states, then writes a <code>dataverse/planning-payload.json</code> you can validate with <code>npx pacaf-validate</code>.</p>
+          <p>Once scope is stable, your agent derives candidate entities, relationships, ownership patterns, and lifecycle states, then writes a <code>dataverse/planning-payload.json</code> that drives schema provisioning through the <a href="#ref-dataverse-plugin">Dataverse-skills plugin</a>.</p>
           <p style="margin-top:12px;"><code>00c-solution-concept-to-dataverse-plan.instructions.md</code></p>
         </div></div>
         <div class="card"><div class="card-body">
@@ -1530,12 +1530,8 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
           <tr><td><code>pacaf-update</code></td><td>Refresh <code>@pacaf/scripts</code> + <code>@pacaf/agent-instructions</code> and re-sync instruction files</td></tr>
           <tr><td><code>pacaf-instructions</code></td><td><code>sync</code> / <code>check</code> / <code>list</code> agent-guidance projections</td></tr>
           <tr><td><code>pacaf-migrate-thin</code></td><td>Convert an older derived repo with in-tree tooling to consume <code>@pacaf/*</code> packages</td></tr>
-          <tr><td><code>pacaf-validate</code></td><td>Validate a Dataverse <code>planning-payload.json</code> against the schema</td></tr>
-          <tr><td><code>pacaf-generate</code></td><td>Expand a planning payload into a Dataverse execution plan</td></tr>
-          <tr><td><code>pacaf-register</code></td><td>Register a Dataverse data source as a Code App connector</td></tr>
           <tr><td><code>pacaf-seed</code></td><td>Seed prototype assets (mock providers, hooks, components, feedback artifact)</td></tr>
           <tr><td><code>pacaf-discover-connection</code></td><td>Discover existing Power Platform connections by API ID</td></tr>
-          <tr><td><code>pacaf-export-solution</code></td><td>Export a Power Platform solution as <code>.zip</code></td></tr>
           <tr><td><code>pacaf-pac</code> / <code>pacaf-pac-safe</code></td><td>Wrappers around <code>pac</code> with retry + error normalization</td></tr>
           <tr><td><code>pacaf-setup-auth</code></td><td>Idempotent PAC auth profile bootstrap (1Password or <code>.env.local</code>)</td></tr>
           <tr><td><code>pacaf-patch-datasources</code></td><td>Patch <code>power.config.json</code> data source info after edits</td></tr>
@@ -2009,7 +2005,7 @@ Claude Code:     /plugin install dataverse@claude-plugins-official</pre>
       <h4 style="margin-top:var(--s5);">How It Flows Together</h4>
       <ol style="margin-left:20px; margin-bottom:16px; line-height:2;">
         <li>Plan the business problem (00a → 00c) → <code>dataverse/planning-payload.json</code></li>
-        <li>Validate &amp; generate plans → <code>node scripts/generate-dataverse-plan.mjs</code></li>
+        <li>Discover existing schema first → agent uses <code>list_tables</code> / <code>describe_table</code> from the plugin</li>
         <li>Provision schema → agent uses <code>dv-metadata</code> from the plugin</li>
         <li>Register data sources → <code>pac code add-data-source</code> generates TypeScript SDK</li>
         <li>Build the UI with generated services, Fluent UI, TanStack Query</li>

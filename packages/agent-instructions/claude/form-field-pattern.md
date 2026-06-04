@@ -14,7 +14,7 @@ Key rules:
 4. Set `aria-required={required || undefined}` using `useDataverseFieldRequired(table, field)`
 5. Guard submit: `disabled={(required && !(value ?? '').trim()) || mutation.isPending}`
 6. Guard mutations for `ApplicationRequired` columns — the Web API does NOT enforce it
-7. Register each new table's `getMetadata` call in `fieldMetadataServiceRegistry` (automated by `register-dataverse-data-sources.mjs`)
+7. Register each new table's `getMetadata` call in `fieldMetadataServiceRegistry` when you register the table as a data source (`pac code add-data-source`, via the add-dataverse skill)
 8. `RequiredLevel.Value` is a **string** (`"None" | "SystemRequired" | "ApplicationRequired" | "Recommended"`), not numeric
 9. Apply `maxLength` on text inputs, `min`/`max`/`step` on number inputs from `DataverseFieldMetadata` constraint properties
 10. `DataverseFieldMetadata` includes `maxLength`, `minValue`, `maxValue`, `precision` — extracted from `getMetadata()` attribute records

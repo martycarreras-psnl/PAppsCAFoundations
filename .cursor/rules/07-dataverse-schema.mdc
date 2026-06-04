@@ -6,10 +6,8 @@ alwaysApply: false
 # Dataverse Schema Design
 
 - Every table/column/option set uses the publisher prefix
-- Schema changes go through: validate → generate plan → provision
-- Use `scripts/validate-schema-plan.mjs` before provisioning
-- Use `scripts/generate-dataverse-plan.mjs` for execution plans
-- Use `scripts/register-dataverse-data-sources.mjs` to register tables
+- Dataverse schema, data, query, and solution operations are owned by the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin — there are no `pacaf-validate` / `pacaf-generate` / `pacaf-register` scripts
+- Discover existing schema first (`07a`), then provision with `dv-metadata`, then register with `pac code add-data-source`
 - Option set values start at `{CHOICE_VALUE_PREFIX}0000`
 - Schema mistakes are most expensive after data exists — plan first
 

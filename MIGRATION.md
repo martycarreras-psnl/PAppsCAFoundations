@@ -15,10 +15,9 @@ This will:
 
 1. Archive `wizard/`, `wizard-ux/`, `scripts/`, and `docs/` to `.pacaf-archive/` (recoverable for one rollback).
 2. Rewrite `package.json` scripts:
-   - `node scripts/validate-schema-plan.mjs` → `pacaf-validate`
-   - `node scripts/register-dataverse-data-sources.mjs` → `pacaf-register`
+   - `node scripts/seed-prototype-assets.mjs` → `pacaf-seed`
    - `node scripts/sync-foundations.mjs` → `pacaf-update`
-   - ...and the other 8 helper script references.
+   - ...and the other helper script references.
 3. Add `@pacaf/scripts` and `@pacaf/agent-instructions` as devDependencies (`^1.0.0`).
 4. Run `npm install` (or `pnpm install` if you have `pnpm-lock.yaml`).
 5. Run `npx @pacaf/agent-instructions sync` to refresh `.github/instructions/`, `.claude/rules/`, `.cursor/rules/`, `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md`.
@@ -91,7 +90,7 @@ The migration tool uses a literal-string replacement for each known shipped scri
 Your CI workflow probably has a hardcoded reference. Search-and-replace:
 
 ```bash
-grep -rln "node scripts/" .github/workflows/ | xargs sed -i '' 's|node scripts/validate-schema-plan.mjs|npx pacaf-validate|g'
+grep -rln "node scripts/" .github/workflows/ | xargs sed -i '' 's|node scripts/seed-prototype-assets.mjs|npx pacaf-seed|g'
 # ...repeat for each script
 ```
 

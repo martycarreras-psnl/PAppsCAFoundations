@@ -1,6 +1,6 @@
-// Step 8 - Connectors. Browser-native connector selection and optional data-source binding.
+// Step 9 - Connectors. Browser-native connector selection and optional data-source binding.
 // Dataverse is NOT in this list and is never an opt-in toggle: every Code App is bound to
-// Dataverse at the environment level via the mandatory Dataverse URL captured in Step 2.
+// Dataverse at the environment level via the mandatory Dataverse URL captured in Step 5.
 import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -176,14 +176,14 @@ function dataverseRegistrationPlan(projectDir) {
 // Dataverse is always bound to a Code App — never optional. When planned tables exist and we
 // have a verified user PAC profile, register them now; otherwise emit clear, non-optional status.
 async function bindDataverse(log, { pac, projectDir, canRegister }) {
-  log.info('Dataverse is always bound to this Code App at the environment level (the Dataverse URL you confirmed in Step 2). It is never optional.');
+  log.info('Dataverse is always bound to this Code App at the environment level (the Dataverse URL you confirmed in Step 5). It is never optional.');
   const { tables } = dataverseRegistrationPlan(projectDir);
   if (tables.length === 0) {
-    log.info('No Dataverse tables are planned yet. Once your planning payload defines tables, register them with: npm run register:dataverse');
+    log.info('No Dataverse tables are planned yet. Once your planning payload defines tables, provision them with the Dataverse-skills plugin (dv-metadata), then register each with: pac code add-data-source -a dataverse -t <table>.');
     return [];
   }
   if (!canRegister || !pac) {
-    log.info(`${tables.length} planned Dataverse table(s) found. Register them with: npm run register:dataverse (or pac code add-data-source -a dataverse -t <table>).`);
+    log.info(`${tables.length} planned Dataverse table(s) found. Provision them with the Dataverse-skills plugin (dv-metadata), then register each with: pac code add-data-source -a dataverse -t <table>.`);
     return [];
   }
   const registered = [];
@@ -245,9 +245,9 @@ function connectionIdFromAnswers(answers, connector) {
 
 export default {
   meta: {
-    number: 8,
+    number: 9,
     title: 'Bind Connectors',
-    description: 'Dataverse is always bound at the environment level (Step 2). Here you optionally choose additional connector references and register their data sources.',
+    description: 'Dataverse is always bound at the environment level (Step 5). Here you optionally choose additional connector references and register their data sources.',
     canRunInBrowser: true,
     optional: true,
     needsSecret: true,
@@ -288,7 +288,7 @@ export default {
       id: 'REGISTER_DATA_SOURCES',
       type: 'confirm',
       label: 'Register selected non-Dataverse connectors as Code App data sources now',
-      help: 'Requires the user PAC auth profile from Step 4 and power.config.json from Step 7. Leave off to create solution connection references only.',
+      help: 'Requires the user PAC auth profile from Step 4 and power.config.json from Step 8. Leave off to create solution connection references only.',
       defaultValue: false,
       showIf: { id: 'DEFER_CONNECTORS', equals: false },
     });
@@ -303,7 +303,7 @@ export default {
         label: `Set up ${connectorLabel(connector, existingApiIds)}`,
         help: referenceExists
           ? 'This connector already has a connection reference in the selected solution. Leave on to keep it in this app setup.'
-          : 'Creates a solution connection reference for this connector when you save Step 8.',
+          : 'Creates a solution connection reference for this connector when you save Step 9.',
         defaultValue: selectedDefaults.includes(connector.apiId),
         group,
         showIf: { id: 'DEFER_CONNECTORS', equals: false },
@@ -376,7 +376,7 @@ export default {
           CONNECTOR_BINDING_DEFERRED: true,
           CUSTOM_CONNECTORS: customRaw,
         },
-        completedStep: 8,
+        completedStep: 9,
       };
     }
 
@@ -401,7 +401,7 @@ export default {
     if (selectedApiIds.length === 0) {
       log.info('No additional connectors selected. Dataverse is still bound automatically.');
     } else {
-      if (!prefix) throw new Error('Publisher prefix is missing. Complete Step 5 before binding connectors.');
+      if (!prefix) throw new Error('Publisher prefix is missing. Complete Step 6 before binding connectors.');
       if (!solutionName) throw new Error('Solution unique name is missing. Complete Step 6 before binding connectors.');
 
       log.info('Checking existing connection references...');
@@ -444,7 +444,7 @@ export default {
       if (!pac) throw new Error('PAC CLI was not found. Install PAC CLI before registering data sources.');
 
       if (!existsSync(join(projectDir, 'power.config.json'))) {
-        throw new Error(`power.config.json was not found in ${projectDir}. Complete Step 7 before registering data sources.`);
+        throw new Error(`power.config.json was not found in ${projectDir}. Complete Step 8 before registering data sources.`);
       }
 
       const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
@@ -483,7 +483,7 @@ export default {
         CUSTOM_CONNECTORS: customRaw,
         CONNECTOR_CONNECTION_IDS: connectionIds,
       },
-      completedStep: 8,
+      completedStep: 9,
     };
   },
 };

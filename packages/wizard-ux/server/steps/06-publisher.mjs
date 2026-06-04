@@ -1,9 +1,10 @@
-// Step 5 — Solution & Publisher (solution-first, publisher auto-resolved).
+// Step 6 — Solution & Publisher (solution-first, publisher auto-resolved).
 import { dirname, resolve, join } from 'node:path';
 import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dvGet, dvPost, hasUsableSecret, setSecret, clearSecret } from '../lib/dataverse-bridge.mjs';
+import { parsePacTabularRows } from '../lib/pac-parse.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
@@ -50,55 +51,6 @@ function getMakerPortalLink() {
 function extractSolutionIdFromUrl(url) {
   const m = String(url).match(/\/solutions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   return m ? m[1].toLowerCase() : null;
-}
-
-/**
- * Parse PAC CLI column-aligned tabular output into an array of row objects.
- * Finds the header line (containing known column keywords), determines column
- * boundaries from header token positions, and slices each subsequent data line
- * by those boundaries. Handles multi-word values (e.g. "Climb Tracker") and
- * aliased columns (e.g. "pub.customizationprefix").
- */
-function parsePacTabularRows(output, headerHints) {
-  const allLines = output.split(/\r?\n/);
-  const hints = headerHints || ['uniquename', 'solutionid', 'friendlyname'];
-
-  // Find the header line — first line containing at least one of the hints.
-  let headerIdx = -1;
-  for (let i = 0; i < allLines.length; i++) {
-    const lower = allLines[i].toLowerCase();
-    if (hints.some((h) => lower.includes(h))) {
-      headerIdx = i;
-      break;
-    }
-  }
-  if (headerIdx < 0) return [];
-
-  const headerLine = allLines[headerIdx];
-
-  // Extract column names and their start positions from the header.
-  const cols = [];
-  const re = /\S+/g;
-  let m;
-  while ((m = re.exec(headerLine)) !== null) {
-    cols.push({ name: m[0].toLowerCase(), start: m.index });
-  }
-
-  // Parse each data line after the header.
-  const rows = [];
-  for (let i = headerIdx + 1; i < allLines.length; i++) {
-    const line = allLines[i];
-    if (!line.trim()) continue;
-    if (/^(Connected|Microsoft|Version:|Online|Feedback)/i.test(line.trim())) continue;
-    const row = {};
-    for (let c = 0; c < cols.length; c++) {
-      const start = cols[c].start;
-      const end = c < cols.length - 1 ? cols[c + 1].start : line.length;
-      row[cols[c].name] = (start < line.length ? line.slice(start, end) : '').trim();
-    }
-    if (Object.values(row).some((v) => v)) rows.push(row);
-  }
-  return rows;
 }
 
 /**
@@ -248,7 +200,7 @@ async function fetchSolutionViaApi(solutionId) {
 
 export default {
   meta: {
-    number: 5,
+    number: 6,
     title: 'Solution & Publisher',
     description: 'Select or create the Power Platform solution for your Code App. The publisher (prefix) is resolved automatically from the solution.',
     canRunInBrowser: true,
@@ -436,7 +388,7 @@ export default {
   async apply(answers, state, log) {
     if (answers.__resume) {
       log.ok(`Reusing solution: ${state.SOLUTION_DISPLAY_NAME} (prefix: ${state.PUBLISHER_PREFIX})`);
-      return { stateUpdate: {}, completedStep: 5 };
+      return { stateUpdate: {}, completedStep: 6 };
     }
 
     const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
@@ -466,7 +418,7 @@ export default {
       log.ok(`Solution: ${sol.friendlyname || sol.uniquename}`);
       log.ok(`Publisher: ${sol.publisherFriendlyName || sol.publisherUniqueName || '?'} (prefix: ${sol.prefix})`);
       clearSecret();
-      return { stateUpdate: buildStateUpdate(sol), completedStep: 6 };
+      return { stateUpdate: buildStateUpdate(sol), completedStep: 7 };
     }
 
     // ── Selected an existing solution from dropdown ──
@@ -489,7 +441,7 @@ export default {
             PUBLISHER_PREFIX: pub?.customizationprefix || '',
             CHOICE_VALUE_PREFIX: String(pub?.customizationoptionvalueprefix || ''),
           },
-          completedStep: 6,
+          completedStep: 7,
         };
       }
       // User auth: selected from dropdown (came from pac env fetch)
@@ -498,7 +450,7 @@ export default {
       if (!sol?.solutionid) throw new Error('Could not fetch solution details. Try pasting the solution URL instead.');
       log.ok(`Solution: ${sol.friendlyname || sol.uniquename}`);
       log.ok(`Publisher prefix: ${sol.prefix || '?'}`);
-      return { stateUpdate: buildStateUpdate(sol), completedStep: 6 };
+      return { stateUpdate: buildStateUpdate(sol), completedStep: 7 };
     }
 
     // ── Create new ──
@@ -527,7 +479,7 @@ export default {
           PUBLISHER_PREFIX: manualPrefix,
           CHOICE_VALUE_PREFIX: '',
         },
-        completedStep: 6,
+        completedStep: 7,
       };
     }
 
@@ -559,7 +511,7 @@ export default {
         PUBLISHER_PREFIX: pubData.customizationprefix || '',
         CHOICE_VALUE_PREFIX: String(pubData.customizationoptionvalueprefix || ''),
       },
-      completedStep: 6,
+      completedStep: 7,
     };
   },
 };

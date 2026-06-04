@@ -161,6 +161,27 @@ In these cases, probe for:
 4. Separation of duties
 5. Escalation and exception review
 
+## Data Isolation & Organizational Boundaries
+
+Many enterprise solutions need records to be partitioned so that one part of the organization cannot see another part's data, or so that ownership and approval routing follow the org chart. This shapes the Dataverse **business unit / owner team / security group** model later (`07b-org-structure-and-security.instructions.md`), so surface it during shaping — not after the schema is frozen.
+
+Probe for:
+
+1. **Who-sees-what boundaries** — Should a region, department, branch, franchise, or client only see its own records? Or is all data visible org-wide?
+2. **Ownership scoping** — Are records owned by an individual, or by a group/department that should retain access as people come and go?
+3. **Approval routing along the org chart** — Do approvals escalate to a manager, a department lead, or a cross-functional review team?
+4. **External/partner isolation** — Will vendors, partners, or customers ever access the app, and must their data be walled off from internal data and from each other?
+5. **Membership source of truth** — Should access groups mirror an existing Entra ID (Azure AD) security group, an HR department list, or be managed manually inside Dataverse?
+
+Reason out loud about what each answer implies:
+
+- A who-sees-what boundary usually implies **business units** (org-scoped row ownership).
+- A "the group keeps access, not the person" requirement usually implies **owner teams**.
+- "Mirror our existing security group" usually implies an **Entra security group → Dataverse team** linkage (AAD-group team).
+- "Everyone sees everything, ownership is just for accountability" usually implies a **single business unit with user-owned records** — do not over-engineer isolation that the business does not need.
+
+If the user has not considered isolation at all, raise it as a gap before conceptual modeling. If they explicitly want flat, org-wide visibility, record that decision so `07b` does not invent unnecessary business units or teams.
+
 ## Preferred Response Shape
 
 When helpful, structure the response in this order:
@@ -183,6 +204,7 @@ By the end of this phase, Copilot should be able to produce:
 - A preliminary automation-placement view
 - A preliminary Teams / Office / Copilot suitability view
 - A summary of reporting, governance, and control concerns
+- A preliminary data-isolation / organizational-boundary view (who-sees-what, ownership scoping, Entra-group linkage)
 
 Once those are strong enough, proceed to conceptual modeling and Dataverse planning.
 

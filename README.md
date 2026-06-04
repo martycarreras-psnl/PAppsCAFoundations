@@ -56,12 +56,8 @@ All five packages are published to public npm under [`@pacaf/*`](https://www.npm
 | `pacaf-update` | Refresh `@pacaf/scripts` + `@pacaf/agent-instructions` and re-sync instruction files |
 | `pacaf-migrate-thin` | Convert a derived repo from the in-tree tooling layout to consume `@pacaf/*` packages |
 | `pacaf-instructions` | `sync` / `check` / `list` agent-guidance projections |
-| `pacaf-validate` | Validate a Dataverse `planning-payload.json` against the schema |
-| `pacaf-generate` | Generate a Dataverse plan from a planning artifact |
-| `pacaf-register` | Register a Dataverse data source as a Code App connector |
 | `pacaf-seed` | Seed prototype assets (mock providers, hooks, components) |
 | `pacaf-discover-connection` | Discover existing Power Platform connections by API ID |
-| `pacaf-export-solution` | Export a Power Platform solution as `.zip` |
 | `pacaf-pac` / `pacaf-pac-safe` | Wrappers around `pac` CLI with retry + error normalization |
 | `pacaf-setup-auth` | Idempotent PAC auth profile bootstrap |
 | `pacaf-patch-datasources` | Patch `power.config.json` data source info |

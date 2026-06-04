@@ -160,7 +160,7 @@ const useStyles = makeStyles({
 export function StepRunner() {
   const s = useStyles();
   const params = useParams();
-  const stepNumber = Math.max(1, Math.min(10, parseInt(params.n || '1', 10)));
+  const stepNumber = Math.max(1, Math.min(11, parseInt(params.n || '1', 10)));
   const navigate = useNavigate();
   const qc = useQueryClient();
 

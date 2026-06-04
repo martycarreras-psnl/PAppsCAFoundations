@@ -104,27 +104,18 @@ npm run prototype:seed
 
 Repeat steps 4 to 6 until the workflow and data model feel stable.
 
-### 7. Validate and generate Dataverse execution plans
+### 7. Provision the Dataverse schema
 
-Run:
+With the planning payload stable, drive the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin to provision the schema. Discover existing tables first (`07a`), then create the tables, columns, relationships, and option sets with the `dv-metadata` skill.
 
-```bash
-pacaf-validate dataverse/planning-payload.json
-pacaf-generate dataverse/planning-payload.json
-```
+If the planning payload's `orgStructure` section defines data-isolation boundaries (business units, owner teams, Entra security groups, role mappings), provision them next with `07b-org-structure-and-security.instructions.md`. Skip this when the app uses flat, org-wide visibility — do not invent business units or teams.
 
-Outputs:
+### 8. Register the tables as Code App data sources
 
-- `dataverse/provision-tables.plan.json`
-- `dataverse/provision-relationships.plan.json`
-- `dataverse/register-datasources.plan.json`
-
-### 8. Provision schema and register data sources
-
-After schema provisioning is complete, register the tables with the Code App:
+After schema provisioning is complete, register each table with the Code App via the add-dataverse skill, which drives:
 
 ```bash
-pacaf-register dataverse/register-datasources.plan.json
+pac code add-data-source -a dataverse -t <logical_table_name>
 ```
 
 This is the point where `src/generated/**` becomes available.
@@ -156,10 +147,10 @@ Prototype asset generation test:
 node --test scripts/tests/seed-prototype-assets.test.mjs
 ```
 
-Planning payload validation:
+Schema discovery (Dataverse-skills plugin):
 
-```bash
-pacaf-validate dataverse/planning-payload.json
+```text
+list_tables          # confirm the environment is reachable and inspect existing tables
 ```
 
 ## Anti-Patterns

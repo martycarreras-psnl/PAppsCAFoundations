@@ -142,7 +142,7 @@ If the developer chooses option 3 ("proceed anyway"), the agent must:
    ```
 2. **Propose a hybrid design when appropriate.** If the override is "we have *both* internal and external reviewers," the agent should still suggest a `contact`-targeted Lookup as the modeling primitive for external parties, rather than a fully custom person table.
 3. **Not re-raise the same pause for the same table later in the session.** The override stands until the developer revisits it.
-4. **Still apply the reserved-name guard.** `pacaf-validate` will continue to reject names that collide with reserved Dataverse names (`account`, `contact`, `systemuser`, `owner`, `user`, `team`, etc.) — overrides cannot bypass the validator's reserved set, only the OOB-recommendation pause.
+4. **Still apply the reserved-name guard.** The reserved-name and reserved-column guards (see *Reserved-Name & Reserved-Column Guard* below) still reject names that collide with reserved Dataverse names (`account`, `contact`, `systemuser`, `owner`, `user`, `team`, etc.). An override clears the OOB-recommendation pause — it does **not** clear the reserved-name rule.
 
 ## Discovery — How the Agent Actually Checks
 
@@ -150,17 +150,20 @@ Before raising or skipping a Pause Moment, the agent must discover what's alread
 
 ### Preferred — Dataverse-skills plugin
 
-```bash
+Discovery is owned by the plugin's **dv-query** / **dv-metadata** skills. Use the MCP tools directly:
+
+```text
 # List all tables in the environment, including OOB
-# (use dv-query / dv-metadata depending on version)
-dv-metadata list-tables --environment $PP_ENV_DEV --include-system
+list_tables                     # dv-query / dv-metadata MCP tool
 
 # Inspect a candidate OOB table to see its columns
-dv-metadata describe-table --table systemuser --environment $PP_ENV_DEV
+describe_table systemuser       # returns columns, RequiredLevel, attribute types
 
 # Look for an existing custom table that may already model the concept
-dv-metadata list-tables --environment $PP_ENV_DEV --filter "schemaName startswith '<prefix>_'"
+list_tables  (then filter the result to schema names starting '<prefix>_')
 ```
+
+The plugin resolves the target environment from the active PAC profile, so there is no environment URL to pass.
 
 ### Fallback — Web API
 
@@ -216,7 +219,19 @@ There are legitimate "yes, build a custom table" cases. The agent should not Pau
 | You need an immutable audit trail beyond Dataverse's audit feature. | A custom append-only table is a valid pattern. |
 | You're modeling external entities that will never have Entra identities (e.g. an applicant who isn't a contact yet). | A custom or `contact`-augmented design is reasonable. |
 
-In these cases the Pause Moment is unnecessary — but the **reserved-name and reserved-column guards from `pacaf-validate` still apply**.
+In these cases the Pause Moment is unnecessary — but the **reserved-name and reserved-column guards below still apply**.
+
+## Reserved-Name & Reserved-Column Guard
+
+This guard used to live in a `pacaf-validate` script. It is now **agent-enforced prose** — apply it by reasoning, before you call `dv-metadata` to create anything. An OOB-override clears the duplication pause but never this guard.
+
+**Reserved table names — never create a custom table with these schema/logical names** (they collide with OOB platform tables): `account`, `contact`, `systemuser`, `user`, `owner`, `team`, `businessunit`, `role`, `task`, `email`, `appointment`, `phonecall`, `annotation`, `queue`, `queueitem`, `incident`, `opportunity`, `activitypointer`. If your concept maps to one of these, reuse the OOB table (Rule 1) instead.
+
+**Reserved / dangerous column names — never create a custom column with these unprefixed names** (they collide with platform columns or the global lifecycle): `status`, `state`, `statecode`, `statuscode`, `owner`, `ownerid`, `createdby`, `createdon`, `modifiedby`, `modifiedon`, `name`. Prefer specific, publisher-prefixed names such as `<prefix>_projectstatus`, `<prefix>_requestowner`, or `<prefix>_taskstage`.
+
+**Naming format guard** — every custom schema name must be `^<publisherprefix>_[a-z][a-z0-9_]*$`: all lowercase, publisher prefix, underscores only, no camelCase, no hyphens. Reject names that omit the prefix (they collide across orgs) or use mixed case.
+
+If a proposed name violates any of the three lists above, stop and rename before provisioning — these collisions are silent and expensive to unwind after data exists.
 
 ## Handoff to `07-dataverse-schema.instructions.md`
 

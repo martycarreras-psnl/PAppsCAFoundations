@@ -194,6 +194,18 @@
       }
     },
     {
+      "id": "07b-org-structure-and-security",
+      "canonical": "07b-org-structure-and-security.instructions.md",
+      "role": "implementation",
+      "scope": { "applyTo": "scripts/**,src/**,solution/**,dataverse/**" },
+      "description": "Read when a solution needs organizational data isolation or group-based ownership — business units, owner teams, Entra ID security groups, and the role mappings that wire them together. Fills a Dataverse-skills plugin gap: the agent drives the plugin's Python SDK (businessunit / team records) plus az ad group for Entra groups. Runs after schema provisioning (07) when the orgStructure section of the planning payload is populated.",
+      "projections": {
+        "claude": { "file": ".claude/rules/org-structure-and-security.md", "mode": "summary", "paths": ["scripts/**", "src/**", "solution/**", "dataverse/**"] },
+        "cursor": { "file": ".cursor/rules/07b-org-structure-and-security.mdc", "globs": "scripts/**,src/**,solution/**,dataverse/**" },
+        "codex": { "file": "scripts/AGENTS.md", "mode": "combined" }
+      }
+    },
+    {
       "id": "08-copilot-studio",
       "canonical": "08-copilot-studio.instructions.md",
       "role": "implementation",

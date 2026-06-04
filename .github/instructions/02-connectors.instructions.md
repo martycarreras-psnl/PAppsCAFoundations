@@ -55,6 +55,8 @@ pac code add-data-source -a dataverse -t <logical_table_name>
 pac code add-data-source -a <connector_api_id> -c <connection_id>
 ```
 
+> **Dataverse tables are owned by the Dataverse-skills plugin.** Provision the table first via the plugin's **dv-metadata** skill (see `07-dataverse-schema.instructions.md`), then register it as a Code App data source. The **add-dataverse** skill drives the `pac code add-data-source -a dataverse -t <table>` registration and regenerates `src/generated/**`. There is no `pacaf-register` script — registration is the agent driving the plugin + PAC CLI.
+
 When a developer is ready to bind a non-Dataverse connector, first try to discover existing connections in the environment:
 
 ```bash

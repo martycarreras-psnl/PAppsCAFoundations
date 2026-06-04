@@ -65,25 +65,17 @@ The plan file is the handoff between planning and execution. It should define:
 1. `domains` — business areas / language used by the app
 2. `tables` — table metadata, logical names, and attributes
 3. `relationships` — lookup relationships and lookup column names
-4. `provisioningPlansJson` — executable payload shape for future orchestration scripts
+4. `provisioningPlansJson` — executable payload shape for downstream provisioning
 
-### Foundation helper workflow
+### Execution workflow — drive the Dataverse-skills plugin
 
-Foundations now provides a reusable script chain for this handoff:
+The planning artifact is the handoff between planning and execution. Once it exists, **provision the schema by driving the Dataverse-skills plugin directly** — the plugin owns table/column/relationship/option-set creation:
 
-```bash
-pacaf-validate dataverse/planning-payload.json
-pacaf-generate dataverse/planning-payload.json
-pacaf-register dataverse/register-datasources.plan.json
-```
+1. **Discover first.** Run the existing-schema / OOB-first decision flow in `07a-existing-schema-discovery.instructions.md` (backed by the plugin's `dv-query` `list_tables` / `describe_table`). Resolve every Pause Moment before creating anything.
+2. **Provision with `dv-metadata`.** Walk the `tables`, `relationships`, and option-set entries in `dataverse/planning-payload.json` and create them through `dv-metadata`, in the golden sequence below. Confirm the solution at the start of the session so every artifact lands in your solution (not the Default Solution).
+3. **Register Dataverse data sources** for the Code App via the **add-dataverse** skill plus `pac code add-data-source -a dataverse -t <table>`, which regenerates `src/generated/**` for each table.
 
-- `validate-schema-plan.mjs` checks the planning artifact before any provisioning work starts
-- `generate-dataverse-plan.mjs` emits normalized execution plans for tables, relationships, and connector registration
-- `register-dataverse-data-sources.mjs` consumes the generated registration plan and runs `pac code add-data-source` in order, refreshing generated connector output as each table is registered
-
-Prefer the `.mjs` entry points for cross-platform automation. The `.sh` variant exists for Bash-heavy environments but is not the canonical path for Windows.
-
-Use these helpers as the default execution path in downstream repos. If you replace them, the alternative must still preserve the same ordered contract and re-runnable plan artifacts.
+The planning artifact remains the re-runnable source of truth: it records every naming decision and lets you re-provision a fresh environment by replaying the same `dv-metadata` calls. There is no separate `pacaf-validate` / `pacaf-generate` / `pacaf-register` step — the agent reads the plan and drives the plugin. The reserved-name and reserved-column guards (below) are enforced by agent reasoning during provisioning, not by a script.
 
 ### Required naming data in the schema plan
 
@@ -724,13 +716,14 @@ npm install @microsoft/power-apps@^1.0.3
 
 The agent uses the planning artifact (`dataverse/planning-payload.json`) to drive `dv-metadata` for schema provisioning, then returns to this repo's data-source registration:
 
-1. Validate: `pacaf-validate dataverse/planning-payload.json`
-2. Generate plans: `pacaf-generate dataverse/planning-payload.json`
-3. Provision via `dv-metadata`: Create global option sets, tables, columns, relationships (the plugin handles idempotency and propagation delays)
-4. Create security role via `dv-security` or `dv-metadata`
-5. Publish: The plugin calls `PublishAllXml` automatically after metadata changes
-6. Register data sources: `pacaf-register dataverse/register-datasources.plan.json`
-7. Install SDK: `npm install @microsoft/power-apps@^1.0.3`
+1. Discover existing schema first (`07a`): `list_tables` / `describe_table` to find OOB or existing tables to reuse
+2. Provision via `dv-metadata`: Create global option sets, tables, columns, relationships (the plugin handles idempotency and propagation delays)
+3. Create security role via `dv-security` or `dv-metadata`
+4. Publish: The plugin calls `PublishAllXml` automatically after metadata changes
+5. Register data sources: `pac code add-data-source -a dataverse -t <table>` for each provisioned table (driven by the add-dataverse skill)
+6. Install SDK: `npm install @microsoft/power-apps@^1.0.3`
+
+There is no `pacaf-validate` / `pacaf-generate` / `pacaf-register` step — the planning payload is the re-runnable source of truth and the agent drives the plugin + PAC CLI directly.
 
 **Without the plugin (fallback):**
 
