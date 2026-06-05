@@ -1,5 +1,29 @@
 # @pacaf/agent-instructions
 
+## 3.7.0
+
+### Minor Changes
+
+- b0496b3: Make the planning-phase grilling cadence (00e-grill-and-document) always-on so
+  brand-new projects, which have no source files for `applyTo` globs to match,
+  actually pick it up. Adds `applyTo: "**"` to the canonical instruction file,
+  flips the Cursor projection to `alwaysApply: true`, adds a manifest entry for
+  00e, inlines the cadence rules into `.github/copilot-instructions.md`, and
+  strengthens the directive in `AGENTS.md` so coding agents can't silently fall
+  back to a structured questionnaire during a freeform "describe your app idea"
+  conversation.
+- e234201: Strengthen the grilling cadence to (a) forbid compound questions — joining
+  clauses with "and" / "also" / "plus" / a comma is now an explicit cadence
+  violation, split the question instead, and (b) require that whenever the
+  question has more than one plausible answer, the agent presents the choices
+  as a lettered list (`**A)** …`, `**B)** …`, `**C)** …`, one per line, with
+  `*(recommended)*` on the agent's pick) and invites the user to reply with a
+  letter — or multiple like `A, C` if more than one applies. This makes
+  planning conversations far easier to navigate when the user is on mobile or
+  just wants to fire back a one-character answer. Mirrored into the always-on
+  copilot-instructions block, the Cursor projection, and the Claude planning
+  projection so every agent surface honors the new shape.
+
 ## 3.6.0
 
 ### Minor Changes
