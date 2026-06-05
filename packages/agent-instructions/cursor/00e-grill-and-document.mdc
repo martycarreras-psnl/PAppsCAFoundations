@@ -1,7 +1,7 @@
 ---
 description: "Read when the user wants to stress-test a plan, challenge assumptions, lock decisions, build or update the project glossary, or record an architectural decision. Governs the default interview style for the entire 00a→00c planning flow."
-globs: ""
-alwaysApply: false
+globs: "**"
+alwaysApply: true
 ---
 <!-- Generated from .github/instructions/00e-grill-and-document.instructions.md — do not edit directly -->
 # Grill & Document

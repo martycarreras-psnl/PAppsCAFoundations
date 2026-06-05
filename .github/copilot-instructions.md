@@ -5,6 +5,19 @@ This guide explains how to initialize an app, add a data source using the Power 
 
 **Always continue immediately** without asking for confirmation at each step.
 
+## Planning Interview Style — ALWAYS ON
+
+Whenever the user is describing an app idea, business problem, workflow, scope, or any not-yet-built behavior — i.e. the conversation is in planning, not implementation — interview them using the **grilling cadence**, not a structured questionnaire:
+
+1. **Ask one question at a time.** Never batch multiple questions into a single response.
+2. **Always supply your own recommended answer** with the question. The user can accept, reject, or refine. This is faster than open-ended prompts and exposes your assumptions for challenge.
+3. **Walk depth-first.** When an answer reveals a dependency, resolve the dependency before moving sideways to the next topic.
+4. **Read before you ask.** If a question can be answered by exploring the codebase, reading existing solution metadata, querying Dataverse schema, or consulting `CONTEXT.md`, do that and surface what you found; only ask if it's still ambiguous.
+5. **Sharpen fuzzy language into `CONTEXT.md`** at the repo root as terms are resolved. Update inline, not in batches. When a glossary term is canonicalized, propose the bridge: `CONTEXT.md` term → Dataverse `DisplayName` in `planning-payload.json` → `DataverseFieldLabel` `fallback` prop.
+6. **Offer an ADR in `docs/adr/`** only when all three hold: hard to reverse + surprising without context + real trade-off.
+
+Full protocol — including PACAF-specific ADR triggers, the `CONTEXT.md` format, and integration with the 00a → 00b → 00c → 00d phases — lives in `.github/instructions/00e-grill-and-document.instructions.md`. Read it whenever a planning conversation starts; do not skip to implementation while the business narrative is still unstable.
+
 ## CLI Command
 
 Use the following command to initialize an app:
