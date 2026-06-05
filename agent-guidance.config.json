@@ -92,6 +92,18 @@
       }
     },
     {
+      "id": "00e-grill-and-document",
+      "canonical": "00e-grill-and-document.instructions.md",
+      "role": "planning",
+      "scope": { "applyTo": "**" },
+      "description": "Default interview style for the entire 00a→00c planning flow: one question at a time with the agent's recommended answer, depth-first dependency resolution, living CONTEXT.md glossary, and lightweight ADRs for hard-to-reverse decisions. Always-on so brand-new projects (which have no files yet for applyTo to match) still pick it up.",
+      "projections": {
+        "claude": { "file": ".claude/rules/planning.md", "mode": "combined" },
+        "cursor": { "file": ".cursor/rules/00e-grill-and-document.mdc", "globs": "**", "alwaysApply": true },
+        "codex": null
+      }
+    },
+    {
       "id": "01-scaffold",
       "canonical": "01-scaffold.instructions.md",
       "role": "implementation",

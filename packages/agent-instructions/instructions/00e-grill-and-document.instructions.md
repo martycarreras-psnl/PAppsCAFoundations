@@ -1,4 +1,5 @@
 ---
+applyTo: "**"
 description: "Read this file when the user wants to stress-test a plan, challenge assumptions, lock decisions, build or update the project glossary, or record an architectural decision. Use this guidance to interview the user one question at a time against the existing domain model, sharpen terminology into CONTEXT.md, and capture hard-to-reverse decisions as ADRs. Do NOT batch questions or skip to implementation."
 ---
 

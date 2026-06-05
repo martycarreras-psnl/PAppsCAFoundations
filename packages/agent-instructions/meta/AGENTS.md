@@ -48,6 +48,8 @@ For a non-trivial app, also read [docs/prototype-golden-path.md](docs/prototype-
 
 During the planning phase (00a → 00b → 00c), the default interview style is the **grilling cadence** defined in [.github/instructions/00e-grill-and-document.instructions.md](.github/instructions/00e-grill-and-document.instructions.md): one question at a time with the agent's recommended answer, depth-first dependency resolution, a living glossary in `CONTEXT.md` at the repo root, and lightweight ADRs in `docs/adr/` for hard-to-reverse decisions. Consult `CONTEXT.md` before introducing any new business term and update it inline as terms are sharpened.
 
+**Do not treat the cadence as optional.** It is the default for any conversation in which the user is describing an idea, scope, workflow, or behavior that has not yet been built — even on a brand-new clone where no source files exist for `applyTo` globs to match. If you find yourself asking two questions in one turn, listing options without a recommendation, or producing a long requirements outline, you are violating the cadence. Stop and re-ask one question with a recommended answer.
+
 ## Mandatory Starting Move For A Fresh Clone
 
 If the repository has no `src/`, no `power.config.json`, and no `package.json` at the root, the user has not yet run the setup wizard. Before generating any application code, direct them to run the **browser-based Wizard UX**:
