@@ -5,12 +5,13 @@ These rules govern the planning phase before any code or schema exists.
 
 ## Grilling Cadence (00e — default for all planning phases)
 The interview style from `00e-grill-and-document.instructions.md` applies throughout 00a → 00b → 00c:
-1. One question at a time; always supply the agent's recommended answer
-2. Walk the design tree depth-first — resolve dependencies before moving sideways
-3. If a question can be answered by reading code, solution metadata, or Dataverse schema, read instead of asking
-4. Challenge against `CONTEXT.md` when the user's terminology conflicts with established glossary entries
-5. Sharpen fuzzy language: propose a precise canonical term, update `CONTEXT.md` inline
-6. Offer ADRs in `docs/adr/` only when all three hold: hard to reverse + surprising without context + real trade-off
+1. One **atomic** question at a time; always supply the agent's recommended answer. Never compound — if you'd join clauses with "and", "also", "plus", or a comma, split it and ask the first half only.
+2. When the question has multiple plausible answers, present them as a lettered list: `**A)** …`, `**B)** …`, `**C)** …` (one per line), mark your recommendation with `*(recommended)*`, and invite the user to reply with a letter — or multiple like `A, C` if more than one applies.
+3. Walk the design tree depth-first — resolve dependencies before moving sideways
+4. If a question can be answered by reading code, solution metadata, or Dataverse schema, read instead of asking
+5. Challenge against `CONTEXT.md` when the user's terminology conflicts with established glossary entries
+6. Sharpen fuzzy language: propose a precise canonical term, update `CONTEXT.md` inline
+7. Offer ADRs in `docs/adr/` only when all three hold: hard to reverse + surprising without context + real trade-off
 
 Adapted with thanks from Matt Pocock's "grill-with-docs" skill (https://github.com/mattpocock/skills, MIT © 2026 Matt Pocock). PACAF-specific additions: Dataverse-aware glossary bridge, Code-App ADR trigger list, planning-payload integration.
 

@@ -9,13 +9,15 @@ alwaysApply: true
 Adapted with thanks from Matt Pocock's "grill-with-docs" skill (https://github.com/mattpocock/skills, MIT © 2026 Matt Pocock). PACAF-specific additions: Dataverse-aware glossary bridge, Code-App ADR trigger list, planning-payload integration.
 
 ## Grilling Cadence (default for all planning phases)
-1. One question at a time; always supply the agent's recommended answer
-2. Walk the design tree depth-first — resolve dependencies before moving sideways
-3. If a question can be answered by reading code, solution metadata, or Dataverse schema, read instead of asking
-4. Challenge against `CONTEXT.md` when the user's terminology conflicts with established glossary entries
-5. Sharpen fuzzy language: propose a precise canonical term, update `CONTEXT.md` inline
-6. Discuss concrete scenarios to probe edge cases
-7. Cross-reference with code when the user states how something works
+1. One **atomic** question at a time; never compound (no joining clauses with "and", "also", "plus", or a comma — split it)
+2. Always supply the agent's recommended answer
+3. When the question has multiple plausible answers, present them as a lettered list: `**A)** …`, `**B)** …`, `**C)** …` (one per line), mark your recommendation with `*(recommended)*`, and invite the user to reply with a letter — or multiple like `A, C` if more than one applies
+4. Walk the design tree depth-first — resolve dependencies before moving sideways
+5. If a question can be answered by reading code, solution metadata, or Dataverse schema, read instead of asking
+6. Challenge against `CONTEXT.md` when the user's terminology conflicts with established glossary entries
+7. Sharpen fuzzy language: propose a precise canonical term, update `CONTEXT.md` inline
+8. Discuss concrete scenarios to probe edge cases
+9. Cross-reference with code when the user states how something works
 
 ## CONTEXT.md — Living Glossary
 - Lives at repo root. Created lazily on the first sharpened term.

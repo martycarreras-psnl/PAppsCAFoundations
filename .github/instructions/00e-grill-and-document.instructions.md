@@ -47,14 +47,25 @@ This phase may be entered at any point during 00a, 00b, or 00c when ambiguity re
 
 Rules:
 
-1. **One question per turn.** Do not batch multiple questions into a single response.
+1. **One atomic question per turn.** Do not batch multiple questions into a single response. A compound question like *"What's your primary user role, and how do they sign in?"* is two questions — split it and ask the first one only. If you catch yourself joining clauses with "and", "also", "plus", or a comma, stop and re-ask the first half alone.
 2. **Always supply a recommended answer.** The user can accept, reject, or refine it. This is faster than open-ended prompts and exposes the agent's assumptions for challenge.
-3. **Walk depth-first.** When a question reveals a dependency, resolve the dependency before moving sideways to the next topic.
-4. **Read instead of ask.** If a question can be answered by exploring the codebase, reading the existing solution metadata, querying Dataverse schema, or consulting `CONTEXT.md`, do that instead of asking the user. Surface what you found and ask only if it is ambiguous.
-5. **Challenge against the glossary.** When the user uses a term that conflicts with an existing entry in `CONTEXT.md`, call it out immediately: *"Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"*
-6. **Sharpen fuzzy language.** When the user uses a vague or overloaded term, propose a precise canonical term: *"You're saying 'account' — do you mean the Customer or the User? Those are different things in this context."*
-7. **Discuss concrete scenarios.** When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
-8. **Cross-reference with code.** When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: *"Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"*
+3. **Present options as a lettered list — every time.** Whenever the question has more than one plausible answer, lay the choices out as `**A)** …`, `**B)** …`, `**C)** …`, etc., one per line. Mark your recommendation with `*(recommended)*` after the option text. End the question by inviting the user to reply with just a letter — and tell them they can pick more than one (e.g. *"reply with a letter, or several like `A, C` if more than one applies"*) so a multi-select answer is always a legitimate response. Never bury the options inline in the question text or list them as parenthetical hints. If the answer is genuinely open-ended (e.g. "what's the project's name?"), say so and skip the list.
+
+   Example shape:
+
+   > **Where should approval routing live?**
+   >
+   > **A)** A Power Automate cloud flow triggered on record create *(recommended — easiest to evolve, surfaces in Approvals app)*
+   > **B)** A Custom API in Dataverse
+   > **C)** Inline in the Code App's submit handler
+   >
+   > Reply with a letter, or several like `A, C` if more than one applies.
+4. **Walk depth-first.** When a question reveals a dependency, resolve the dependency before moving sideways to the next topic.
+5. **Read instead of ask.** If a question can be answered by exploring the codebase, reading the existing solution metadata, querying Dataverse schema, or consulting `CONTEXT.md`, do that instead of asking the user. Surface what you found and ask only if it is ambiguous.
+6. **Challenge against the glossary.** When the user uses a term that conflicts with an existing entry in `CONTEXT.md`, call it out immediately: *"Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"*
+7. **Sharpen fuzzy language.** When the user uses a vague or overloaded term, propose a precise canonical term: *"You're saying 'account' — do you mean the Customer or the User? Those are different things in this context."*
+8. **Discuss concrete scenarios.** When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
+9. **Cross-reference with code.** When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: *"Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"*
 
 ---
 
