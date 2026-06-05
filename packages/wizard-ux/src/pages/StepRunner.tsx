@@ -18,6 +18,7 @@ import { StepNav } from '../components/StepNav';
 import { AddToSolutionStep } from '../components/AddToSolutionStep';
 import { isQuestionHidden, QuestionCard, QuestionGroupCard } from '../components/QuestionCard';
 import { LiveLog } from '../components/LiveLog';
+import { AgentHelpBanner } from '../components/AgentHelpBanner';
 import { api } from '../services/api';
 import { Question, QuestionGroup } from '../types/schema';
 import { gradients } from '../theme/tokens';
@@ -492,15 +493,21 @@ export function StepRunner() {
 
               {/* Error states — compact */}
               {apply.isError && (
-                <MessageBar intent="error">
-                  <MessageBarBody>{(apply.error as Error).message}</MessageBarBody>
-                </MessageBar>
+                <>
+                  <MessageBar intent="error">
+                    <MessageBarBody>{(apply.error as Error).message}</MessageBarBody>
+                  </MessageBar>
+                  <AgentHelpBanner stepNumber={stepNumber} variant="error" />
+                </>
               )}
 
               {stream.status === 'error' && (
-                <MessageBar intent="error">
-                  <MessageBarBody>{stream.error || 'Step failed — see output above.'}</MessageBarBody>
-                </MessageBar>
+                <>
+                  <MessageBar intent="error">
+                    <MessageBarBody>{stream.error || 'Step failed — see output above.'}</MessageBarBody>
+                  </MessageBar>
+                  <AgentHelpBanner stepNumber={stepNumber} variant="error" />
+                </>
               )}
 
               {/* Device code card — surface sign-in code prominently */}
@@ -567,6 +574,13 @@ export function StepRunner() {
                     {isLastStep ? 'View summary' : 'Continue now'}
                   </Button>
                 </div>
+              )}
+
+              {/* When a step completes with stderr lines, surface an agent-help
+                  banner alongside the success panel so the user knows they
+                  can have their coding agent triage the warnings. */}
+              {isComplete && hasWarnings && (
+                <AgentHelpBanner stepNumber={stepNumber} variant="warning" />
               )}
 
               {/* Step 7 long-running scaffold notice */}
