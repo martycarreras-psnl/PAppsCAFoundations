@@ -45,7 +45,29 @@ Do not ask for connection IDs during the initial scaffold if the app is still in
 3. Refine the planning payload based on prototype feedback
 4. Bind real connectors and data sources only when the model is stable
 
-### Via PAC CLI (preferred)
+### Use Code Apps plugin skills first (required)
+
+Before running any `pac code add-data-source` command, invoke the appropriate Code Apps plugin skill. The skills know the correct flags, connection ID format, and generated-service adapter pattern for each connector type. See `AGENTS.md` → "Power Apps Code Apps Skills Plugin Integration" for the full routing table.
+
+| Connector | Invoke |
+|---|---|
+| Dataverse table | `/add-dataverse` |
+| SharePoint | `/add-sharepoint` |
+| Teams | `/add-teams` |
+| Excel Online | `/add-excel` |
+| OneDrive | `/add-onedrive` |
+| Office 365 Outlook | `/add-office365` |
+| Azure DevOps | `/add-azuredevops` |
+| Copilot Studio agent | `/add-mcscopilot` |
+| Any other connector | `/add-connector` |
+| Unsure which to use | `/add-datasource` |
+| Need a connection ID | `/list-connections` |
+
+If the plugin is not installed, the hard gate in `00-prereq-gate.instructions.md` Step 9 applies — stop and direct the user to install it.
+
+### Via PAC CLI (executed by plugin skills)
+
+The plugin skills drive these commands on your behalf. Shown here for reference:
 
 ```bash
 # Dataverse tables
@@ -55,7 +77,7 @@ pac code add-data-source -a dataverse -t <logical_table_name>
 pac code add-data-source -a <connector_api_id> -c <connection_id>
 ```
 
-> **Dataverse tables are owned by the Dataverse-skills plugin.** Provision the table first via the plugin's **dv-metadata** skill (see `07-dataverse-schema.instructions.md`), then register it as a Code App data source. The **add-dataverse** skill drives the `pac code add-data-source -a dataverse -t <table>` registration and regenerates `src/generated/**`. There is no `pacaf-register` script — registration is the agent driving the plugin + PAC CLI.
+> **Dataverse tables are owned by the Dataverse-skills plugin.** Provision the table first via the plugin's **dv-metadata** skill (see `07-dataverse-schema.instructions.md`), then register it as a Code App data source. The Code Apps plugin's **`/add-dataverse`** skill drives the `pac code add-data-source -a dataverse -t <table>` registration and regenerates `src/generated/**`.
 
 When a developer is ready to bind a non-Dataverse connector, first try to discover existing connections in the environment:
 

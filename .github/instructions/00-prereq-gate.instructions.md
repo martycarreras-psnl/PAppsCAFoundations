@@ -307,6 +307,82 @@ Then **stop**. Do not attempt Dataverse operations, do not hand-roll Web API / F
 
 Re-run the three detection checks above. Only proceed once the plugin files are present, the SDK imports, **and** a Dataverse MCP tool call actually succeeds. If MCP tools still aren't reachable, the most common cause is a missing editor restart — say so and wait.
 
+## Step 9 — Code App scaffold / deploy / connector intent? HARD GATE on the Code Apps plugin
+
+All Code App scaffolding, deployment, and connector-binding work in this template is delegated to the **[microsoft/power-platform-skills Code Apps plugin](https://github.com/microsoft/power-platform-skills/tree/main/plugins/code-apps)**. The plugin is **not optional** — it is the first-class, only-supported path for these operations. If the user has any scaffold, deploy, or connector intent and the plugin is **not installed and verified**, you must **STOP** before attempting the operation.
+
+### When this gate fires
+
+Fire it whenever **any** of these are true:
+
+- The user asks to scaffold, create, or initialize a new Code App.
+- The user asks to build and deploy (`pac code push` or equivalent).
+- The user asks to add a data source, connector, or data binding of any kind (Dataverse, SharePoint, Teams, SQL, Excel, OneDrive, Office 365, Azure DevOps, or any other connector).
+- The user asks to list connections or get a connection ID.
+- A connector registration command (`pac code add-data-source`) fails or the user asks why generated files weren't created.
+
+This gate does **not** fire for planning phases (00a–00e), TypeScript/React component work inside `src/`, or reading and discussing existing code.
+
+### Detection (read-only — do this before declaring the plugin missing)
+
+The plugin install is **manual** (see why below). Detect it without trying to install it:
+
+1. **Plugin files present.** Check the agent's installed-plugins cache:
+   - **GitHub Copilot (VS Code or CLI):** `~/.copilot/installed-plugins/power-platform-skills/code-apps-preview/` exists, and `~/.copilot/config.json` lists an `installedPlugins[]` entry with `name == "code-apps-preview"` and `enabled == true`.
+   - **Claude Code:** the equivalent installed-plugins path under `~/.claude*` (e.g. `~/.claude/plugins/power-platform-skills/code-apps-preview/`).
+   ```bash
+   # macOS / Linux — Copilot
+   [ -d "$HOME/.copilot/installed-plugins/power-platform-skills/code-apps" ] \
+     && echo "✅ Code Apps plugin files present" \
+     || echo "❌ Code Apps plugin not found"
+   ```
+   > **Note:** The marketplace lists this plugin as `code-apps-preview`. If you see "not found" when searching for `code-apps`, use `code-apps-preview@power-platform-skills` instead.
+2. **Skills reachable.** Confirm the plugin's skills are available in your session (e.g. `/list-connections` is recognized). A freshly installed plugin only exposes its skills **after the editor/CLI is restarted**.
+
+If both pass, proceed with the Code App work normally by invoking the relevant skill.
+
+### If the plugin is missing — STOP
+
+You **cannot** reliably install the plugin for the user: `/plugin install` is an interactive slash command, not a scriptable shell subcommand, and hand-editing `~/.copilot/config.json` is fragile and unsupported. Detect only, then output a single STOP block:
+
+```
+🛑 Code Apps plugin required — install it before scaffold / deploy / connector work
+
+All Code App scaffolding, deployment, and connector operations in this template
+go through the power-platform-skills Code Apps plugin. It is not installed (or
+its skills aren't available yet).
+
+Install it in two steps — run these inside Claude Code or GitHub Copilot chat
+(not in the terminal):
+
+  Step 1 — Add the marketplace:
+    /plugin marketplace add microsoft/power-platform-skills
+
+  Step 2 — Install the plugin:
+    /plugin install code-apps-preview@power-platform-skills
+
+After installing, restart your editor so the plugin's skills load, then say
+"ready" and I'll verify before continuing.
+
+Why I can't do this for you: /plugin install is an interactive slash command
+that only works inside the agent chat UI. A terminal session cannot run it, and
+hand-editing config files is unsupported and fragile.
+
+Plugin README: https://github.com/microsoft/power-platform-skills/tree/main/plugins/code-apps
+```
+
+Then **stop**. Do not attempt to hand-roll `pac code add-data-source` steps, manually scaffold connector files, or work around the missing plugin. The plugin is the supported path.
+
+### Scaffolding override — wizard takes precedence over plugin degit
+
+The plugin's `/create-code-app` skill scaffolds using `npx degit microsoft/PowerAppsCodeApps/templates/vite`. **Do not use this for PACAF repos.** Instead, use `npx @pacaf/wizard-ux@latest` — it wires up publisher, solution, App Registration, and auth in the correct order. For all other plugin skills (`/deploy`, `/add-*`, `/list-connections`), invoke the plugin as normal.
+
+### When the user says "ready"
+
+Re-run the detection checks above. Only proceed once the plugin files are present **and** a plugin skill (e.g. `/list-connections`) is recognized in the session. If skills still aren't reachable, the most common cause is a missing editor restart — say so and wait.
+
+---
+
 ## Why this rule exists
 
 A coding agent's superpower is *speed inside a working environment*. Inside a *broken* environment, that same speed produces a flurry of confident-sounding terminal commands that all fail in slightly different ways, and the user ends up convinced PACAF is broken. The agent should refuse to play that game. One clear stop, one clear list, one link to a guide — then wait.
