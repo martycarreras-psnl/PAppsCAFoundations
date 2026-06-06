@@ -116,6 +116,88 @@ function findProfileIndexByName(pac, name) {
   return null;
 }
 
+/**
+ * Parse the raw stdout of `pac auth list` into structured rows. Columns are:
+ *   [index] [active*] Kind Name User ...
+ * The active flag is a `*` in the second column; it is absent for inactive
+ * profiles. Pure (no I/O) so it can be unit-tested against captured fixtures.
+ */
+export function parseAuthListOutput(stdout) {
+  const rows = [];
+  for (const line of String(stdout || '').split(/\r?\n/)) {
+    const m = line.match(/^\s*\[(\d+)\]\s*(\*?)\s+(\S+)\s+(\S+)\s+(\S+)/);
+    if (!m) continue;
+    rows.push({
+      index: Number(m[1]),
+      active: m[2] === '*',
+      kind: m[3],
+      name: m[4],
+      user: m[5].trim(),
+    });
+  }
+  return rows;
+}
+
+/**
+ * Given parsed profiles and the name we intend to keep, return the stale
+ * duplicates: other profiles sharing the same user + kind as the kept profile.
+ * Pure so the duplicate-detection rules can be unit-tested directly.
+ */
+export function selectDuplicateProfiles(profiles, keepName) {
+  const keep = profiles.find((p) => p.name === keepName);
+  if (!keep) return [];
+  return profiles.filter(
+    (p) => p.name !== keepName && p.user === keep.user && p.kind === keep.kind,
+  );
+}
+
+/**
+ * Detect the signature of the corrupted-auth-store crash so we can surface an
+ * actionable remediation instead of the raw pac stack trace. The
+ * "Sequence contains..." line lands in pac-log.txt; the console shows the
+ * generic non-recoverable error / InvalidOperationException.
+ */
+export function isDuplicateAuthStoreError(output) {
+  const s = String(output || '');
+  return /Sequence contains more than one matching element/i.test(s)
+    || /non-recoverable error/i.test(s)
+    || /InvalidOperationException/i.test(s);
+}
+
+/** Fetch and parse `pac auth list` into structured rows. */
+function parseAuthProfiles(pac) {
+  const res = SHELL.runSafeCapture(pac, ['auth', 'list']);
+  if (!res.ok) return [];
+  return parseAuthListOutput(res.stdout);
+}
+
+/**
+ * Pre-flight auth hygiene. `pac auth name` crashes with
+ * "Sequence contains more than one matching element" when the local auth store
+ * holds duplicate profiles for the same user (a known pac CLI bug — its
+ * AuthProfiles.Update uses SingleOrDefault). Prior wizard runs in other folders
+ * leave stale `pp-<slug>-*` profiles behind, which is exactly the trigger.
+ *
+ * Before renaming the discovery profile, delete any *other* profile that shares
+ * the same user + kind as the profile we're keeping. The discovery profile was
+ * freshly authenticated for the current user in Step 4, so same-user leftovers
+ * are stale and safe to remove. This both prevents the crash and stops profiles
+ * accumulating across runs (issue #102, fixes 1 & 3).
+ */
+function pruneDuplicateAuthProfiles(log, pac, keepName) {
+  const profiles = parseAuthProfiles(pac);
+  if (profiles.length === 0) return;
+  const dupes = selectDuplicateProfiles(profiles, keepName);
+  if (dupes.length === 0) return;
+  const keep = profiles.find((p) => p.name === keepName);
+  log.warn(`Found ${dupes.length} stale duplicate auth profile(s) for ${keep.user}; removing them to avoid a known pac CLI crash.`);
+  for (const d of dupes) {
+    const del = SHELL.runSafeCapture(pac, ['auth', 'delete', '--name', d.name]);
+    if (del.ok) log.ok(`Removed stale auth profile ${d.name}`);
+    else log.warn(`Could not remove stale auth profile ${d.name}. If finalize still fails, run \`pac auth clear\` and retry.`);
+  }
+}
+
 export default {
   meta: {
     number: 5,
@@ -256,8 +338,24 @@ export default {
         SHELL.runSafeCapture(pac, ['auth', 'select', '--name', DISCOVERY_PROFILE_NAME]);
         const sel = SHELL.runSafeCapture(pac, ['env', 'select', '--environment', devUrl]);
         if (!sel.ok) throw new Error(`Could not target ${devUrl}: ${SCRUB.scrubSecrets(sel.stderr || sel.stdout || '')}`);
-        const renamed = SHELL.runSafeCapture(pac, ['auth', 'name', '--index', String(discoveryIdx), '--name', userProfileName]);
-        if (!renamed.ok) throw new Error(`Could not finalize the auth profile: ${SCRUB.scrubSecrets(renamed.stderr || renamed.stdout || '')}`);
+        // Pre-flight hygiene: clear stale duplicate profiles that crash `pac auth name` (issue #102).
+        pruneDuplicateAuthProfiles(log, pac, DISCOVERY_PROFILE_NAME);
+        // Deletions can shift indices, so re-resolve the discovery profile's index.
+        const renameIdx = findProfileIndexByName(pac, DISCOVERY_PROFILE_NAME) ?? discoveryIdx;
+        const renamed = SHELL.runSafeCapture(pac, ['auth', 'name', '--index', String(renameIdx), '--name', userProfileName]);
+        if (!renamed.ok) {
+          const detail = SCRUB.scrubSecrets(renamed.stderr || renamed.stdout || '');
+          if (isDuplicateAuthStoreError(detail)) {
+            throw new Error([
+              'Could not finalize the auth profile: your local PAC auth store has duplicate or dual-active profiles.',
+              'This is a known pac CLI bug ("Sequence contains more than one matching element") that crashes `pac auth name`.',
+              'Fix it by clearing the local profiles, then click Save & run again:',
+              '  pac auth clear',
+              '(After clearing you will be asked to sign in once more to recreate a single clean profile.)',
+            ].join('\n'));
+          }
+          throw new Error(`Could not finalize the auth profile: ${detail}`);
+        }
         log.ok(`Profile ${userProfileName} ready (targeting Dev).`);
       } else if (findProfileIndexByName(pac, userProfileName) != null) {
         // Re-run after a previous success: discovery was already renamed.
