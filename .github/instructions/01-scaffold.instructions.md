@@ -218,6 +218,10 @@ Scaffolding is not the moment to lock in a premature data model. If the user is 
 
 ## Scaffolding a New Project (Step by Step)
 
+> **Code Apps plugin required.** Before scaffolding, verify the Code Apps plugin (`code-apps-preview@power-platform-skills`) is installed in your agent. If it is, invoke **`/create-code-app`** — it walks through prerequisites, scaffold, connector selection, and baseline deploy in one guided flow. If the plugin is not installed, the hard gate in `00-prereq-gate.instructions.md` Step 9 applies — stop and direct the user to install it first.
+
+The manual steps below are the reference implementation of what `/create-code-app` automates. Follow them only when the plugin is unavailable.
+
 ```bash
 # 1. Verify authentication is working (should show org info — no browser popup)
 pac org who

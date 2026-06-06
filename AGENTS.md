@@ -117,9 +117,19 @@ For Dataverse schema provisioning, data operations, solution lifecycle, and envi
 | Form field metadata pattern (`DataverseFieldLabel`) | **This repo** |
 | Deployment settings & CI/CD | **This repo** |
 
-### When the plugin is installed
+### Extracting API ID and Connection ID from a Maker Portal URL
 
-If the Dataverse-skills plugin is installed, prefer it for all Dataverse environment operations. The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
+When a user pastes a Maker Portal connection URL, extract both values directly — **never ask the user for them**:
+
+```
+https://make.powerapps.com/environments/<env>/connections/<API_ID>/<CONNECTION_ID>/details
+```
+
+Example: `.../connections/shared_service-now/f8e0094f.../details` → API ID = `shared_service-now`, Connection ID = `f8e0094f...`
+
+Pass directly to `/add-connector`. Works for any connector, known or unknown.
+
+### When the Code Apps plugin is installed The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
 
 ### Organizational structure & security (plugin gap)
 
@@ -139,6 +149,75 @@ The plugin is a **hard requirement** for Dataverse work — `00-prereq-gate.inst
 The plugin requires **Python 3** and the **PowerPlatform-Dataverse-Client** SDK (`pip install PowerPlatform-Dataverse-Client pandas`). The setup wizard checks for these.
 
 For the complete, linear, OS-specific install walkthrough — Python → `pip` → SDK + pandas → PAC auth → `/plugin install dataverse` → MCP verification → end-to-end smoke test, each with a verify command and the most common failure/fix — point the user to [docs/dataverse-skills-setup.md](docs/dataverse-skills-setup.md). That file is the single source of truth; do not restate its steps inline or invent alternative install commands.
+
+## Power Apps Code Apps Skills Plugin Integration
+
+For Code App scaffolding, deployment, and connector binding, this template **requires** the [microsoft/power-platform-skills Code Apps plugin](https://github.com/microsoft/power-platform-skills/tree/main/plugins/code-apps). That plugin teaches coding agents the correct patterns for creating, deploying, and extending Code Apps via specialist skills (`/create-code-app`, `/deploy`, `/add-datasource`, `/add-dataverse`, `/add-sharepoint`, and more). Any scaffold, deploy, or connector-binding work is gated on the plugin being installed and verified — see `.github/instructions/00-prereq-gate.instructions.md`.
+
+### Scope split
+
+| Responsibility | Owner |
+|---|---|
+| New Code App scaffold (`pac code init`, Vite, Fluent UI wiring) | **Code Apps plugin** (`/create-code-app`) |
+| Build and deploy (`pac code push`) | **Code Apps plugin** (`/deploy`) |
+| Connector routing — pick the right skill for what the user needs | **Code Apps plugin** (`/add-datasource`) |
+| Add Dataverse tables as a data source | **Code Apps plugin** (`/add-dataverse`) drives `pac code add-data-source -a dataverse -t <table>` |
+| Add SharePoint, Teams, Excel, OneDrive, Office 365, ADO connectors | **Code Apps plugin** (`/add-sharepoint`, `/add-teams`, `/add-excel`, `/add-onedrive`, `/add-office365`, `/add-azuredevops`) |
+| Add any other Power Platform connector | **Code Apps plugin** (`/add-connector`) |
+| List existing connections to get connection IDs | **Code Apps plugin** (`/list-connections`) |
+| Connector adapter pattern & three-layer architecture rules | **This repo** (`02-connectors.instructions.md`) |
+| Business planning workflow (00a → 00b → 00c → 00d) | **This repo** |
+| Dataverse schema provisioning | **Dataverse-skills plugin** (gated separately — see above) |
+| Form field metadata pattern (`DataverseFieldLabel`) | **This repo** (`09-form-field-pattern.instructions.md`) |
+| Deployment pipeline, CI/CD, solution promotion | **This repo** (`04-deployment.instructions.md`) |
+| Security patterns | **This repo** (`06-security.instructions.md`) |
+
+### CLI compatibility note
+
+This repo standardizes on the PAC CLI (`pac code push`, `pac code add-data-source`) — confirmed as the authoritative CLI by the plugin's own documentation linking to the [Power Apps CLI Reference](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/code). If a plugin skill emits a command in a different form (e.g. `npx power-apps push`), substitute the PAC CLI equivalent per this repo's custom instruction. Never introduce a second CLI tool into the project.
+
+### Scaffolding override — wizard takes precedence
+
+The plugin's `/create-code-app` skill uses `npx degit microsoft/PowerAppsCodeApps/templates/vite` to scaffold a new project. **Do not use this path for PACAF-based repos.** This template's scaffold is `npx @pacaf/wizard-ux@latest` (or `npx @pacaf/wizard@latest` for headless), which sets up the publisher, solution, App Registration, auth profile, and PAC CLI in the correct order. Using `npx degit` directly produces a plain Microsoft template that is not PACAF-aligned and will diverge from this instruction set.
+
+**Rule:** For all other skills (`/deploy`, `/add-*`, `/list-connections`), invoke the plugin skill as directed. For new project scaffold only, use the PACAF wizard and skip the plugin's degit step.
+
+### When the plugin is installed
+
+Invoke the appropriate skill **before** writing any connector-binding or deployment code:
+
+| User intent | Invoke |
+|---|---|
+| Scaffold a new Code App | `/create-code-app` |
+| Build and deploy / push | `/deploy` |
+| Add a data source (unsure which type) | `/add-datasource` |
+| Add Dataverse tables | `/add-dataverse` |
+| Add SharePoint | `/add-sharepoint` |
+| Add Teams | `/add-teams` |
+| Add Excel | `/add-excel` |
+| Add OneDrive | `/add-onedrive` |
+| Add Office 365 Outlook | `/add-office365` |
+| Add Azure DevOps | `/add-azuredevops` |
+| Add Copilot Studio agent | `/add-mcscopilot` |
+| Add any other connector | `/add-connector` |
+| Get connection IDs | `/list-connections` |
+
+Do **not** hand-roll connector registration steps when the plugin is installed. The skills know the correct `pac code add-data-source` flags, connection ID format, and generated-service adapter pattern for each connector type.
+
+### When the plugin is NOT installed
+
+The plugin is a **hard requirement** for scaffold, deploy, and connector work — `00-prereq-gate.instructions.md` blocks until it is installed and verified.
+
+### Install commands
+
+Both commands are run inside Claude Code or GitHub Copilot (in the agent chat, not the terminal):
+
+```
+/plugin marketplace add microsoft/power-platform-skills
+/plugin install code-apps-preview@power-platform-skills
+```
+
+---
 
 ## When In Doubt
 
