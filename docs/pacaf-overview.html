@@ -31,105 +31,120 @@ html[data-theme="dark"] {
   --cp-warning:#fbbf24;--cp-link:#4da6ff;--cp-shadow:0 18px 48px rgba(0,0,0,0.32);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cp-bg);color:var(--cp-text);font-size:14px;line-height:1.6;min-height:100vh}
+body{font-family:"Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cp-bg);color:var(--cp-text);font-size:14px;line-height:1.6;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-/* ── NAV ── */
-.top-nav{background:var(--cp-surface);border-bottom:1px solid var(--cp-border);position:sticky;top:0;z-index:50}
-.top-nav-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:0;padding:0 2rem}
-.nav-tab{padding:0.9rem 1.1rem;font-size:0.85rem;font-weight:600;color:var(--cp-text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
-.nav-tab:hover{color:var(--cp-text)}
-.nav-tab.active{color:var(--cp-accent);border-bottom-color:var(--cp-accent)}
-.nav-brand{font-weight:700;font-size:0.9rem;color:var(--cp-text);margin-right:1rem;letter-spacing:-0.01em}
-.nav-brand span{color:var(--cp-accent)}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
-.theme-btn{background:none;border:1px solid var(--cp-border);border-radius:6px;padding:0.3rem 0.6rem;font-size:0.8rem;cursor:pointer;color:var(--cp-text-muted);font-family:inherit}
+/* ── TOPBAR ── */
+.topbar{background:var(--cp-surface);border-bottom:1px solid var(--cp-border);padding:0 1.25rem;height:44px;display:flex;align-items:center;gap:0.75rem;flex-shrink:0;z-index:50}
+.brand{font-weight:700;font-size:0.88rem;letter-spacing:-0.01em;color:var(--cp-text);white-space:nowrap}
+.brand span{color:var(--cp-accent)}
+.back-link{font-size:0.75rem;color:var(--cp-text-muted);text-decoration:none;display:flex;align-items:center;gap:0.3rem;padding:0.2rem 0.5rem;border-radius:5px;border:1px solid var(--cp-border);transition:all 0.15s}
+.back-link:hover{color:var(--cp-text);border-color:var(--cp-border-strong)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
+.theme-btn{background:none;border:1px solid var(--cp-border);border-radius:6px;padding:0.25rem 0.55rem;font-size:0.75rem;cursor:pointer;color:var(--cp-text-muted);font-family:inherit}
 .theme-btn:hover{background:var(--cp-surface-soft)}
 
-/* ── PAGES ── */
-.page{display:none;max-width:1000px;margin:0 auto;padding:2rem 2rem 4rem}
+/* ── SHELL ── */
+.shell{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:200px;flex-shrink:0;background:var(--cp-surface);border-right:1px solid var(--cp-border);display:flex;flex-direction:column;overflow-y:auto;padding:1rem 0}
+.sidebar-section{padding:0 0.75rem;margin-bottom:1.25rem}
+.sidebar-label{font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--cp-text-muted);padding:0 0.5rem;margin-bottom:0.35rem}
+.nav-item{display:flex;align-items:center;gap:0.55rem;padding:0.5rem 0.6rem;border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:500;color:var(--cp-text-muted);transition:all 0.12s;border:none;background:none;font-family:inherit;width:100%;text-align:left}
+.nav-item:hover{background:var(--cp-surface-soft);color:var(--cp-text)}
+.nav-item.active{background:var(--cp-accent-soft);color:var(--cp-accent);font-weight:600}
+.nav-item .nav-icon{font-size:1rem;flex-shrink:0;width:1.2rem;text-align:center}
+.nav-item .nav-badge{margin-left:auto;font-size:0.6rem;font-weight:700;background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:99px;padding:0.1rem 0.4rem;color:var(--cp-text-muted)}
+.nav-item.active .nav-badge{background:var(--cp-accent-soft);border-color:var(--cp-accent);color:var(--cp-accent)}
+.sidebar-divider{height:1px;background:var(--cp-border);margin:0.5rem 0.75rem}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;overflow-y:auto;padding:2rem 2.5rem 4rem}
+.content-inner{max-width:820px}
+
+/* ── PAGE VISIBILITY ── */
+.page{display:none}
 .page.active{display:block}
 
-/* ── HERO BLOCK ── */
-.page-hero{margin-bottom:2rem}
-.eyebrow{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--cp-accent);margin-bottom:0.5rem}
-.page-hero h2{font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;line-height:1.2}
+/* ── HERO ── */
+.page-hero{margin-bottom:1.75rem}
+.eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--cp-accent);margin-bottom:0.4rem}
+.page-hero h2{font-size:1.4rem;font-weight:700;letter-spacing:-0.02em;line-height:1.25}
 .page-hero h2 span{color:var(--cp-accent)}
-.page-hero p{color:var(--cp-text-muted);margin-top:0.5rem;font-size:0.9rem;max-width:680px}
-.hero-note{margin-top:1rem;background:var(--cp-surface);border:1px solid var(--cp-border);border-left:3px solid var(--cp-warning);border-radius:8px;padding:0.65rem 0.9rem;font-size:0.82rem;color:var(--cp-text-muted)}
+.page-hero p{color:var(--cp-text-muted);margin-top:0.4rem;font-size:0.88rem;max-width:640px}
+.hero-note{margin-top:0.9rem;background:var(--cp-surface);border:1px solid var(--cp-border);border-left:3px solid var(--cp-warning);border-radius:8px;padding:0.6rem 0.85rem;font-size:0.8rem;color:var(--cp-text-muted)}
 .hero-note strong{color:var(--cp-text)}
 
 /* ── STATS ── */
-.stats-bar{display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.5rem}
-.stat{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:10px;padding:0.55rem 0.9rem;display:flex;flex-direction:column;gap:0.05rem}
-.stat-value{font-size:1.25rem;font-weight:700;color:var(--cp-accent);line-height:1}
-.stat-label{font-size:0.68rem;color:var(--cp-text-muted);text-transform:uppercase;letter-spacing:0.05em}
+.stats-bar{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.stat{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:10px;padding:0.5rem 0.85rem;display:flex;flex-direction:column;gap:0.05rem}
+.stat-value{font-size:1.2rem;font-weight:700;color:var(--cp-accent);line-height:1}
+.stat-label{font-size:0.65rem;color:var(--cp-text-muted);text-transform:uppercase;letter-spacing:0.05em}
 
 /* ── WEAVE DIAGRAM ── */
-.weave-wrap{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.75rem}
-.weave-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--cp-text-muted);margin-bottom:1rem}
-.weave-diagram{display:grid;grid-template-columns:1fr 2.5rem 1fr;gap:0;align-items:center}
-.sources-col{display:flex;flex-direction:column;gap:0.4rem}
-.arrow-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.2rem;padding:0 0.25rem}
-.arrow-center{font-size:1.1rem;color:var(--cp-text-muted)}
-.output-col{display:flex;flex-direction:column;gap:0.4rem}
-.source-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.45rem 0.75rem;display:flex;align-items:center;gap:0.5rem;cursor:pointer;transition:all 0.15s}
+.weave-wrap{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:14px;padding:1.1rem 1.3rem;margin-bottom:1.5rem}
+.weave-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--cp-text-muted);margin-bottom:0.85rem}
+.weave-diagram{display:grid;grid-template-columns:1fr 2rem 1fr;gap:0;align-items:center}
+.sources-col{display:flex;flex-direction:column;gap:0.35rem}
+.arrow-col{display:flex;align-items:center;justify-content:center;padding:0 0.2rem;align-self:stretch}
+.arrow-center{font-size:1rem;color:var(--cp-text-muted)}
+.output-col{display:flex;flex-direction:column;gap:0.35rem}
+.source-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.4rem 0.65rem;display:flex;align-items:center;gap:0.45rem;cursor:pointer;transition:all 0.15s}
 .source-node:hover{border-color:var(--cp-border-strong)}
 .source-node.active{border-color:var(--src-color,var(--cp-accent));background:color-mix(in srgb,var(--src-color,var(--cp-accent)) 8%,transparent)}
-.src-icon{font-size:0.9rem;flex-shrink:0}
+.src-icon{font-size:0.85rem;flex-shrink:0}
 .src-info{display:flex;flex-direction:column;flex:1;min-width:0}
-.src-name{font-size:0.78rem;font-weight:600;color:var(--cp-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.src-desc{font-size:0.65rem;color:var(--cp-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.src-count{font-size:0.68rem;font-weight:700;color:var(--src-color,var(--cp-accent));flex-shrink:0}
-.pacaf-node{background:var(--cp-accent);border-radius:10px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.4rem}
-.pacaf-title{font-size:0.88rem;font-weight:700;color:var(--cp-accent-fg)}
-.pacaf-sub{font-size:0.68rem;color:rgba(255,255,255,0.72)}
-.output-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.45rem 0.75rem;display:flex;align-items:flex-start;gap:0.5rem}
-.out-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:0.35rem}
-.out-text{font-size:0.75rem;color:var(--cp-text-muted);line-height:1.4}
+.src-name{font-size:0.75rem;font-weight:600;color:var(--cp-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-desc{font-size:0.62rem;color:var(--cp-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-count{font-size:0.65rem;font-weight:700;color:var(--src-color,var(--cp-accent));flex-shrink:0}
+.pacaf-node{background:var(--cp-accent);border-radius:10px;padding:0.75rem 0.9rem;display:flex;flex-direction:column;gap:0.25rem;margin-bottom:0.35rem}
+.pacaf-title{font-size:0.82rem;font-weight:700;color:var(--cp-accent-fg)}
+.pacaf-sub{font-size:0.65rem;color:rgba(255,255,255,0.72)}
+.output-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.4rem 0.65rem;display:flex;align-items:flex-start;gap:0.45rem}
+.out-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:0.35rem}
+.out-text{font-size:0.72rem;color:var(--cp-text-muted);line-height:1.4}
 .out-text strong{color:var(--cp-text)}
 
-/* ── CONTROLS BAR ── */
-.controls{display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-bottom:0.75rem}
-.filter-btn{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:20px;padding:0.25rem 0.75rem;font-size:0.75rem;cursor:pointer;color:var(--cp-text-muted);transition:all 0.15s;font-family:inherit;white-space:nowrap}
+/* ── CONTROLS ── */
+.controls{display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.65rem}
+.filter-btn{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:20px;padding:0.22rem 0.65rem;font-size:0.72rem;cursor:pointer;color:var(--cp-text-muted);transition:all 0.12s;font-family:inherit;white-space:nowrap}
 .filter-btn:hover{border-color:var(--cp-accent);color:var(--cp-accent)}
 .filter-btn.active{background:var(--cp-accent);border-color:var(--cp-accent);color:var(--cp-accent-fg)}
-.ctrl-divider{width:1px;height:1.2rem;background:var(--cp-border);flex-shrink:0}
-.sort-sel{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:6px;padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--cp-text);cursor:pointer;font-family:inherit;margin-left:auto}
-.results-info{font-size:0.75rem;color:var(--cp-text-muted);margin-bottom:0.75rem}
+.ctrl-divider{width:1px;height:1.1rem;background:var(--cp-border);flex-shrink:0}
+.sort-sel{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:6px;padding:0.22rem 0.5rem;font-size:0.72rem;color:var(--cp-text);cursor:pointer;font-family:inherit;margin-left:auto}
+.results-info{font-size:0.72rem;color:var(--cp-text-muted);margin-bottom:0.65rem}
 
 /* ── ACCORDION ── */
-.accordion{display:flex;flex-direction:column;gap:0.4rem}
-.acc-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:12px;overflow:hidden;transition:border-color 0.15s}
+.accordion{display:flex;flex-direction:column;gap:0.35rem}
+.acc-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:10px;overflow:hidden;transition:border-color 0.15s}
 .acc-item.sev-critical{border-left:3px solid var(--cp-danger)}
 .acc-item.sev-nice{border-left:3px solid var(--cp-success)}
 .acc-item.open{border-color:var(--cp-accent)}
-.acc-item.acc-hidden{display:none}
-.acc-header{display:flex;align-items:center;gap:0.6rem;padding:0.7rem 1rem;cursor:pointer;user-select:none}
-.acc-num{font-size:0.68rem;color:var(--cp-text-muted);font-weight:700;min-width:1.6rem;flex-shrink:0}
-.acc-title{flex:1;font-size:0.86rem;font-weight:600;color:var(--cp-text);line-height:1.3}
-.acc-tags{display:flex;gap:0.3rem;flex-wrap:wrap;flex-shrink:0}
-.sev-badge{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.15rem 0.4rem;border-radius:4px}
+.acc-header{display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none}
+.acc-num{font-size:0.65rem;color:var(--cp-text-muted);font-weight:700;min-width:1.5rem;flex-shrink:0}
+.acc-title{flex:1;font-size:0.84rem;font-weight:600;color:var(--cp-text);line-height:1.3}
+.acc-tags{display:flex;gap:0.25rem;flex-wrap:wrap;flex-shrink:0}
+.sev-badge{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.12rem 0.38rem;border-radius:4px}
 .sev-badge.critical{background:rgba(220,38,38,0.12);color:var(--cp-danger)}
 .sev-badge.nice{background:rgba(22,163,74,0.12);color:var(--cp-success)}
-.recov-badge{font-size:0.6rem;padding:0.15rem 0.4rem;border-radius:4px}
+.recov-badge{font-size:0.58rem;padding:0.12rem 0.38rem;border-radius:4px}
 .recov-irrecoverable{background:rgba(220,38,38,0.1);color:var(--cp-danger)}
 .recov-hard{background:rgba(249,115,22,0.1);color:#c2410c}
 .recov-moderate{background:rgba(245,158,11,0.1);color:#92400e}
 .recov-easy{background:rgba(22,163,74,0.1);color:var(--cp-success)}
-.acc-chevron{font-size:0.7rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0}
+.acc-chevron{font-size:0.65rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0}
 .acc-item.open .acc-chevron{transform:rotate(90deg);color:var(--cp-accent)}
-
-.acc-body{display:none;padding:0 1rem 1rem;padding-top:0}
+.acc-body{display:none;padding:0 0.85rem 0.85rem}
 .acc-item.open .acc-body{display:block}
-.acc-divider{height:1px;background:var(--cp-border);margin-bottom:0.8rem}
-.acc-desc{font-size:0.83rem;color:var(--cp-text-muted);line-height:1.65;margin-bottom:0.75rem}
-.acc-meta{display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.75rem}
-.cat-pill{font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:4px;background:var(--cp-surface-soft);border:1px solid var(--cp-border);color:var(--cp-text-soft);font-weight:500}
-.src-pill{font-size:0.63rem;padding:0.12rem 0.45rem;border-radius:4px;font-weight:600;border:1px solid transparent}
-.acc-meters{display:flex;gap:1.5rem;flex-wrap:wrap}
-.meter-row{display:flex;align-items:center;gap:0.45rem}
-.meter-label{font-size:0.65rem;color:var(--cp-text-muted);width:5rem;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0}
-.meter-track{width:80px;height:5px;background:var(--cp-surface-soft);border-radius:99px;overflow:hidden;border:1px solid var(--cp-border);flex-shrink:0}
+.acc-divider{height:1px;background:var(--cp-border);margin-bottom:0.7rem}
+.acc-desc{font-size:0.81rem;color:var(--cp-text-muted);line-height:1.65;margin-bottom:0.65rem}
+.acc-meta{display:flex;flex-wrap:wrap;gap:0.3rem;align-items:center;margin-bottom:0.65rem}
+.cat-pill{font-size:0.63rem;padding:0.1rem 0.4rem;border-radius:4px;background:var(--cp-surface-soft);border:1px solid var(--cp-border);color:var(--cp-text-soft);font-weight:500}
+.src-pill{font-size:0.61rem;padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;border:1px solid transparent}
+.acc-meters{display:flex;gap:1.25rem;flex-wrap:wrap}
+.meter-row{display:flex;align-items:center;gap:0.4rem}
+.meter-label{font-size:0.63rem;color:var(--cp-text-muted);width:4.8rem;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0}
+.meter-track{width:72px;height:5px;background:var(--cp-surface-soft);border-radius:99px;overflow:hidden;border:1px solid var(--cp-border);flex-shrink:0}
 .meter-fill{height:100%;border-radius:99px}
 .fill-irrecoverable{background:var(--cp-danger)}
 .fill-hard{background:#f97316}
@@ -138,36 +153,35 @@ body{font-family:"Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-
 .fill-token-high{background:var(--cp-accent)}
 .fill-token-medium{background:#8b5cf6}
 .fill-token-low{background:var(--cp-text-muted)}
-.meter-val{font-size:0.65rem;color:var(--cp-text-soft)}
+.meter-val{font-size:0.63rem;color:var(--cp-text-soft)}
 
 /* ── FAQ ── */
-.faq-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:12px;overflow:hidden;transition:border-color 0.15s}
+.faq-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:10px;overflow:hidden;transition:border-color 0.15s}
 .faq-item:hover{border-color:var(--cp-border-strong)}
 .faq-item.open{border-color:var(--cp-accent)}
-.faq-item.faq-hidden{display:none}
-.faq-header{display:flex;align-items:flex-start;gap:0.6rem;padding:0.8rem 1rem;cursor:pointer;user-select:none}
-.faq-persona{font-size:1.1rem;flex-shrink:0;margin-top:0.05rem}
-.faq-q-text{flex:1;font-size:0.87rem;font-weight:600;color:var(--cp-text);line-height:1.4}
-.faq-tag-badge{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.15rem 0.45rem;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:0.1rem}
-.faq-chevron{font-size:0.7rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0;margin-top:0.2rem}
+.faq-header{display:flex;align-items:flex-start;gap:0.55rem;padding:0.7rem 0.85rem;cursor:pointer;user-select:none}
+.faq-persona{font-size:1rem;flex-shrink:0;margin-top:0.05rem}
+.faq-q-text{flex:1;font-size:0.84rem;font-weight:600;color:var(--cp-text);line-height:1.4}
+.faq-tag-badge{font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.12rem 0.42rem;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:0.1rem}
+.faq-chevron{font-size:0.65rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0;margin-top:0.2rem}
 .faq-item.open .faq-chevron{transform:rotate(90deg);color:var(--cp-accent)}
-.faq-body{display:none;padding:0 1rem 1rem}
+.faq-body{display:none;padding:0 0.85rem 0.85rem}
 .faq-item.open .faq-body{display:block}
-.faq-divider{height:1px;background:var(--cp-border);margin-bottom:0.9rem}
-.faq-a{font-size:0.84rem;color:var(--cp-text-muted);line-height:1.7}
-.faq-a p{margin-bottom:0.65rem}
+.faq-divider{height:1px;background:var(--cp-border);margin-bottom:0.8rem}
+.faq-a{font-size:0.82rem;color:var(--cp-text-muted);line-height:1.7}
+.faq-a p{margin-bottom:0.6rem}
 .faq-a p:last-child{margin-bottom:0}
 .faq-a strong{color:var(--cp-text)}
-.faq-a code{font-family:Consolas,"Courier New",monospace;font-size:0.8rem;background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:4px;padding:0.1rem 0.35rem;color:var(--cp-text)}
-.faq-a ul{margin:0.4rem 0 0.65rem 1.1rem}
-.faq-a li{margin-bottom:0.3rem;font-size:0.84rem}
-.faq-highlight{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.65rem 0.85rem;margin:0.65rem 0;font-size:0.82rem}
-.faq-highlight-title{font-weight:700;color:var(--cp-text);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin:0.65rem 0}
-.col-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.faq-a code{font-family:Consolas,"Courier New",monospace;font-size:0.78rem;background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:4px;padding:0.1rem 0.3rem;color:var(--cp-text)}
+.faq-a ul{margin:0.35rem 0 0.6rem 1rem}
+.faq-a li{margin-bottom:0.25rem;font-size:0.82rem}
+.faq-highlight{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.6rem 0.8rem;margin:0.6rem 0;font-size:0.8rem}
+.faq-highlight-title{font-weight:700;color:var(--cp-text);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0}
+.col-label{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem}
 .col-bad{color:var(--cp-danger)}
 .col-good{color:var(--cp-success)}
-.col-content{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.65rem;font-size:0.8rem;color:var(--cp-text-muted)}
+.col-content{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.6rem;font-size:0.78rem;color:var(--cp-text-muted)}
 
 /* TAG COLORS */
 .tag-complexity{background:rgba(139,92,246,0.12);color:#7c3aed}
@@ -179,111 +193,159 @@ body{font-family:"Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-
 .tag-real{background:rgba(22,163,74,0.12);color:var(--cp-success)}
 
 /* EMPTY STATE */
-.empty-state{display:none;padding:3rem 1rem;text-align:center;color:var(--cp-text-muted);font-size:0.88rem}
+.empty-state{display:none;padding:2.5rem 1rem;text-align:center;color:var(--cp-text-muted);font-size:0.85rem}
 .empty-state.show{display:block}
 
-@media(max-width:660px){
-  .page{padding:1.5rem 1rem 3rem}
+/* MOBILE */
+@media(max-width:680px){
+  body{overflow:auto;height:auto}
+  .shell{flex-direction:column;overflow:visible}
+  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;padding:0.5rem 0.75rem;border-right:none;border-bottom:1px solid var(--cp-border);overflow-y:visible}
+  .sidebar-section{margin-bottom:0;padding:0}
+  .sidebar-label{display:none}
+  .sidebar-divider{display:none}
+  .nav-item{padding:0.35rem 0.6rem;font-size:0.8rem}
+  .nav-item .nav-icon{display:none}
+  .content{padding:1.25rem 1rem 3rem;overflow:visible}
   .weave-diagram{grid-template-columns:1fr}
   .arrow-col{display:none}
   .two-col{grid-template-columns:1fr}
   .acc-tags{display:none}
-  .top-nav-inner{padding:0 1rem}
-  .nav-brand{display:none}
 }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="top-nav">
-  <div class="top-nav-inner">
-    <span class="nav-brand">PACAF <span>Docs</span></span>
-    <button class="nav-tab active" data-page="differentiators">Differentiators</button>
-    <button class="nav-tab" data-page="faq">FAQ</button>
-    <div class="nav-right">
-      <button class="theme-btn" id="themeBtn">🌓 Theme</button>
-    </div>
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="brand">PACAF <span>Foundations</span></span>
+  <a href="index.html" class="back-link">← Back to docs</a>
+  <div class="topbar-right">
+    <button class="theme-btn" id="themeBtn">🌓</button>
   </div>
-</nav>
-
-<!-- ═══════════════════════════════════════════
-     PAGE 1 — DIFFERENTIATORS
-════════════════════════════════════════════ -->
-<div class="page active" id="page-differentiators">
-  <div class="page-hero">
-    <div class="eyebrow">The Weave, Not the Invention</div>
-    <h2>What PACAF gets right <span>out of the gate</span></h2>
-    <p>Every piece of knowledge here already existed — in Microsoft's official docs, in community plugins, in open-source agent patterns. PACAF's value is assembling it in one place so an agent works effectively from the first prompt.</p>
-  </div>
-
-  <div class="stats-bar" id="diffStats"></div>
-
-  <!-- WEAVE DIAGRAM -->
-  <div class="weave-wrap">
-    <div class="weave-label">Where the knowledge comes from → what PACAF assembles → what the agent delivers</div>
-    <div class="weave-diagram">
-      <div class="sources-col" id="sourceNodes"></div>
-      <div class="arrow-col"><div class="arrow-center">→</div></div>
-      <div class="output-col">
-        <div class="pacaf-node">
-          <div class="pacaf-title">PACAF Agent Instructions</div>
-          <div class="pacaf-sub">One instruction set. Loaded at agent startup. No discovery required.</div>
-        </div>
-        <div class="output-node"><div class="out-dot" style="background:var(--cp-success)"></div><div class="out-text"><strong>Zero prerequisite discovery</strong> — agent knows what to invoke before writing a line</div></div>
-        <div class="output-node"><div class="out-dot" style="background:var(--cp-accent)"></div><div class="out-text"><strong>No silent failures</strong> — traps documented before the agent can fall into them</div></div>
-        <div class="output-node"><div class="out-dot" style="background:#8b5cf6"></div><div class="out-text"><strong>Token-efficient sessions</strong> — routing tables replace reasoning from scratch</div></div>
-        <div class="output-node"><div class="out-dot" style="background:var(--cp-warning)"></div><div class="out-text"><strong>Durable decisions</strong> — planning cadence + ADRs prevent expensive rework</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CONTROLS -->
-  <div class="controls" id="diffControls">
-    <button class="filter-btn active" data-filter="all" data-group="dsev">All</button>
-    <button class="filter-btn" data-filter="critical" data-group="dsev">🔴 Critical</button>
-    <button class="filter-btn" data-filter="nice" data-group="dsev">🟢 Nice to Have</button>
-    <div class="ctrl-divider"></div>
-    <div id="diffCatBtns" style="display:contents"></div>
-    <div class="ctrl-divider"></div>
-    <div id="diffSrcBtns" style="display:contents"></div>
-    <select class="sort-sel" id="diffSort">
-      <option value="default">Default order</option>
-      <option value="recov">Hardest to recover ↑</option>
-      <option value="token">Token savings ↓</option>
-      <option value="sev">Critical first</option>
-      <option value="alpha">A–Z</option>
-    </select>
-  </div>
-  <div class="results-info" id="diffCount"></div>
-  <div class="accordion" id="diffAccordion"></div>
-  <div class="empty-state" id="diffEmpty">No items match the current filters.</div>
 </div>
 
-<!-- ═══════════════════════════════════════════
-     PAGE 2 — FAQ
-════════════════════════════════════════════ -->
-<div class="page" id="page-faq">
-  <div class="page-hero">
-    <div class="eyebrow">Frequently Asked Questions</div>
-    <h2>Yeah, but <span>do I really need all this?</span></h2>
-    <p>Honest answers for people who just watched a 7-minute YouTube video and are wondering why production Code App development involves more than 6 commands.</p>
-    <div class="hero-note"><strong>Fair warning:</strong> This FAQ doesn't try to sell you on anything. Some of this stuff genuinely is optional depending on what you're building. We'll tell you which parts are which.</div>
-  </div>
+<!-- SHELL: sidebar + content -->
+<div class="shell">
 
-  <div class="controls">
-    <button class="filter-btn active" data-filter="all" data-group="ftag">All questions</button>
-    <button class="filter-btn" data-filter="complexity" data-group="ftag">Complexity</button>
-    <button class="filter-btn" data-filter="demo" data-group="ftag">Demo vs. Reality</button>
-    <button class="filter-btn" data-filter="traps" data-group="ftag">Silent Traps</button>
-    <button class="filter-btn" data-filter="agents" data-group="ftag">AI Agents</button>
-    <button class="filter-btn" data-filter="tokens" data-group="ftag">Token Cost</button>
-    <button class="filter-btn" data-filter="dataverse" data-group="ftag">Dataverse</button>
-    <button class="filter-btn" data-filter="real" data-group="ftag">Real Projects</button>
-  </div>
-  <div class="results-info" id="faqCount"></div>
-  <div class="accordion" id="faqAccordion"></div>
-  <div class="empty-state" id="faqEmpty">No questions match this filter.</div>
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Explore</div>
+      <button class="nav-item active" data-page="differentiators">
+        <span class="nav-icon">🧵</span>
+        <span>Differentiators</span>
+        <span class="nav-badge">38</span>
+      </button>
+      <button class="nav-item" data-page="faq">
+        <span class="nav-icon">💬</span>
+        <span>FAQ</span>
+        <span class="nav-badge">20</span>
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by severity</div>
+      <button class="nav-item filter-nav active" data-filter="all" data-group="dsev">
+        <span class="nav-icon">📋</span><span>All items</span>
+      </button>
+      <button class="nav-item filter-nav" data-filter="critical" data-group="dsev">
+        <span class="nav-icon">🔴</span><span>Critical</span>
+      </button>
+      <button class="nav-item filter-nav" data-filter="nice" data-group="dsev">
+        <span class="nav-icon">🟢</span><span>Nice to have</span>
+      </button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by category</div>
+      <div id="sidebarCatBtns"></div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Filter by source</div>
+      <div id="sidebarSrcBtns"></div>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+    <div class="content-inner">
+
+      <!-- ══ PAGE: DIFFERENTIATORS ══ -->
+      <div class="page active" id="page-differentiators">
+        <div class="page-hero">
+          <div class="eyebrow">The Weave, Not the Invention</div>
+          <h2>What PACAF gets right <span>out of the gate</span></h2>
+          <p>Every piece of knowledge here already existed — in Microsoft's official docs, in community plugins, in open-source agent patterns. PACAF's value is assembling it in one place so an agent works effectively from the first prompt.</p>
+        </div>
+
+        <div class="stats-bar" id="diffStats"></div>
+
+        <div class="weave-wrap">
+          <div class="weave-label">Where the knowledge comes from → what PACAF assembles → what the agent delivers</div>
+          <div class="weave-diagram">
+            <div class="sources-col" id="sourceNodes"></div>
+            <div class="arrow-col"><div class="arrow-center">→</div></div>
+            <div class="output-col">
+              <div class="pacaf-node">
+                <div class="pacaf-title">PACAF Agent Instructions</div>
+                <div class="pacaf-sub">One instruction set. Loaded at agent startup. No discovery required.</div>
+              </div>
+              <div class="output-node"><div class="out-dot" style="background:var(--cp-success)"></div><div class="out-text"><strong>Zero prerequisite discovery</strong> — agent knows what to invoke before writing a line</div></div>
+              <div class="output-node"><div class="out-dot" style="background:var(--cp-accent)"></div><div class="out-text"><strong>No silent failures</strong> — traps documented before the agent can fall into them</div></div>
+              <div class="output-node"><div class="out-dot" style="background:#8b5cf6"></div><div class="out-text"><strong>Token-efficient sessions</strong> — routing tables replace reasoning from scratch</div></div>
+              <div class="output-node"><div class="out-dot" style="background:var(--cp-warning)"></div><div class="out-text"><strong>Durable decisions</strong> — planning cadence + ADRs prevent expensive rework</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" id="diffControls">
+          <select class="sort-sel" id="diffSort">
+            <option value="default">Default order</option>
+            <option value="recov">Hardest to recover ↑</option>
+            <option value="token">Token savings ↓</option>
+            <option value="sev">Critical first</option>
+            <option value="alpha">A–Z</option>
+          </select>
+        </div>
+        <div class="results-info" id="diffCount"></div>
+        <div class="accordion" id="diffAccordion"></div>
+        <div class="empty-state" id="diffEmpty">No items match the current filters.</div>
+      </div>
+
+      <!-- ══ PAGE: FAQ ══ -->
+      <div class="page" id="page-faq">
+        <div class="page-hero">
+          <div class="eyebrow">Frequently Asked Questions</div>
+          <h2>Yeah, but <span>do I really need all this?</span></h2>
+          <p>Honest answers for people who just watched a 7-minute YouTube video and are wondering why production Code App development involves more than 6 commands.</p>
+          <div class="hero-note"><strong>Fair warning:</strong> This FAQ doesn't try to sell you on anything. Some of this stuff genuinely is optional depending on what you're building. We'll tell you which parts are which.</div>
+        </div>
+
+        <div class="controls">
+          <button class="filter-btn active" data-filter="all" data-group="ftag">All</button>
+          <button class="filter-btn" data-filter="complexity" data-group="ftag">Complexity</button>
+          <button class="filter-btn" data-filter="demo" data-group="ftag">Demo vs. Reality</button>
+          <button class="filter-btn" data-filter="traps" data-group="ftag">Silent Traps</button>
+          <button class="filter-btn" data-filter="agents" data-group="ftag">AI Agents</button>
+          <button class="filter-btn" data-filter="tokens" data-group="ftag">Token Cost</button>
+          <button class="filter-btn" data-filter="dataverse" data-group="ftag">Dataverse</button>
+          <button class="filter-btn" data-filter="real" data-group="ftag">Real Projects</button>
+        </div>
+        <div class="results-info" id="faqCount"></div>
+        <div class="accordion" id="faqAccordion"></div>
+        <div class="empty-state" id="faqEmpty">No questions match this filter.</div>
+      </div>
+
+    </div>
+  </main>
 </div>
 
 <script>
@@ -406,19 +468,26 @@ function syncSrcBtns(){
 }
 
 function buildDiffFilters(){
-  const cc=document.getElementById("diffCatBtns");
-  [{v:"all",l:"All cats"},...dCats.map(c=>({v:c,l:c}))].forEach(({v,l})=>{
+  // Sidebar: category buttons
+  const cc=document.getElementById("sidebarCatBtns"); if(!cc) return;
+  [{v:"all",l:"All categories",icon:"📂"},...dCats.map(c=>({v:c,l:c,icon:"·"}))].forEach(({v,l,icon})=>{
     const b=document.createElement("button");
-    b.className="filter-btn"+(v==="all"?" active":"");
-    b.dataset.filter=v; b.dataset.group="dcat"; b.textContent=l; cc.appendChild(b);
+    b.className="nav-item filter-nav"+(v==="all"?" active":"");
+    b.dataset.filter=v; b.dataset.group="dcat";
+    b.innerHTML=`<span class="nav-icon">${icon}</span><span>${l}</span>`;
+    cc.appendChild(b);
   });
-  const sc=document.getElementById("diffSrcBtns");
+  // Sidebar: source buttons
+  const sc=document.getElementById("sidebarSrcBtns"); if(!sc) return;
   const allB=document.createElement("button");
-  allB.className="filter-btn active"; allB.dataset.filter="all"; allB.dataset.group="dsrc"; allB.textContent="All sources"; sc.appendChild(allB);
+  allB.className="nav-item filter-nav active"; allB.dataset.filter="all"; allB.dataset.group="dsrc";
+  allB.innerHTML=`<span class="nav-icon">🔍</span><span>All sources</span>`;
+  sc.appendChild(allB);
   Object.entries(SOURCES).forEach(([k,s])=>{
     const b=document.createElement("button");
-    b.className="filter-btn"; b.dataset.filter=k; b.dataset.group="dsrc";
-    b.textContent=`${s.icon} ${s.label}`; sc.appendChild(b);
+    b.className="nav-item filter-nav"; b.dataset.filter=k; b.dataset.group="dsrc";
+    b.innerHTML=`<span class="nav-icon">${s.icon}</span><span>${s.label}</span>`;
+    sc.appendChild(b);
   });
 }
 
@@ -519,25 +588,35 @@ function buildFAQ(){
 
 /* ══════════════════ EVENT WIRING ══════════════════ */
 document.addEventListener("click",e=>{
-  // Nav tabs
-  const tab=e.target.closest(".nav-tab");
-  if(tab){
-    document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  // Sidebar nav items (page switch)
+  const navItem=e.target.closest(".nav-item[data-page]");
+  if(navItem){
+    document.querySelectorAll(".nav-item[data-page]").forEach(t=>t.classList.remove("active"));
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById("page-"+tab.dataset.page).classList.add("active");
+    navItem.classList.add("active");
+    document.getElementById("page-"+navItem.dataset.page).classList.add("active");
+    // scroll content to top
+    document.querySelector(".content").scrollTop=0;
     return;
   }
-  // Filter buttons
+  // Sidebar filter nav items
+  const fnav=e.target.closest(".filter-nav");
+  if(fnav){
+    const group=fnav.dataset.group, filter=fnav.dataset.filter;
+    document.querySelectorAll(`.filter-nav[data-group="${group}"]`).forEach(b=>b.classList.remove("active"));
+    fnav.classList.add("active");
+    if(group==="dsev"){dSev=filter;buildDiffs();}
+    else if(group==="dcat"){dCat=filter;buildDiffs();}
+    else if(group==="dsrc"){dSrc=filter;buildWeave();buildDiffs();}
+    return;
+  }
+  // Inline filter buttons (FAQ bar)
   const btn=e.target.closest(".filter-btn");
   if(!btn) return;
   const group=btn.dataset.group, filter=btn.dataset.filter;
   document.querySelectorAll(`.filter-btn[data-group="${group}"]`).forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
-  if(group==="dsev"){dSev=filter;buildDiffs();}
-  else if(group==="dcat"){dCat=filter;buildDiffs();}
-  else if(group==="dsrc"){dSrc=filter;buildWeave();buildDiffs();}
-  else if(group==="ftag"){fTag=filter;buildFAQ();}
+  if(group==="ftag"){fTag=filter;buildFAQ();}
 });
 
 document.getElementById("diffSort").addEventListener("change",e=>{dSort=e.target.value;buildDiffs();});
