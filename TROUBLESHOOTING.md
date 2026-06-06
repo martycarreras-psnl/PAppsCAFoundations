@@ -284,6 +284,32 @@ rm power.config.json
 ~/.dotnet/tools/pac code init --displayName "Your App" --buildPath "./dist" --fileEntryPoint "index.html"
 ```
 
+### "Could not finalize the auth profile" at the Environments step
+
+**Cause:** Your local `pac` auth store contains **duplicate or dual-active profiles** for the same user/environment — usually leftover `pp-<slug>-*` profiles from running the wizard in other project folders. The wizard renames its discovery profile with `pac auth name`, and that command crashes on a corrupted store. The `pac-log.txt` signature is:
+
+```
+FTL | bolt.Session :: Sequence contains more than one matching element
+EXCEPTION: System.InvalidOperationException: Sequence contains more than one matching element
+   at bolt.authentication.profiles.AuthProfiles.Update(...)
+```
+
+This is an upstream `pac` CLI bug (`AuthProfiles.Update` uses `SingleOrDefault` against a store that can hold duplicates).
+
+**Fix:** The wizard now runs a pre-flight hygiene check that removes stale same-user duplicates before renaming, so most users never hit this. If it still fails, clear the local profiles and re-run:
+```bash
+pac auth clear        # removes ALL local profiles — you'll sign in again
+```
+Then click **Save & run** again to recreate a single clean profile.
+
+Surgical alternative (delete only the stale duplicate; the dual-active flag may persist):
+```bash
+pac auth list                 # identify the stale duplicate's index
+pac auth delete --index <n>
+```
+
+Note: `pac auth select --index <n>` does **not** repair the dual-active flag — the store must be cleared or the duplicates deleted.
+
 ---
 
 ## Solution & Deployment
