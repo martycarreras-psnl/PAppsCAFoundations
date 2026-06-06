@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PACAF — Why It Matters</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme = param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg:#f7f4ef;--cp-bg-elevated:#fcfbf8;--cp-surface:#ffffff;
+  --cp-surface-soft:#f5f5f5;--cp-border:#dedede;--cp-border-strong:#919191;
+  --cp-text:#242424;--cp-text-muted:#5c5c5c;--cp-text-soft:#6f6f6f;
+  --cp-accent:#b11f4b;--cp-accent-hover:#9a1a41;--cp-accent-soft:rgba(177,31,75,0.08);
+  --cp-accent-fg:#ffffff;--cp-success:#16a34a;--cp-danger:#dc2626;
+  --cp-warning:#f59e0b;--cp-link:#0078d4;--cp-shadow:0 18px 48px rgba(0,0,0,0.12);
+}
+html[data-theme="dark"] {
+  color-scheme:dark;
+  --cp-bg:#3d3b3a;--cp-bg-elevated:#343231;--cp-surface:#292929;
+  --cp-surface-soft:#2e2e2e;--cp-border:#474747;--cp-border-strong:#5f5f5f;
+  --cp-text:#dedede;--cp-text-muted:#919191;--cp-text-soft:#b0b0b0;
+  --cp-accent:#fd8ea1;--cp-accent-hover:#fb7b91;--cp-accent-soft:rgba(253,142,161,0.14);
+  --cp-accent-fg:#1a1a1a;--cp-success:#4ade80;--cp-danger:#f87171;
+  --cp-warning:#fbbf24;--cp-link:#4da6ff;--cp-shadow:0 18px 48px rgba(0,0,0,0.32);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",Aptos,Calibri,-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cp-bg);color:var(--cp-text);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* ── NAV ── */
+.top-nav{background:var(--cp-surface);border-bottom:1px solid var(--cp-border);position:sticky;top:0;z-index:50}
+.top-nav-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;gap:0;padding:0 2rem}
+.nav-tab{padding:0.9rem 1.1rem;font-size:0.85rem;font-weight:600;color:var(--cp-text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.nav-tab:hover{color:var(--cp-text)}
+.nav-tab.active{color:var(--cp-accent);border-bottom-color:var(--cp-accent)}
+.nav-brand{font-weight:700;font-size:0.9rem;color:var(--cp-text);margin-right:1rem;letter-spacing:-0.01em}
+.nav-brand span{color:var(--cp-accent)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
+.theme-btn{background:none;border:1px solid var(--cp-border);border-radius:6px;padding:0.3rem 0.6rem;font-size:0.8rem;cursor:pointer;color:var(--cp-text-muted);font-family:inherit}
+.theme-btn:hover{background:var(--cp-surface-soft)}
+
+/* ── PAGES ── */
+.page{display:none;max-width:1000px;margin:0 auto;padding:2rem 2rem 4rem}
+.page.active{display:block}
+
+/* ── HERO BLOCK ── */
+.page-hero{margin-bottom:2rem}
+.eyebrow{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--cp-accent);margin-bottom:0.5rem}
+.page-hero h2{font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;line-height:1.2}
+.page-hero h2 span{color:var(--cp-accent)}
+.page-hero p{color:var(--cp-text-muted);margin-top:0.5rem;font-size:0.9rem;max-width:680px}
+.hero-note{margin-top:1rem;background:var(--cp-surface);border:1px solid var(--cp-border);border-left:3px solid var(--cp-warning);border-radius:8px;padding:0.65rem 0.9rem;font-size:0.82rem;color:var(--cp-text-muted)}
+.hero-note strong{color:var(--cp-text)}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.stat{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:10px;padding:0.55rem 0.9rem;display:flex;flex-direction:column;gap:0.05rem}
+.stat-value{font-size:1.25rem;font-weight:700;color:var(--cp-accent);line-height:1}
+.stat-label{font-size:0.68rem;color:var(--cp-text-muted);text-transform:uppercase;letter-spacing:0.05em}
+
+/* ── WEAVE DIAGRAM ── */
+.weave-wrap{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.75rem}
+.weave-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--cp-text-muted);margin-bottom:1rem}
+.weave-diagram{display:grid;grid-template-columns:1fr 2.5rem 1fr;gap:0;align-items:center}
+.sources-col{display:flex;flex-direction:column;gap:0.4rem}
+.arrow-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.2rem;padding:0 0.25rem}
+.arrow-center{font-size:1.1rem;color:var(--cp-text-muted)}
+.output-col{display:flex;flex-direction:column;gap:0.4rem}
+.source-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.45rem 0.75rem;display:flex;align-items:center;gap:0.5rem;cursor:pointer;transition:all 0.15s}
+.source-node:hover{border-color:var(--cp-border-strong)}
+.source-node.active{border-color:var(--src-color,var(--cp-accent));background:color-mix(in srgb,var(--src-color,var(--cp-accent)) 8%,transparent)}
+.src-icon{font-size:0.9rem;flex-shrink:0}
+.src-info{display:flex;flex-direction:column;flex:1;min-width:0}
+.src-name{font-size:0.78rem;font-weight:600;color:var(--cp-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-desc{font-size:0.65rem;color:var(--cp-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-count{font-size:0.68rem;font-weight:700;color:var(--src-color,var(--cp-accent));flex-shrink:0}
+.pacaf-node{background:var(--cp-accent);border-radius:10px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.4rem}
+.pacaf-title{font-size:0.88rem;font-weight:700;color:var(--cp-accent-fg)}
+.pacaf-sub{font-size:0.68rem;color:rgba(255,255,255,0.72)}
+.output-node{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.45rem 0.75rem;display:flex;align-items:flex-start;gap:0.5rem}
+.out-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:0.35rem}
+.out-text{font-size:0.75rem;color:var(--cp-text-muted);line-height:1.4}
+.out-text strong{color:var(--cp-text)}
+
+/* ── CONTROLS BAR ── */
+.controls{display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;margin-bottom:0.75rem}
+.filter-btn{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:20px;padding:0.25rem 0.75rem;font-size:0.75rem;cursor:pointer;color:var(--cp-text-muted);transition:all 0.15s;font-family:inherit;white-space:nowrap}
+.filter-btn:hover{border-color:var(--cp-accent);color:var(--cp-accent)}
+.filter-btn.active{background:var(--cp-accent);border-color:var(--cp-accent);color:var(--cp-accent-fg)}
+.ctrl-divider{width:1px;height:1.2rem;background:var(--cp-border);flex-shrink:0}
+.sort-sel{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:6px;padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--cp-text);cursor:pointer;font-family:inherit;margin-left:auto}
+.results-info{font-size:0.75rem;color:var(--cp-text-muted);margin-bottom:0.75rem}
+
+/* ── ACCORDION ── */
+.accordion{display:flex;flex-direction:column;gap:0.4rem}
+.acc-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:12px;overflow:hidden;transition:border-color 0.15s}
+.acc-item.sev-critical{border-left:3px solid var(--cp-danger)}
+.acc-item.sev-nice{border-left:3px solid var(--cp-success)}
+.acc-item.open{border-color:var(--cp-accent)}
+.acc-item.acc-hidden{display:none}
+.acc-header{display:flex;align-items:center;gap:0.6rem;padding:0.7rem 1rem;cursor:pointer;user-select:none}
+.acc-num{font-size:0.68rem;color:var(--cp-text-muted);font-weight:700;min-width:1.6rem;flex-shrink:0}
+.acc-title{flex:1;font-size:0.86rem;font-weight:600;color:var(--cp-text);line-height:1.3}
+.acc-tags{display:flex;gap:0.3rem;flex-wrap:wrap;flex-shrink:0}
+.sev-badge{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.15rem 0.4rem;border-radius:4px}
+.sev-badge.critical{background:rgba(220,38,38,0.12);color:var(--cp-danger)}
+.sev-badge.nice{background:rgba(22,163,74,0.12);color:var(--cp-success)}
+.recov-badge{font-size:0.6rem;padding:0.15rem 0.4rem;border-radius:4px}
+.recov-irrecoverable{background:rgba(220,38,38,0.1);color:var(--cp-danger)}
+.recov-hard{background:rgba(249,115,22,0.1);color:#c2410c}
+.recov-moderate{background:rgba(245,158,11,0.1);color:#92400e}
+.recov-easy{background:rgba(22,163,74,0.1);color:var(--cp-success)}
+.acc-chevron{font-size:0.7rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0}
+.acc-item.open .acc-chevron{transform:rotate(90deg);color:var(--cp-accent)}
+
+.acc-body{display:none;padding:0 1rem 1rem;padding-top:0}
+.acc-item.open .acc-body{display:block}
+.acc-divider{height:1px;background:var(--cp-border);margin-bottom:0.8rem}
+.acc-desc{font-size:0.83rem;color:var(--cp-text-muted);line-height:1.65;margin-bottom:0.75rem}
+.acc-meta{display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.75rem}
+.cat-pill{font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:4px;background:var(--cp-surface-soft);border:1px solid var(--cp-border);color:var(--cp-text-soft);font-weight:500}
+.src-pill{font-size:0.63rem;padding:0.12rem 0.45rem;border-radius:4px;font-weight:600;border:1px solid transparent}
+.acc-meters{display:flex;gap:1.5rem;flex-wrap:wrap}
+.meter-row{display:flex;align-items:center;gap:0.45rem}
+.meter-label{font-size:0.65rem;color:var(--cp-text-muted);width:5rem;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0}
+.meter-track{width:80px;height:5px;background:var(--cp-surface-soft);border-radius:99px;overflow:hidden;border:1px solid var(--cp-border);flex-shrink:0}
+.meter-fill{height:100%;border-radius:99px}
+.fill-irrecoverable{background:var(--cp-danger)}
+.fill-hard{background:#f97316}
+.fill-moderate{background:var(--cp-warning)}
+.fill-easy{background:var(--cp-success)}
+.fill-token-high{background:var(--cp-accent)}
+.fill-token-medium{background:#8b5cf6}
+.fill-token-low{background:var(--cp-text-muted)}
+.meter-val{font-size:0.65rem;color:var(--cp-text-soft)}
+
+/* ── FAQ ── */
+.faq-item{background:var(--cp-surface);border:1px solid var(--cp-border);border-radius:12px;overflow:hidden;transition:border-color 0.15s}
+.faq-item:hover{border-color:var(--cp-border-strong)}
+.faq-item.open{border-color:var(--cp-accent)}
+.faq-item.faq-hidden{display:none}
+.faq-header{display:flex;align-items:flex-start;gap:0.6rem;padding:0.8rem 1rem;cursor:pointer;user-select:none}
+.faq-persona{font-size:1.1rem;flex-shrink:0;margin-top:0.05rem}
+.faq-q-text{flex:1;font-size:0.87rem;font-weight:600;color:var(--cp-text);line-height:1.4}
+.faq-tag-badge{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.15rem 0.45rem;border-radius:4px;white-space:nowrap;flex-shrink:0;margin-top:0.1rem}
+.faq-chevron{font-size:0.7rem;color:var(--cp-text-muted);transition:transform 0.2s;flex-shrink:0;margin-top:0.2rem}
+.faq-item.open .faq-chevron{transform:rotate(90deg);color:var(--cp-accent)}
+.faq-body{display:none;padding:0 1rem 1rem}
+.faq-item.open .faq-body{display:block}
+.faq-divider{height:1px;background:var(--cp-border);margin-bottom:0.9rem}
+.faq-a{font-size:0.84rem;color:var(--cp-text-muted);line-height:1.7}
+.faq-a p{margin-bottom:0.65rem}
+.faq-a p:last-child{margin-bottom:0}
+.faq-a strong{color:var(--cp-text)}
+.faq-a code{font-family:Consolas,"Courier New",monospace;font-size:0.8rem;background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:4px;padding:0.1rem 0.35rem;color:var(--cp-text)}
+.faq-a ul{margin:0.4rem 0 0.65rem 1.1rem}
+.faq-a li{margin-bottom:0.3rem;font-size:0.84rem}
+.faq-highlight{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.65rem 0.85rem;margin:0.65rem 0;font-size:0.82rem}
+.faq-highlight-title{font-weight:700;color:var(--cp-text);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.35rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin:0.65rem 0}
+.col-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.col-bad{color:var(--cp-danger)}
+.col-good{color:var(--cp-success)}
+.col-content{background:var(--cp-surface-soft);border:1px solid var(--cp-border);border-radius:8px;padding:0.65rem;font-size:0.8rem;color:var(--cp-text-muted)}
+
+/* TAG COLORS */
+.tag-complexity{background:rgba(139,92,246,0.12);color:#7c3aed}
+.tag-demo{background:rgba(245,158,11,0.12);color:#b45309}
+.tag-traps{background:rgba(220,38,38,0.12);color:var(--cp-danger)}
+.tag-agents{background:rgba(0,120,212,0.12);color:var(--cp-link)}
+.tag-tokens{background:rgba(177,31,75,0.1);color:var(--cp-accent)}
+.tag-dataverse{background:rgba(92,45,145,0.12);color:#5c2d91}
+.tag-real{background:rgba(22,163,74,0.12);color:var(--cp-success)}
+
+/* EMPTY STATE */
+.empty-state{display:none;padding:3rem 1rem;text-align:center;color:var(--cp-text-muted);font-size:0.88rem}
+.empty-state.show{display:block}
+
+@media(max-width:660px){
+  .page{padding:1.5rem 1rem 3rem}
+  .weave-diagram{grid-template-columns:1fr}
+  .arrow-col{display:none}
+  .two-col{grid-template-columns:1fr}
+  .acc-tags{display:none}
+  .top-nav-inner{padding:0 1rem}
+  .nav-brand{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <span class="nav-brand">PACAF <span>Docs</span></span>
+    <button class="nav-tab active" data-page="differentiators">Differentiators</button>
+    <button class="nav-tab" data-page="faq">FAQ</button>
+    <div class="nav-right">
+      <button class="theme-btn" id="themeBtn">🌓 Theme</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 1 — DIFFERENTIATORS
+════════════════════════════════════════════ -->
+<div class="page active" id="page-differentiators">
+  <div class="page-hero">
+    <div class="eyebrow">The Weave, Not the Invention</div>
+    <h2>What PACAF gets right <span>out of the gate</span></h2>
+    <p>Every piece of knowledge here already existed — in Microsoft's official docs, in community plugins, in open-source agent patterns. PACAF's value is assembling it in one place so an agent works effectively from the first prompt.</p>
+  </div>
+
+  <div class="stats-bar" id="diffStats"></div>
+
+  <!-- WEAVE DIAGRAM -->
+  <div class="weave-wrap">
+    <div class="weave-label">Where the knowledge comes from → what PACAF assembles → what the agent delivers</div>
+    <div class="weave-diagram">
+      <div class="sources-col" id="sourceNodes"></div>
+      <div class="arrow-col"><div class="arrow-center">→</div></div>
+      <div class="output-col">
+        <div class="pacaf-node">
+          <div class="pacaf-title">PACAF Agent Instructions</div>
+          <div class="pacaf-sub">One instruction set. Loaded at agent startup. No discovery required.</div>
+        </div>
+        <div class="output-node"><div class="out-dot" style="background:var(--cp-success)"></div><div class="out-text"><strong>Zero prerequisite discovery</strong> — agent knows what to invoke before writing a line</div></div>
+        <div class="output-node"><div class="out-dot" style="background:var(--cp-accent)"></div><div class="out-text"><strong>No silent failures</strong> — traps documented before the agent can fall into them</div></div>
+        <div class="output-node"><div class="out-dot" style="background:#8b5cf6"></div><div class="out-text"><strong>Token-efficient sessions</strong> — routing tables replace reasoning from scratch</div></div>
+        <div class="output-node"><div class="out-dot" style="background:var(--cp-warning)"></div><div class="out-text"><strong>Durable decisions</strong> — planning cadence + ADRs prevent expensive rework</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls" id="diffControls">
+    <button class="filter-btn active" data-filter="all" data-group="dsev">All</button>
+    <button class="filter-btn" data-filter="critical" data-group="dsev">🔴 Critical</button>
+    <button class="filter-btn" data-filter="nice" data-group="dsev">🟢 Nice to Have</button>
+    <div class="ctrl-divider"></div>
+    <div id="diffCatBtns" style="display:contents"></div>
+    <div class="ctrl-divider"></div>
+    <div id="diffSrcBtns" style="display:contents"></div>
+    <select class="sort-sel" id="diffSort">
+      <option value="default">Default order</option>
+      <option value="recov">Hardest to recover ↑</option>
+      <option value="token">Token savings ↓</option>
+      <option value="sev">Critical first</option>
+      <option value="alpha">A–Z</option>
+    </select>
+  </div>
+  <div class="results-info" id="diffCount"></div>
+  <div class="accordion" id="diffAccordion"></div>
+  <div class="empty-state" id="diffEmpty">No items match the current filters.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 2 — FAQ
+════════════════════════════════════════════ -->
+<div class="page" id="page-faq">
+  <div class="page-hero">
+    <div class="eyebrow">Frequently Asked Questions</div>
+    <h2>Yeah, but <span>do I really need all this?</span></h2>
+    <p>Honest answers for people who just watched a 7-minute YouTube video and are wondering why production Code App development involves more than 6 commands.</p>
+    <div class="hero-note"><strong>Fair warning:</strong> This FAQ doesn't try to sell you on anything. Some of this stuff genuinely is optional depending on what you're building. We'll tell you which parts are which.</div>
+  </div>
+
+  <div class="controls">
+    <button class="filter-btn active" data-filter="all" data-group="ftag">All questions</button>
+    <button class="filter-btn" data-filter="complexity" data-group="ftag">Complexity</button>
+    <button class="filter-btn" data-filter="demo" data-group="ftag">Demo vs. Reality</button>
+    <button class="filter-btn" data-filter="traps" data-group="ftag">Silent Traps</button>
+    <button class="filter-btn" data-filter="agents" data-group="ftag">AI Agents</button>
+    <button class="filter-btn" data-filter="tokens" data-group="ftag">Token Cost</button>
+    <button class="filter-btn" data-filter="dataverse" data-group="ftag">Dataverse</button>
+    <button class="filter-btn" data-filter="real" data-group="ftag">Real Projects</button>
+  </div>
+  <div class="results-info" id="faqCount"></div>
+  <div class="accordion" id="faqAccordion"></div>
+  <div class="empty-state" id="faqEmpty">No questions match this filter.</div>
+</div>
+
+<script>
+/* ══════════════════ DATA ══════════════════ */
+
+const SOURCES = {
+  msdocs:    {label:"Microsoft Docs",      desc:"Official PAC CLI, SDK & Power Apps docs", icon:"📘", color:"#0078d4"},
+  codeapps:  {label:"Code Apps Plugin",    desc:"microsoft/power-platform-skills",          icon:"🔌", color:"#0f7b0f"},
+  dataverse: {label:"Dataverse Skills",    desc:"microsoft/Dataverse-skills plugin",        icon:"🗄️", color:"#5c2d91"},
+  grillme:   {label:"Grill-with-docs",     desc:"Matt Pocock's interview cadence",          icon:"🔥", color:"#c05621"},
+  hardwon:   {label:"Hard-won Experience", desc:"Discovered by building, not reading",      icon:"⚡", color:"#b11f4b"},
+  pacaf:     {label:"PACAF Original",      desc:"Patterns originated in this template",     icon:"🧵", color:"#6b7280"},
+};
+
+const DIFFS = [
+  {id:1,title:"Solution unique name vs. display name silently succeeds but does nothing",desc:"pac code push -s 'My App' (display name) returns success and silently skips the solution. Only the unique name works. No error is thrown. PACAF gates on verifying the unique name with pac solution list first.",cat:"Deployment",sev:"critical",recov:"irrecoverable",token:"medium",src:["msdocs","hardwon"]},
+  {id:2,title:"base: './' in vite.config is required for production builds",desc:"Without it, asset URLs are absolute and 404 inside the Power Apps iframe. Works perfectly in local dev. Nothing in Vite or Power Apps docs connects these two facts — PACAF documents the pairing explicitly.",cat:"Deployment",sev:"critical",recov:"easy",token:"medium",src:["hardwon","pacaf"]},
+  {id:3,title:"npm run build must succeed before pac code push — never skip",desc:"Pushing without a successful build deploys stale or broken assets. The Code Apps plugin's /deploy skill enforces build-first with a confirmation gate. PACAF gates on the plugin to get this behavior.",cat:"Deployment",sev:"critical",recov:"easy",token:"low",src:["codeapps","pacaf"]},
+  {id:4,title:"BrowserRouter works locally and silently dies in production",desc:"The Power Apps host owns the URL path. BrowserRouter 404s on every deep link inside the iframe. Nothing in Microsoft's getting-started docs calls this out. PACAF bans it at the prebuild hook level.",cat:"Architecture",sev:"critical",recov:"easy",token:"medium",src:["hardwon","pacaf"]},
+  {id:5,title:"Direct fetch/axios calls succeed in dev and fail silently in production",desc:"The sandbox blocks arbitrary outbound HTTP. Valid React code works locally against Graph API, ships to prod, and does nothing — no error. The Code Apps plugin enforces connector-first; PACAF gates on the plugin.",cat:"Architecture",sev:"critical",recov:"moderate",token:"high",src:["msdocs","codeapps","pacaf"]},
+  {id:6,title:"src/generated/ is read-only — edits are silently lost on next add-data-source",desc:"Beginners fix generated files, re-run add-data-source, and lose all changes with no warning. The read-only rule + wrapper pattern in src/services/ comes from the Code Apps plugin guidance, reinforced by PACAF.",cat:"Architecture",sev:"critical",recov:"moderate",token:"high",src:["codeapps","msdocs","pacaf"]},
+  {id:7,title:"Three-layer architecture prevents connector shape leakage",desc:"Components that call generated services directly break across the entire app when connector schema changes. Hook → service → adapter localizes breakage to one file. PACAF documents this as a hard rule.",cat:"Architecture",sev:"critical",recov:"hard",token:"high",src:["pacaf","hardwon"]},
+  {id:8,title:"Port 3000 is mandatory — Vite's default 5173 breaks the SDK silently",desc:"The Power Apps SDK requires port 3000. Documented in the SDK docs but easily missed. PACAF makes it an explicit rule in the scaffold instruction file with a comment explaining why.",cat:"Architecture",sev:"critical",recov:"easy",token:"low",src:["msdocs","pacaf"]},
+  {id:9,title:"verbatimModuleSyntax: false is required for SDK compatibility",desc:"TypeScript strict mode defaults flip this to true. The SDK breaks in ways that don't point back to this tsconfig setting. PACAF pins it with an explanatory comment so no agent ever has to reason it out.",cat:"Architecture",sev:"critical",recov:"easy",token:"medium",src:["hardwon","pacaf"]},
+  {id:10,title:"Mock provider pattern enables stakeholder demos before real data is bound",desc:"Without mock providers, demos require live Dataverse connections. PACAF's prototype-first pattern (00d) lets the entire UX be validated with realistic data before any schema is provisioned.",cat:"Architecture",sev:"nice",recov:"moderate",token:"high",src:["pacaf"]},
+  {id:11,title:"TanStack Query is the correct abstraction for async connector data",desc:"Without it, beginners call connector services in useEffect, producing duplicate requests and stale data. PACAF mandates TanStack Query as the server-state layer for all connector calls.",cat:"Architecture",sev:"nice",recov:"moderate",token:"medium",src:["pacaf","hardwon"]},
+  {id:12,title:"Path alias @/ prevents fragile relative imports as the codebase grows",desc:"../../../../components/Button breaks on reorganization. The @/ alias is configured in both tsconfig.json and vite.config.ts. PACAF bakes this in from scaffold day one.",cat:"Architecture",sev:"nice",recov:"easy",token:"low",src:["pacaf"]},
+  {id:13,title:"Publisher prefix is immutable once data exists",desc:"Picking 'new' or 'app' is a permanent decision. Microsoft documents prefixes but not that they cannot change after records exist. PACAF forces this decision upfront and records it as an ADR.",cat:"Schema",sev:"critical",recov:"irrecoverable",token:"high",src:["msdocs","hardwon","pacaf"]},
+  {id:14,title:"DataverseFieldLabel pattern prevents required-field drift",desc:"A schema owner flips Optional to Business Required. Every hardcoded asterisk is now wrong, and the Web API won't enforce it. PACAF originated this pattern — it doesn't exist in Microsoft's Code App guidance.",cat:"Schema",sev:"critical",recov:"moderate",token:"high",src:["pacaf"]},
+  {id:15,title:"Business unit / data isolation decisions cannot be retrofitted cheaply",desc:"'Region A shouldn't see Region B's records' must be decided before schema is provisioned. PACAF's 00b scoping questions surface this before it's too late, filling a gap in the Dataverse Skills plugin.",cat:"Schema",sev:"critical",recov:"hard",token:"high",src:["dataverse","pacaf","hardwon"]},
+  {id:16,title:"OOB-first schema discovery prevents duplicate table creation",desc:"Beginners create custom tables for Account, Contact, Activity — all of which exist OOB. PACAF's 07a gate requires discovery before proposing any new table, driving the Dataverse Skills plugin's list_tables.",cat:"Schema",sev:"critical",recov:"hard",token:"medium",src:["dataverse","pacaf"]},
+  {id:17,title:"RequiredLevel.Value returns a string name, not a numeric enum",desc:"The Power Apps SDK returns 'ApplicationRequired' as a string, not a number. Code using numeric enum values silently shows no asterisk on required fields. Not documented in the SDK reference.",cat:"Schema",sev:"critical",recov:"easy",token:"medium",src:["hardwon","pacaf"]},
+  {id:18,title:"Connection references are environment-specific — dev IDs break in prod",desc:"Deploying with a dev connection ID silently fails in production. PACAF's 00-before-you-start forces collecting all three environment connection IDs before writing a line of code.",cat:"Connectors",sev:"critical",recov:"hard",token:"medium",src:["msdocs","pacaf"]},
+  {id:19,title:"Maker Portal URL encodes both API ID and Connection ID — no need to ask",desc:"The URL /connections/<API_ID>/<CONNECTION_ID>/details contains everything. Agents without this pattern ask follow-up questions for every connector. PACAF eliminates the entire round-trip.",cat:"Connectors",sev:"nice",recov:"easy",token:"high",src:["pacaf","hardwon"]},
+  {id:20,title:"Code Apps plugin hard gate prevents agents from improvising connector binding",desc:"Without the gate, agents hand-roll pac code add-data-source with wrong flags or scaffold via npx degit, producing a non-PACAF template. The gate forces the right tool. Added in this session.",cat:"Connectors",sev:"critical",recov:"moderate",token:"high",src:["codeapps","pacaf"]},
+  {id:21,title:"/add-mcscopilot for Copilot Studio connectors — previously undocumented",desc:"No routing existed for Copilot Studio agent connectors in PACAF. An agent would guess wrong flags. Now explicitly routed to /add-mcscopilot from the Code Apps plugin.",cat:"Connectors",sev:"nice",recov:"easy",token:"medium",src:["codeapps","pacaf"]},
+  {id:22,title:"Wizard orders steps correctly: publisher → solution → app reg → pac code init",desc:"Microsoft's docs describe each step in isolation. Getting the order wrong produces untracked artifacts. The PACAF wizard enforces the correct sequence.",cat:"Tooling",sev:"critical",recov:"hard",token:"high",src:["msdocs","pacaf"]},
+  {id:23,title:"Scaffolding override: PACAF wizard takes precedence over plugin's npx degit",desc:"The Code Apps plugin's /create-code-app scaffolds via npx degit — a plain Microsoft template with no publisher, solution, App Registration, or auth wiring. PACAF explicitly overrides this.",cat:"Tooling",sev:"critical",recov:"hard",token:"high",src:["codeapps","pacaf","hardwon"]},
+  {id:24,title:"PAC CLI PATH problems look like PACAF bugs — diagnosed upfront",desc:"A PATH entry with a literal ~ is silently broken in zsh/bash. The binary exists but which pac fails. PACAF's prereq gate Step 2.5 catches this before any error spiral begins.",cat:"Tooling",sev:"nice",recov:"easy",token:"low",src:["hardwon","pacaf"]},
+  {id:25,title:"code-apps-preview is the correct marketplace name, not code-apps",desc:"'/plugin install code-apps@power-platform-skills' returns not found. Discovered during actual install. PACAF documents the correct name and adds a fallback note for agents.",cat:"Tooling",sev:"nice",recov:"easy",token:"medium",src:["codeapps","hardwon","pacaf"]},
+  {id:26,title:"App Registration (SPN) required for CI/CD — interactive auth blocks pipelines",desc:"pac auth create with interactive login works locally but fails in GitHub Actions. PACAF forces SPN auth profile creation before any deployment pipeline is wired up.",cat:"Tooling",sev:"critical",recov:"moderate",token:"medium",src:["msdocs","pacaf"]},
+  {id:27,title:"Planning before schema prevents the most expensive mid-project rework",desc:"Binding real connectors at day one, building 3 screens, then finding the data model is wrong forces a full rewrite. PACAF's 00a→00d flow with mock providers makes rework happen in cheap mock-land.",cat:"Planning",sev:"critical",recov:"hard",token:"high",src:["pacaf","hardwon"]},
+  {id:28,title:"Grilling cadence: one question at a time with a recommended answer",desc:"Adapted from Matt Pocock's grill-with-docs pattern. AI agents given free rein produce requirement lists that look complete and miss everything important. One question + lettered recommendation forces real decisions.",cat:"Planning",sev:"nice",recov:"easy",token:"high",src:["grillme","pacaf"]},
+  {id:29,title:"CONTEXT.md living glossary prevents terminology drift across sessions",desc:"Without it, 'account' means Customer in one session and User in the next. Adapted from the grill-with-docs pattern. Consulted before any new business term is introduced, updated inline as terms are sharpened.",cat:"Planning",sev:"nice",recov:"moderate",token:"medium",src:["grillme","pacaf"]},
+  {id:30,title:"ADR pattern captures decisions that will confuse future developers",desc:"Adapted from the grill-with-docs pattern. Three-sentence ADRs turn 'why HashRouter?' into a committed file rather than institutional knowledge that leaves with the first developer.",cat:"Planning",sev:"nice",recov:"easy",token:"low",src:["grillme","pacaf"]},
+  {id:31,title:"Environment topology must be decided before any artifact creation",desc:"Creating tables in the default environment before Dev/Test/Prod are set up produces artifacts that cannot be promoted. PACAF's 00-before-you-start gates on topology first.",cat:"Planning",sev:"critical",recov:"hard",token:"medium",src:["msdocs","pacaf"]},
+  {id:32,title:"No secrets in source — tokens committed to git history are permanent",desc:"Git history is forever. PACAF's security instruction file and .gitignore patterns prevent PAC auth tokens, client secrets, and .env.local from being committed even accidentally.",cat:"Security",sev:"critical",recov:"hard",token:"low",src:["msdocs","pacaf"]},
+  {id:33,title:"Scope-split tables tell the agent which plugin owns which task instantly",desc:"Without scope-split tables, an agent reasons from first principles whether to use PAC CLI, the Dataverse plugin, or the Code Apps plugin for each operation — wasting tokens every session.",cat:"Token Efficiency",sev:"nice",recov:"easy",token:"high",src:["pacaf"]},
+  {id:34,title:"Prereq gate surfaces missing tools before commands fail cryptically",desc:"A missing .NET SDK produces a chain of confusing errors. The prereq gate runs a targeted check first and stops with a clear action list — saving the agent from a multi-turn debug spiral.",cat:"Token Efficiency",sev:"nice",recov:"easy",token:"high",src:["pacaf","hardwon"]},
+  {id:35,title:"Connector skill routing table collapses decision-making to one lookup",desc:"Without a routing table, an agent asks 'what connector?', 'what API ID?', 'what connection ID?' — 3+ round trips per connector. The routing table + URL parser collapse this to zero every time.",cat:"Token Efficiency",sev:"nice",recov:"easy",token:"high",src:["codeapps","pacaf"]},
+  {id:36,title:"Changeset discipline ensures fixes reach npx users — not just the repo",desc:"A fix merged without a changeset never reaches npx @pacaf/wizard-ux@latest users. PACAF's CI guard makes it impossible to do accidentally, keeping the shipped instruction set current.",cat:"Token Efficiency",sev:"nice",recov:"moderate",token:"low",src:["pacaf","hardwon"]},
+  {id:37,title:"@pacaf/agent-instructions ships the latest guidance to every new scaffold",desc:"Raw GitHub instructions are only as current as when you cloned. The npm package means npx @pacaf/wizard-ux@latest bakes the latest instruction set into every new project automatically.",cat:"Token Efficiency",sev:"nice",recov:"easy",token:"high",src:["pacaf"]},
+  {id:38,title:"Dataverse Skills plugin hard gate prevents hand-rolled Web API calls",desc:"Without the gate, agents improvise FetchXML and Web API calls from scratch, consuming hundreds of tokens and getting details wrong. The gate forces the plugin's dv-metadata/dv-data skills instead.",cat:"Token Efficiency",sev:"critical",recov:"moderate",token:"high",src:["dataverse","pacaf"]},
+];
+
+const FAQS = [
+  {tag:"demo",persona:"😅",q:"Dude, you are making this way too complicated. I saw a guy spin up a Code App with like 6 commands. It looked so much easier.",a:`<p>That video was probably right. <strong>You absolutely can build a Code App in 6 commands.</strong> The question isn't whether the demo worked — it's whether the demo was building something you'd actually ship and maintain for two years.</p><div class="faq-highlight"><div class="faq-highlight-title">What a 6-command demo typically skips</div>Creating a proper solution so the app can be promoted to test and production, setting up a Service Principal for CI/CD, knowing that connection IDs differ per environment, and that BrowserRouter 404s in the Power Apps iframe even though it worked locally.</div><p><strong>If you're building a proof of concept for yourself, 6 commands is the right answer.</strong> If you're building something that needs to go to production and be maintained by a team, those skipped steps come back around.</p>`},
+  {tag:"demo",persona:"🤔",q:"The Microsoft docs literally have a quickstart. Why not just follow that?",a:`<p>The quickstart is excellent for what it is: a fast path to 'it runs.' It's intentionally minimal so nothing blocks you from seeing the product work. That's good documentation design.</p><p>What quickstarts aren't designed to do: tell you which decisions are reversible and which ones aren't, explain what breaks in production that worked in dev, or help an AI agent make correct decisions without reasoning everything out from scratch each session.</p><div class="faq-highlight"><div class="faq-highlight-title">The one thing quickstarts can't tell you</div>Which steps are one-way doors. The publisher prefix you set in step 2 of the quickstart? That's permanent once you have data. The quickstart doesn't say that.</div>`},
+  {tag:"complexity",persona:"😤",q:"I just want to connect to SharePoint and show a list. Why do I need all this planning stuff?",a:`<p>You don't. <strong>If your app is one screen, one SharePoint list, and one person using it, skip the planning phase entirely.</strong> Run the wizard, add SharePoint, build the screen, push it. Done.</p><p>The planning guidance is for when the app is actually a business process with multiple data sources, approval steps, role-based visibility, and more than one person who has opinions about what it should do. That's where skipping planning is expensive.</p>`},
+  {tag:"complexity",persona:"🙄",q:"The one-question-at-a-time grilling cadence is going to take forever.",a:`<p>It feels slow. It's actually faster. The alternative is an AI agent asking you 15 questions at once, you answering them all, and the agent building something based on its interpretation — which is subtly wrong in 3 places.</p><p>One question with a recommended answer means you only have to say "yes" or pick a letter most of the time. Sessions that follow this pattern produce a stable data model in one sitting. Sessions that don't often produce a data model you have to redo after the first prototype.</p><p><strong>The cadence is also optional.</strong> If you know exactly what you want and can describe it precisely, tell the agent that and it will skip the questions entirely.</p>`},
+  {tag:"complexity",persona:"😬",q:"Do I really need a Service Principal and App Registration just to deploy?",a:`<p>For a personal project you're the only one deploying from your own laptop? No. Interactive login works fine.</p><p>For anything with a CI/CD pipeline — even a simple GitHub Actions deploy — <strong>yes, you need the Service Principal.</strong> Interactive auth requires a browser. GitHub Actions doesn't have one. You'll hit this wall the moment you try to automate deployment, and setting it up retroactively is more painful than doing it first.</p>`},
+  {tag:"traps",persona:"😱",q:"Wait, BrowserRouter just... breaks? But it worked fine when I tested it.",a:`<p>Yes. This is probably the most common 'works on my machine' problem in Code Apps. <strong>BrowserRouter works perfectly in local dev. It breaks silently in production</strong> — specifically, every deep link 404s and refresh 404s.</p><p>The Power Apps host owns the URL path. BrowserRouter expects to own the path too, and gets confused when someone navigates directly to a route.</p><div class="faq-highlight"><div class="faq-highlight-title">The fix</div>Use <code>HashRouter</code> instead. The URL fragment after <code>#</code> is reliably owned by the iframe. PACAF bans BrowserRouter at the prebuild hook level so you get an error before you deploy, not after.</div>`},
+  {tag:"traps",persona:"😰",q:"I built a component that calls the Microsoft Graph API directly. That's wrong?",a:`<p>In a generic React app, it's fine. In a Code App, <strong>it will not work in production.</strong> The Power Apps sandbox blocks outbound HTTP calls not proxied through a Power Platform connector. Your app works perfectly locally and does nothing — silently — when deployed.</p><p>There's no error message. No console warning. The call just doesn't happen.</p><div class="faq-highlight"><div class="faq-highlight-title">The rule</div>All external data access goes through Power Platform connectors. If there's a connector for what you need — use it. If there's no connector, you need a Custom Connector.</div>`},
+  {tag:"traps",persona:"🤦",q:"I edited a file in src/generated/ to fix something. Was that a mistake?",a:`<p>It will be the next time you run <code>pac code add-data-source</code>. <strong>That command regenerates everything in <code>src/generated/</code> and your edit will be gone</strong> — with no warning, no merge conflict, just overwritten.</p><div class="two-col"><div><div class="col-label col-bad">❌ Avoid</div><div class="col-content">Edit the generated service file directly to add a method or fix a type</div></div><div><div class="col-label col-good">✅ Instead</div><div class="col-content">Create an adapter in <code>src/services/</code> that wraps the generated service and adds what you need</div></div></div>`},
+  {tag:"traps",persona:"😳",q:"I picked a publisher prefix of 'new' because I didn't know what to put. Is that a problem?",a:`<p>Depends on whether you have Dataverse data yet. <strong>Publisher prefixes become the namespace for every Dataverse table, column, and option set you create.</strong> So a table becomes <code>new_ProjectTask</code> and every column gets <code>new_</code> in front.</p><p>If you haven't created any Dataverse tables yet, you can still change it. If you have tables with data, the only practical fix is starting over.</p><div class="faq-highlight"><div class="faq-highlight-title">The PACAF rule</div>Decide the prefix before you create anything. Record it in a committed ADR. Then don't change it.</div>`},
+  {tag:"traps",persona:"😬",q:"My app works in dev but shows a blank screen in production. What happened?",a:`<p>Almost certainly a connection ID mismatch. <strong>Connection IDs are environment-specific.</strong> The connection you created in dev has a different ID than the one in production — even if they're both Office 365 connectors pointing to the same tenant.</p><div class="faq-highlight"><div class="faq-highlight-title">How to get the right connection ID</div>Go to Power Apps Maker Portal → select the environment → Connections → click the connection → copy the ID from the URL. Or paste the full URL to your agent — PACAF knows how to extract the ID from it.</div>`},
+  {tag:"agents",persona:"🤖",q:"I'm using GitHub Copilot / Claude Code. Why do I need to install a plugin? Can't the AI just figure it out?",a:`<p>It can figure most of it out — eventually, with enough back-and-forth. <strong>The plugin is about making it work correctly on the first try</strong> rather than after three rounds of wrong flags and a build error.</p><div class="faq-highlight"><div class="faq-highlight-title">A concrete example</div>Adding the ServiceNow connector without the plugin: agent asks for the API ID, asks for the connection ID, constructs the command, gets a flag wrong, tries again. With the plugin: you paste the Maker Portal URL, agent extracts both IDs from the URL path, invokes /add-connector, done.</div>`},
+  {tag:"agents",persona:"🤨",q:"I used Copilot / Claude to build a Code App without any of this and it worked fine.",a:`<p>You might not be missing anything for a simple app. <strong>For a single connector and no production deployment, an AI agent does pretty well without specialized guidance.</strong></p><p>The gaps show up when you need to deploy to a separate production environment, multiple people are working on the app, you need to add more connectors later, or someone asks for approval steps or role-based visibility six months from now.</p><p>An agent without PACAF gets you to a working demo. An agent with PACAF gets you to something you can hand off, deploy, and maintain.</p>`},
+  {tag:"agents",persona:"😤",q:"The agent keeps stopping to make me install plugins before it does anything. That's annoying.",a:`<p>We hear you. The gates exist because the failure mode without them is much worse: an agent that confidently does the wrong thing and produces something broken in a way that's hard to diagnose.</p><p><strong>You only install the plugins once per machine.</strong> After that, the gates don't fire again. The two you need:</p><ul><li>Code Apps: <code>/plugin marketplace add microsoft/power-platform-skills</code> then <code>/plugin install code-apps-preview@power-platform-skills</code></li><li>Dataverse Skills (only for schema work): <code>/plugin install dataverse@awesome-copilot</code></li></ul><p>Ten minutes once. Then the agent just works.</p>`},
+  {tag:"tokens",persona:"💸",q:"I'm paying for AI tokens. All these instructions must be costing me a fortune.",a:`<p>This is a reasonable concern and the answer is counterintuitive. <strong>More upfront instruction actually reduces total token consumption.</strong></p><p>Every question the agent has to figure out on its own — what command to use, what flags it takes, what connection ID format is, whether to use HashRouter — consumes tokens in reasoning. A single confused back-and-forth about a wrong command can burn 500–1000 tokens.</p><div class="faq-highlight"><div class="faq-highlight-title">The math</div>PACAF's instruction set costs tokens once at context load. The routing tables, skill mappings, and explicit rules prevent dozens of reasoning loops that would each cost more. For any session longer than 20 minutes of real work, the instructions pay for themselves.</div>`},
+  {tag:"tokens",persona:"🤓",q:"OK but doesn't loading all those instruction files eat tokens at the start of every session?",a:`<p>Yes, the instruction files have a cost at context load time. <strong>The design intentionally front-loads that cost to avoid paying it repeatedly throughout the session.</strong></p><p>The instructions are also scoped — they load based on which files you're working with. If you're only editing a React component, you don't load the Dataverse schema instructions. If you're doing planning, you don't load the deployment instructions.</p>`},
+  {tag:"dataverse",persona:"🗄️",q:"I watched a Dataverse Skills demo where the agent just created tables directly. Why does PACAF make a big deal about 'discovery first'?",a:`<p>The demo was right for the demo. <strong>Creating tables directly is fast when you're starting fresh.</strong> The discovery-first rule matters in the real world where Dataverse already has hundreds of OOB tables you might be duplicating.</p><p>Creating a custom <code>csoeng_Contact</code> table when the platform already has a <code>contact</code> table means you now have two places where contact data lives with no relationship between them — a sync problem that doesn't exist if you use the OOB table.</p>`},
+  {tag:"dataverse",persona:"😮",q:"Someone told me to just put everything in SharePoint lists instead of Dataverse. Is that wrong?",a:`<p>Not wrong — it's a valid choice for the right situation. <strong>SharePoint lists are fast to set up and adequate for simple tabular data without complex relationships.</strong></p><p>Dataverse becomes the better choice when you need row-level security, complex relationships between entities, business rules that enforce data integrity, or approval workflows tightly coupled to the data.</p><p>PACAF supports both. The planning questions in 00b surface which one is right for your situation rather than defaulting to either.</p>`},
+  {tag:"dataverse",persona:"🤔",q:"The Dataverse Skills plugin already handles Dataverse. Why do I need PACAF's Dataverse instructions too?",a:`<p>The Dataverse Skills plugin is excellent at execution — creating tables, columns, relationships, running queries. <strong>What it doesn't do is help you decide what to build before you build it.</strong></p><p>PACAF covers: should this be a new table or an extended OOB table? Does this entity need business unit scoping? What's the lifecycle of this record? Which columns are required at the app level vs. the schema level? PACAF handles the 'what and why', then hands off to Dataverse Skills for the 'how.'</p>`},
+  {tag:"real",persona:"🏗️",q:"We have 5 developers working on this. Does PACAF actually help with that?",a:`<p>It's more valuable with multiple developers, not less. <strong>The problems PACAF solves get worse as team size grows.</strong></p><p>With one developer, institutional knowledge lives in one person's head. With five, it lives in nobody's head. The CONTEXT.md glossary, the ADRs, the three-layer architecture rule, and the solution-first discipline all exist to keep a team aligned without a 3-hour onboarding call for every new member.</p>`},
+  {tag:"real",persona:"🚀",q:"We need to ship in two weeks. Should we skip all of this and come back to it?",a:`<p>Skip the parts that don't apply to a two-week sprint. Don't skip the parts that are one-way doors.</p><div class="two-col"><div><div class="col-label col-bad">⏭️ Safe to skip</div><div class="col-content">Full planning cadence, ADRs, mock provider phase, org structure planning, full CI/CD pipeline</div></div><div><div class="col-label col-good">⛔ Do not skip</div><div class="col-content">Publisher prefix decision, HashRouter, base: './' in vite.config, solution creation, port 3000, no editing src/generated/</div></div></div><p>The "do not skip" list takes about 30 minutes. Fixing any of those items post-production can take days.</p>`},
+  {tag:"real",persona:"💼",q:"I'm a consultant delivering this for a client. Why should I care if I'm handing it off anyway?",a:`<p>Because the moment you hand it off, someone tries to add a feature or onboard a new developer — and they'll have questions you're no longer there to answer.</p><p>A Code App delivered with PACAF patterns means the client's team can add connectors without breaking the architecture, deployment is automated and repeatable, and key decisions are documented in committed files. <strong>The quality of the handoff is part of the deliverable.</strong> A demo that works on delivery day but requires you for every change after is not a complete project.</p>`},
+];
+
+/* ══════════════════ DIFF STATE ══════════════════ */
+const dCats = [...new Set(DIFFS.map(d=>d.cat))];
+let dSev="all", dCat="all", dSrc="all", dSort="default";
+const rOrd={irrecoverable:0,hard:1,moderate:2,easy:3};
+const tOrd={high:0,medium:1,low:2};
+const rLabel={irrecoverable:"Irrecoverable",hard:"Hard to recover",moderate:"Moderate effort",easy:"Quick fix"};
+const rW={irrecoverable:"100%",hard:"72%",moderate:"45%",easy:"20%"};
+const tW={high:"100%",medium:"60%",low:"28%"};
+const tLabel={high:"High (500+ tokens)",medium:"Medium (200–500)",low:"Low (<200)"};
+
+function srcCount(k){return DIFFS.filter(d=>d.src.includes(k)).length}
+
+function buildDiffStats(){
+  const c=DIFFS.filter(d=>d.sev==="critical").length;
+  const ir=DIFFS.filter(d=>d.recov==="irrecoverable").length;
+  const ht=DIFFS.filter(d=>d.token==="high").length;
+  document.getElementById("diffStats").innerHTML=`
+    <div class="stat"><span class="stat-value">${DIFFS.length}</span><span class="stat-label">Differentiators</span></div>
+    <div class="stat"><span class="stat-value" style="color:var(--cp-danger)">${c}</span><span class="stat-label">Critical</span></div>
+    <div class="stat"><span class="stat-value" style="color:var(--cp-danger)">${ir}</span><span class="stat-label">Irrecoverable if missed</span></div>
+    <div class="stat"><span class="stat-value" style="color:var(--cp-accent)">${ht}</span><span class="stat-label">High token savings</span></div>
+    <div class="stat"><span class="stat-value" style="color:var(--cp-text-muted)">${Object.keys(SOURCES).length}</span><span class="stat-label">Sources woven</span></div>
+  `;
+}
+
+function buildWeave(){
+  const col=document.getElementById("sourceNodes"); col.innerHTML="";
+  Object.entries(SOURCES).forEach(([k,s])=>{
+    const n=document.createElement("div");
+    n.className="source-node"+(dSrc===k?" active":"");
+    n.style.setProperty("--src-color",s.color);
+    n.dataset.srckey=k;
+    n.innerHTML=`<span class="src-icon">${s.icon}</span><div class="src-info"><div class="src-name">${s.label}</div><div class="src-desc">${s.desc}</div></div><span class="src-count">${srcCount(k)}</span>`;
+    n.addEventListener("click",()=>{dSrc=dSrc===k?"all":k; buildWeave(); buildDiffs(); syncSrcBtns();});
+    col.appendChild(n);
+  });
+}
+
+function syncSrcBtns(){
+  document.querySelectorAll('[data-group="dsrc"]').forEach(b=>b.classList.toggle("active",b.dataset.filter===dSrc));
+}
+
+function buildDiffFilters(){
+  const cc=document.getElementById("diffCatBtns");
+  [{v:"all",l:"All cats"},...dCats.map(c=>({v:c,l:c}))].forEach(({v,l})=>{
+    const b=document.createElement("button");
+    b.className="filter-btn"+(v==="all"?" active":"");
+    b.dataset.filter=v; b.dataset.group="dcat"; b.textContent=l; cc.appendChild(b);
+  });
+  const sc=document.getElementById("diffSrcBtns");
+  const allB=document.createElement("button");
+  allB.className="filter-btn active"; allB.dataset.filter="all"; allB.dataset.group="dsrc"; allB.textContent="All sources"; sc.appendChild(allB);
+  Object.entries(SOURCES).forEach(([k,s])=>{
+    const b=document.createElement("button");
+    b.className="filter-btn"; b.dataset.filter=k; b.dataset.group="dsrc";
+    b.textContent=`${s.icon} ${s.label}`; sc.appendChild(b);
+  });
+}
+
+function buildDiffs(){
+  const wrap=document.getElementById("diffAccordion"); wrap.innerHTML="";
+  let items=[...DIFFS];
+  if(dSev!=="all") items=items.filter(d=>d.sev===dSev);
+  if(dCat!=="all") items=items.filter(d=>d.cat===dCat);
+  if(dSrc!=="all") items=items.filter(d=>d.src.includes(dSrc));
+  if(dSort==="recov") items.sort((a,b)=>rOrd[a.recov]-rOrd[b.recov]);
+  else if(dSort==="token") items.sort((a,b)=>tOrd[a.token]-tOrd[b.token]);
+  else if(dSort==="sev") items.sort((a,b)=>(a.sev==="critical"?0:1)-(b.sev==="critical"?0:1));
+  else if(dSort==="alpha") items.sort((a,b)=>a.title.localeCompare(b.title));
+
+  document.getElementById("diffCount").textContent=`Showing ${items.length} of ${DIFFS.length} items`;
+  document.getElementById("diffEmpty").classList.toggle("show",items.length===0);
+
+  items.forEach(item=>{
+    const srcPills=item.src.map(k=>{const s=SOURCES[k];return `<span class="src-pill" style="background:color-mix(in srgb,${s.color} 12%,transparent);color:${s.color};border-color:${s.color}44">${s.icon} ${s.label}</span>`;}).join("");
+    const el=document.createElement("div");
+    el.className=`acc-item sev-${item.sev}`;
+    el.innerHTML=`
+      <div class="acc-header">
+        <span class="acc-num">#${item.id}</span>
+        <span class="acc-title">${item.title}</span>
+        <div class="acc-tags">
+          <span class="sev-badge ${item.sev}">${item.sev==="critical"?"Critical":"Nice to Have"}</span>
+          <span class="recov-badge recov-${item.recov}">${rLabel[item.recov]}</span>
+        </div>
+        <span class="acc-chevron">▶</span>
+      </div>
+      <div class="acc-body">
+        <div class="acc-divider"></div>
+        <p class="acc-desc">${item.desc}</p>
+        <div class="acc-meta">${`<span class="cat-pill">${item.cat}</span>`+srcPills}</div>
+        <div class="acc-meters">
+          <div class="meter-row">
+            <span class="meter-label">Recoverability</span>
+            <div class="meter-track"><div class="meter-fill fill-${item.recov}" style="width:${rW[item.recov]}"></div></div>
+            <span class="meter-val">${rLabel[item.recov]}</span>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">Token savings</span>
+            <div class="meter-track"><div class="meter-fill fill-token-${item.token}" style="width:${tW[item.token]}"></div></div>
+            <span class="meter-val">${tLabel[item.token]}</span>
+          </div>
+        </div>
+      </div>`;
+    el.querySelector(".acc-header").addEventListener("click",()=>{
+      const was=el.classList.contains("open");
+      document.querySelectorAll(".acc-item.open").forEach(x=>x.classList.remove("open"));
+      if(!was) el.classList.add("open");
+    });
+    wrap.appendChild(el);
+  });
+}
+
+/* ══════════════════ FAQ STATE ══════════════════ */
+const TAG_META={
+  complexity:{label:"Complexity",cls:"tag-complexity"},
+  demo:{label:"Demo vs. Reality",cls:"tag-demo"},
+  traps:{label:"Silent Traps",cls:"tag-traps"},
+  agents:{label:"AI Agents",cls:"tag-agents"},
+  tokens:{label:"Token Cost",cls:"tag-tokens"},
+  dataverse:{label:"Dataverse",cls:"tag-dataverse"},
+  real:{label:"Real Projects",cls:"tag-real"},
+};
+let fTag="all";
+
+function buildFAQ(){
+  const wrap=document.getElementById("faqAccordion"); wrap.innerHTML="";
+  let items=fTag==="all"?FAQS:FAQS.filter(f=>f.tag===fTag);
+  document.getElementById("faqCount").textContent=`Showing ${items.length} of ${FAQS.length} questions`;
+  document.getElementById("faqEmpty").classList.toggle("show",items.length===0);
+  items.forEach(faq=>{
+    const tm=TAG_META[faq.tag];
+    const el=document.createElement("div");
+    el.className="faq-item";
+    el.innerHTML=`
+      <div class="faq-header">
+        <span class="faq-persona">${faq.persona}</span>
+        <span class="faq-q-text">${faq.q}</span>
+        <span class="faq-tag-badge ${tm.cls}">${tm.label}</span>
+        <span class="faq-chevron">▶</span>
+      </div>
+      <div class="faq-body">
+        <div class="faq-divider"></div>
+        <div class="faq-a">${faq.a}</div>
+      </div>`;
+    el.querySelector(".faq-header").addEventListener("click",()=>{
+      const was=el.classList.contains("open");
+      document.querySelectorAll(".faq-item.open").forEach(x=>x.classList.remove("open"));
+      if(!was) el.classList.add("open");
+    });
+    wrap.appendChild(el);
+  });
+}
+
+/* ══════════════════ EVENT WIRING ══════════════════ */
+document.addEventListener("click",e=>{
+  // Nav tabs
+  const tab=e.target.closest(".nav-tab");
+  if(tab){
+    document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("page-"+tab.dataset.page).classList.add("active");
+    return;
+  }
+  // Filter buttons
+  const btn=e.target.closest(".filter-btn");
+  if(!btn) return;
+  const group=btn.dataset.group, filter=btn.dataset.filter;
+  document.querySelectorAll(`.filter-btn[data-group="${group}"]`).forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  if(group==="dsev"){dSev=filter;buildDiffs();}
+  else if(group==="dcat"){dCat=filter;buildDiffs();}
+  else if(group==="dsrc"){dSrc=filter;buildWeave();buildDiffs();}
+  else if(group==="ftag"){fTag=filter;buildFAQ();}
+});
+
+document.getElementById("diffSort").addEventListener("change",e=>{dSort=e.target.value;buildDiffs();});
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  const h=document.documentElement;
+  h.setAttribute("data-theme",h.getAttribute("data-theme")==="dark"?"light":"dark");
+});
+
+/* ══════════════════ INIT ══════════════════ */
+buildDiffStats(); buildWeave(); buildDiffFilters(); buildDiffs(); buildFAQ();
+</script>
+</body>
+</html>
