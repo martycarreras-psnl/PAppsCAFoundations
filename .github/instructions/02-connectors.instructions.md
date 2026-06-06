@@ -65,6 +65,23 @@ Before running any `pac code add-data-source` command, invoke the appropriate Co
 
 If the plugin is not installed, the hard gate in `00-prereq-gate.instructions.md` Step 9 applies — stop and direct the user to install it.
 
+### Extracting API ID and Connection ID from a Maker Portal URL
+
+When a user pastes a Power Apps Maker Portal connection URL, **extract both values directly from the URL — do not ask the user for them**. The URL structure is always:
+
+```
+https://make.powerapps.com/environments/<env-id>/connections/<API_ID>/<CONNECTION_ID>/details
+```
+
+**Example:**
+```
+https://make.powerapps.com/environments/f9b87f8b-0abf-e629-affb-b13195d1ed14/connections/shared_service-now/f8e0094f415946b984e2eb42bf943e46/details
+```
+- **API ID**: `shared_service-now` (segment immediately after `connections/`)
+- **Connection ID**: `f8e0094f415946b984e2eb42bf943e46` (segment after the API ID)
+
+Use these values directly with `/add-connector -a shared_service-now -c f8e0094f415946b984e2eb42bf943e46`. This works for any connector — known or unknown — that the user can navigate to in the Maker Portal. Zero follow-up questions needed.
+
 ### Via PAC CLI (executed by plugin skills)
 
 The plugin skills drive these commands on your behalf. Shown here for reference:

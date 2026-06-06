@@ -117,9 +117,19 @@ For Dataverse schema provisioning, data operations, solution lifecycle, and envi
 | Form field metadata pattern (`DataverseFieldLabel`) | **This repo** |
 | Deployment settings & CI/CD | **This repo** |
 
-### When the plugin is installed
+### Extracting API ID and Connection ID from a Maker Portal URL
 
-If the Dataverse-skills plugin is installed, prefer it for all Dataverse environment operations. The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
+When a user pastes a Maker Portal connection URL, extract both values directly — **never ask the user for them**:
+
+```
+https://make.powerapps.com/environments/<env>/connections/<API_ID>/<CONNECTION_ID>/details
+```
+
+Example: `.../connections/shared_service-now/f8e0094f.../details` → API ID = `shared_service-now`, Connection ID = `f8e0094f...`
+
+Pass directly to `/add-connector`. Works for any connector, known or unknown.
+
+### When the Code Apps plugin is installed The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
 
 ### Organizational structure & security (plugin gap)
 
