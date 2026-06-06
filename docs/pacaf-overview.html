@@ -762,10 +762,6 @@ document.addEventListener("click",e=>{
 });
 
 document.getElementById("diffSort").addEventListener("change",e=>{dSort=e.target.value;buildDiffs();});
-document.getElementById("themeBtn").addEventListener("click",()=>{
-  const h=document.documentElement;
-  h.setAttribute("data-theme",h.getAttribute("data-theme")==="dark"?"light":"dark");
-});
 
 /* ══════════════════ INIT ══════════════════ */
 buildDiffStats(); buildDiffFilters(); buildWeave(); buildDiffs(); buildFAQ();
