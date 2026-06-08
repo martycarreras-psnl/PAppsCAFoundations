@@ -8,7 +8,6 @@ import { parsePacTabularRows } from '../lib/pac-parse.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
-const VALIDATE = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'validate.mjs')).href);
 const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
 const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
 
@@ -278,7 +277,10 @@ export default {
       options: [
         ...solutions,
         { value: PASTE_URL, label: 'Paste solution URL from Maker Portal' },
-        { value: CREATE_NEW, label: '+ Create new solution' },
+        // "Create new solution" is only offered for service-principal auth, which
+        // can create solutions via the Dataverse API. User auth cannot, so they
+        // create the solution in the Maker Portal and paste its URL instead.
+        ...(!isUserAuth ? [{ value: CREATE_NEW, label: '+ Create new solution' }] : []),
       ],
       hideIf: { id: '__resume', equals: true },
     });
@@ -340,47 +342,10 @@ export default {
       }
     }
 
-    // ── Create new user auth: link to Maker Portal + URL paste back ──
-    if (isUserAuth) {
-      questions.push({
-        id: 'SOLUTION_CREATED_MANUALLY',
-        type: 'confirm',
-        label: 'I have created the solution in the Maker Portal',
-        help: `Create the solution at ${makerLink}, then come back here. You can either paste the URL above (switch to "Paste solution URL") or toggle this and enter details manually.`,
-        defaultValue: false,
-        showIf: { id: 'SOLUTION_SELECTION', equals: CREATE_NEW },
-        why: [
-          'Create your solution in the Maker Portal:',
-          `1. Open ${makerLink}`,
-          '2. Click + New Solution',
-          '3. Enter the display name',
-          '4. Select (or create) a publisher',
-          '5. Save the solution',
-          '',
-          'Then come back here and either:',
-          '• Switch the dropdown to "Paste solution URL" and paste the URL (recommended)',
-          '• OR toggle this confirmation and enter the details manually below',
-        ].join('\n'),
-      });
-
-      questions.push({
-        id: 'MANUAL_SOLUTION_UNIQUE_NAME',
-        type: 'text',
-        label: 'Solution unique name',
-        help: 'The internal name (no spaces). Find this in the solution details in the Maker Portal.',
-        defaultValue: '',
-        showIf: { id: 'SOLUTION_CREATED_MANUALLY', equals: true },
-      });
-
-      questions.push({
-        id: 'MANUAL_PUBLISHER_PREFIX',
-        type: 'text',
-        label: 'Publisher prefix',
-        help: '2–8 lowercase letters. Find this in the Maker Portal under the publisher you selected.',
-        defaultValue: state.PUBLISHER_PREFIX || '',
-        showIf: { id: 'SOLUTION_CREATED_MANUALLY', equals: true },
-      });
-    }
+    // Note: "+ Create new solution" is only offered to service-principal auth
+    // (see SOLUTION_SELECTION options above). User auth creates the solution in
+    // the Maker Portal and pastes the URL back via the PASTE_URL path, so no
+    // manual create-and-enter-details questions are needed here.
 
     return questions;
   },
@@ -453,34 +418,15 @@ export default {
       return { stateUpdate: buildStateUpdate(sol), completedStep: 7 };
     }
 
-    // ── Create new ──
+    // ── Create new (service-principal only) ──
     const solName = String(answers.NEW_SOLUTION_NAME || '').trim();
     if (!solName) throw new Error('Solution display name is required.');
     const solUnique = solName.replace(/[\s\-]+/g, '');
 
     if (isUserAuth) {
-      if (answers.SOLUTION_CREATED_MANUALLY !== true) {
-        throw new Error('Create the solution in the Maker Portal first, then confirm — or switch to "Paste solution URL".');
-      }
-      const manualUnique = String(answers.MANUAL_SOLUTION_UNIQUE_NAME || '').trim();
-      const manualPrefix = String(answers.MANUAL_PUBLISHER_PREFIX || '').trim();
-      if (!manualUnique) throw new Error('Solution unique name is required.');
-      if (!VALIDATE.isValidPrefix(manualPrefix)) throw new Error('Publisher prefix must be 2–8 lowercase letters.');
-      log.ok(`Solution: "${solName}" (${manualUnique})`);
-      log.ok(`Publisher prefix: ${manualPrefix}`);
-      return {
-        stateUpdate: {
-          SOLUTION_ID: '',
-          SOLUTION_UNIQUE_NAME: manualUnique,
-          SOLUTION_DISPLAY_NAME: solName,
-          PUBLISHER_ID: '',
-          PUBLISHER_NAME: '',
-          PUBLISHER_DISPLAY_NAME: '',
-          PUBLISHER_PREFIX: manualPrefix,
-          CHOICE_VALUE_PREFIX: '',
-        },
-        completedStep: 7,
-      };
+      // "Create new solution" isn't offered for user auth — it can't create a
+      // solution via the API. Direct the user to the Maker Portal + paste flow.
+      throw new Error('Creating a new solution requires service-principal auth. Create the solution in the Maker Portal, then choose "Paste solution URL".');
     }
 
     // SPN: create via API
