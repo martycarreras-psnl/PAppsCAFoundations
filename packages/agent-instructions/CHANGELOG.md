@@ -1,5 +1,11 @@
 # @pacaf/agent-instructions
 
+## 3.8.1
+
+### Patch Changes
+
+- 4bfebc2: Remove consumer-facing references to the CLI wizard (`@pacaf/wizard`) from agent guidance. The browser-based Wizard UX (`npx @pacaf/wizard-ux@latest`) is now presented as the single supported setup path across AGENTS.md, the prerequisite gate, and the scaffold instructions. Contributor/source-tree references and the internal workspace dependency are unchanged.
+
 ## 3.8.0
 
 ### Minor Changes
