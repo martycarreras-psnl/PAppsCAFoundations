@@ -697,6 +697,52 @@ const useStyles = makeStyles({
     textAlign: 'center',
     maxWidth: '560px',
   },
+  // Fresh-eyes review callout (shown on the choice screen)
+  reviewCallout: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+    width: '100%',
+    maxWidth: '800px',
+    padding: tokens.spacingHorizontalXL,
+    borderRadius: tokens.borderRadiusXLarge,
+    backgroundColor: tokens.colorBrandBackground2,
+    borderLeftStyle: 'solid',
+    borderLeftWidth: '4px',
+    borderLeftColor: tokens.colorBrandStroke1,
+    boxShadow: tokens.shadow8,
+    boxSizing: 'border-box',
+  },
+  reviewHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+  },
+  reviewEmoji: {
+    fontSize: '28px',
+    lineHeight: '1',
+    flexShrink: 0,
+  },
+  reviewLabel: {
+    display: 'block',
+    fontSize: tokens.fontSizeBase100,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorBrandForeground1,
+  },
+  reviewBody: {
+    color: tokens.colorNeutralForeground2,
+  },
+  reviewPrompt: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: tokens.borderRadiusMedium,
+    paddingTop: tokens.spacingVerticalS,
+    paddingBottom: tokens.spacingVerticalS,
+    paddingLeft: tokens.spacingHorizontalM,
+    paddingRight: tokens.spacingHorizontalM,
+    position: 'relative',
+  },
 });
 
 // ── Copy-to-clipboard button ────────────────────────────────────────────────
@@ -892,6 +938,39 @@ function ExistingTablesSteps() {
   );
 }
 
+// ── Fresh-eyes review callout ───────────────────────────────────────────────
+
+function ReviewCallout() {
+  const styles = useStyles();
+  const reviewPrompt =
+    "I just finished the initial implementation of this Power Apps Code App, based on a plan we made earlier. Before I start functional testing, do a complete review of the implementation in a fresh pass. First read the plan artifacts that live in the repo — CONTEXT.md, dataverse/planning-payload.json, and any ADRs in docs/adr — then read AGENTS.md and the project's agent instruction files. Audit the codebase against both: does the implementation match what we planned, and does it follow the rules (architecture layering, the read-only src/generated rule, HashRouter, the DataverseFieldLabel form-field pattern, security)? Give me a prioritized findings list — gaps from the plan, rule violations, and bugs — before we change anything.";
+
+  return (
+    <div className={styles.reviewCallout}>
+      <div className={styles.reviewHead}>
+        <span className={styles.reviewEmoji} role="img" aria-label="Magnifying glass">
+          🔍
+        </span>
+        <div>
+          <span className={styles.reviewLabel}>A tip for later</span>
+          <Subtitle2>After the build, get a fresh-eyes review before you test</Subtitle2>
+        </div>
+      </div>
+      <Text className={styles.reviewBody}>
+        Once your coding agent finishes the initial implementation, resist diving straight into
+        functional testing. Start a brand new agent session and ask for a complete review of the
+        implementation against your plan. A clean context window catches gaps, rule violations,
+        and bugs that the same session that wrote the code tends to miss.
+      </Text>
+      <div className={styles.reviewPrompt}>
+        <span className={styles.promptLabel}>Paste this into a fresh agent session:</span>
+        <Text className={styles.promptText}>{reviewPrompt}</Text>
+        <CopyButton text={reviewPrompt} />
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ────────────────────────────────────────────────────────────────
 
 export function App() {
@@ -936,9 +1015,11 @@ export function App() {
           You just deployed a real Power Apps Code App to Dataverse. That is not a demo —
           that is a production-grade Microsoft 365 integration running on your tenant.
         </Subtitle1>
-
-        <Title3 className={styles.question}>What are you building?</Title3>
       </div>
+
+      <ReviewCallout />
+
+      <Title3 className={styles.question}>What are you building?</Title3>
 
       <div className={styles.paths}>
         <Card
