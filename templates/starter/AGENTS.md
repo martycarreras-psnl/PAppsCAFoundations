@@ -10,12 +10,6 @@ If this repo has no `src/`, no `power.config.json`, and no `package.json` with a
 npx @pacaf/wizard-ux@latest
 ```
 
-For headless / SSH-only environments, use the terminal wizard:
-
-```bash
-npx @pacaf/wizard@latest
-```
-
 The wizard configures the publisher, solution, App Registration, auth profile, `pac code init`, dependency selection, and the first smoke test in the correct order. **Do not hand-scaffold a Code App** — skipping the wizard produces apps that cannot be deployed.
 
 ## Load the full agent guidance

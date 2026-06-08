@@ -56,7 +56,7 @@ git checkout -- package.json package-lock.json
 
 ## What's removed
 
-- `wizard/` and `wizard-ux/` — replaced by `npx @pacaf/wizard@latest` / `npx @pacaf/wizard-ux@latest` (run-on-demand).
+- `wizard/` and `wizard-ux/` — replaced by `npx @pacaf/wizard-ux@latest` (run-on-demand).
 - `scripts/*.mjs` — every script is now a `pacaf-*` bin from `@pacaf/scripts`.
 - `docs/` — hosted at <https://martycarreras-psnl.github.io/PAppsCAFoundations>.
 

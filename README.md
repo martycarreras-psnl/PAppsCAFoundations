@@ -44,7 +44,6 @@ All five packages are published to public npm under [`@pacaf/*`](https://www.npm
 | Package | Purpose | Consumed by |
 |---|---|---|
 | **[`@pacaf/wizard-ux`](packages/wizard-ux/)** | Browser-based 10-step setup wizard (Fastify + React + xterm) | End users — `npx @pacaf/wizard-ux@latest` |
-| **[`@pacaf/wizard`](packages/wizard/)** | Equivalent CLI wizard for headless/SSH workflows | End users — `npx @pacaf/wizard@latest` |
 | **[`@pacaf/scripts`](packages/scripts/)** | 15 `pacaf-*` CLIs: validate, register, generate, seed, sync, update, migrate-thin, … | Derived repos as a **devDependency** |
 | **[`@pacaf/agent-instructions`](packages/agent-instructions/)** | Agent guidance for GitHub Copilot, Claude, Cursor — synced into derived repos | Derived repos via `pacaf-instructions sync` |
 | **[`@pacaf/rebrand`](packages/rebrand/)** | Retarget a fork to a different npm scope and bin prefix | Fork owners — `npx @pacaf/rebrand` |

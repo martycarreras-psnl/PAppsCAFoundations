@@ -3100,12 +3100,11 @@ body {
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            A 10-step setup flow you can run two ways — pick whichever feels right:
+            A 10-step setup flow you run in the browser:
             <ul>
               <li><strong>Browser wizard</strong> (<code>npx @pacaf/wizard-ux@latest</code>) — a localhost web app at <code>http://127.0.0.1:5174</code> built with the same Fluent UI v9 design language you'll use in your Code Apps. Step navigator with status pills, jump-to-step, resume detection, light/dark/system themes, live log panel with SSE streaming, and one-click terminal-handoff cards for steps that need interactive auth. CSRF-protected, localhost-only, auto-shutdown on idle.</li>
-              <li><strong>Terminal wizard</strong> (<code>npx @pacaf/wizard@latest</code>) — equivalent Node.js CLI that runs natively on macOS, Linux, and Windows. Headless and SSH-friendly. No WSL required.</li>
             </ul>
-            Both flows share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Both check prerequisites, collect project identity, guide portal steps, set up auth (1Password or encrypted .env.local), scaffold React + Fluent UI, seed prototype assets, run smoke tests, and finish by helping you install the Dataverse-skills plugin for your coding agent. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over.
+            It checks prerequisites, collects project identity, guides portal steps, sets up auth (1Password or encrypted .env.local), scaffolds React + Fluent UI, seeds prototype assets, runs smoke tests, and finishes by helping you install the Dataverse-skills plugin for your coding agent. Save progress with Ctrl+C, resume anytime, or <code>--reset</code> to start over.
           </div>
         </div>
       </div>
@@ -3206,7 +3205,6 @@ body {
           <div class="cta-step-number">2</div>
           <div class="cta-step-text">Run the wizard</div>
           <code>npx @pacaf/wizard-ux@latest</code>
-          <div style="margin-top:6px; font-size:12px; color:var(--neutral-secondary);">or <code>npx @pacaf/wizard@latest</code></div>
         </div>
         <div class="cta-step">
           <div class="cta-step-number">3</div>

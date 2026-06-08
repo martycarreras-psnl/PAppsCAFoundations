@@ -58,15 +58,9 @@ If the repository has no `src/`, no `power.config.json`, and no `package.json` a
 npx @pacaf/wizard-ux@latest
 ```
 
-This opens a guided UI at `http://127.0.0.1:5174` in the browser. It is the default and preferred experience for all users — no flags, no extra arguments needed.
+This opens a guided UI at `http://127.0.0.1:5174` in the browser. It is the default and only supported setup experience for all users — no flags, no extra arguments needed.
 
-**Only fall back to the CLI wizard if the environment is headless or SSH-only** (no browser available):
-
-```bash
-npx @pacaf/wizard@latest
-```
-
-Do not suggest the CLI wizard unless the user explicitly asks for it or confirms they cannot open a browser. Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, auth profile, `pac code init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
+Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, auth profile, `pac code init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
 
 ### Consumer vs. monorepo source contributor
 
@@ -178,7 +172,7 @@ This repo standardizes on the PAC CLI (`pac code push`, `pac code add-data-sourc
 
 ### Scaffolding override — wizard takes precedence
 
-The plugin's `/create-code-app` skill uses `npx degit microsoft/PowerAppsCodeApps/templates/vite` to scaffold a new project. **Do not use this path for PACAF-based repos.** This template's scaffold is `npx @pacaf/wizard-ux@latest` (or `npx @pacaf/wizard@latest` for headless), which sets up the publisher, solution, App Registration, auth profile, and PAC CLI in the correct order. Using `npx degit` directly produces a plain Microsoft template that is not PACAF-aligned and will diverge from this instruction set.
+The plugin's `/create-code-app` skill uses `npx degit microsoft/PowerAppsCodeApps/templates/vite` to scaffold a new project. **Do not use this path for PACAF-based repos.** This template's scaffold is `npx @pacaf/wizard-ux@latest`, which sets up the publisher, solution, App Registration, auth profile, and PAC CLI in the correct order. Using `npx degit` directly produces a plain Microsoft template that is not PACAF-aligned and will diverge from this instruction set.
 
 **Rule:** For all other skills (`/deploy`, `/add-*`, `/list-connections`), invoke the plugin skill as directed. For new project scaffold only, use the PACAF wizard and skip the plugin's degit step.
 
