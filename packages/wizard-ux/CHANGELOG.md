@@ -1,5 +1,12 @@
 # @pacaf/wizard-ux
 
+## 3.6.5
+
+### Patch Changes
+
+- 4bfebc2: Step 6 (Solution & Publisher) now only offers "+ Create new solution" when authenticating with a service principal, which can create solutions via the Dataverse API. User-auth sessions no longer see the option (and the unreachable manual create-and-enter-details flow was removed); they create the solution in the Maker Portal and paste its URL instead.
+  - @pacaf/wizard@3.4.8
+
 ## 3.6.4
 
 ### Patch Changes
