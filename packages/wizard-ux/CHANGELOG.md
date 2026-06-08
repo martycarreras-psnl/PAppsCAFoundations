@@ -1,5 +1,12 @@
 # @pacaf/wizard-ux
 
+## 3.6.6
+
+### Patch Changes
+
+- Updated dependencies [d2950c1]
+  - @pacaf/wizard@3.4.9
+
 ## 3.6.5
 
 ### Patch Changes
