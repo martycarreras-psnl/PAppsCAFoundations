@@ -741,10 +741,9 @@
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">📦</div>
           <h3>What you install from npm</h3>
-          <p>Five published packages under <strong><code>@pacaf/*</code></strong> drive setup, scaffolding, agent guidance, fork rebranding, and ongoing updates. End users never copy this tooling into their repo — they consume it as devDependencies.</p>
+          <p>Published packages under <strong><code>@pacaf/*</code></strong> drive setup, scaffolding, agent guidance, fork rebranding, and ongoing updates. End users never copy this tooling into their repo — they consume it as devDependencies.</p>
           <ul style="margin-top:8px; padding-left:20px; line-height:1.7; font-size:13px;">
-            <li><code>@pacaf/wizard-ux</code> — browser wizard (recommended)</li>
-            <li><code>@pacaf/wizard</code> — equivalent CLI wizard</li>
+            <li><code>@pacaf/wizard-ux</code> — browser setup wizard</li>
             <li><code>@pacaf/scripts</code> — 15 <code>pacaf-*</code> helper CLIs</li>
             <li><code>@pacaf/agent-instructions</code> — coding-agent guidance, synced into your repo</li>
             <li><code>@pacaf/rebrand</code> — retarget a fork to your own npm scope</li>
@@ -830,8 +829,8 @@
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#dff6dd; color:var(--green);">🧙</div>
-          <h3>Setup Wizard (CLI &amp; Browser)</h3>
-          <p>One npx command, 10 steps. <code>npx @pacaf/wizard-ux@latest</code> opens a Fluent UI browser experience on <code>127.0.0.1:5174</code>. <code>npx @pacaf/wizard@latest</code> is the equivalent terminal flow for SSH or headless setups.</p>
+          <h3>Setup Wizard (Browser)</h3>
+          <p>One npx command, 10 steps. <code>npx @pacaf/wizard-ux@latest</code> opens a Fluent UI browser experience on <code>127.0.0.1:5174</code>.</p>
         </div></div>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:#fff4ce; color:#835c00;">🔐</div>
@@ -1006,12 +1005,10 @@
           <p style="margin-top:16px;"><strong>Step 2 — Ask your agent to run the wizard</strong></p>
           <p style="margin-top:6px;">In the chat panel, say:</p>
           <blockquote style="margin:8px 0 4px 0; padding:8px 12px; border-left:3px solid var(--themePrimary); background:var(--themeLighterAlt); font-style:italic;">"Set up this Code App using the PACAF wizard."</blockquote>
-          <p style="margin-top:8px;">Your agent will launch one of these (you can also run them yourself):</p>
-          <p style="margin-top:8px;"><strong>Browser wizard</strong> (recommended) — Fluent UI experience at <code>http://127.0.0.1:5174</code>:</p>
+          <p style="margin-top:8px;">Your agent will launch this (you can also run it yourself):</p>
+          <p style="margin-top:8px;"><strong>Browser wizard</strong> — Fluent UI experience at <code>http://127.0.0.1:5174</code>:</p>
           <pre style="margin-top:4px; display:inline-block;">npx @pacaf/wizard-ux@latest</pre>
-          <p style="margin-top:12px;"><strong>Terminal wizard</strong> — same 10 steps, headless or SSH friendly:</p>
-          <pre style="margin-top:4px; display:inline-block;">npx @pacaf/wizard@latest</pre>
-          <p style="margin-top:8px; font-size:13px; color:var(--neutral-secondary, #605e5c);">Both wizards share <code>.wizard-state.json</code>, so you can switch between them at any time without losing progress. Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff in the browser version.</p>
+          <p style="margin-top:8px; font-size:13px; color:var(--neutral-secondary, #605e5c);">Steps that need interactive auth or long-running CLI sessions show a one-click "copy command" handoff in the browser.</p>
           <p style="margin-top:12px;"><strong>Works on Windows, macOS, and Linux.</strong> The wizard saves your progress — quit with Ctrl+C and pick up where you left off. Reset with <code>--reset</code>.</p>
 
           <p style="margin-top:16px;"><strong>Step 3 — Plan before you build</strong></p>
@@ -1318,10 +1315,7 @@
             <h4>Connector &amp; Data Source Setup</h4>
             <p>The initial scaffold no longer asks for connector IDs up front. The intended flow is to return later once the planning payload and prototype are stable enough to bind real systems.</p>
             <pre style="margin-top:4px; display:inline-block;"><em># Browser wizard — navigate to Step 8 (Bind Connectors):</em>
-npx @pacaf/wizard-ux@latest
-
-<em># Or the terminal wizard, jumping straight to the connector-binding step:</em>
-npx @pacaf/wizard@latest --from 8</pre>
+npx @pacaf/wizard-ux@latest</pre>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
@@ -1403,7 +1397,7 @@ npx @pacaf/wizard@latest --from 8</pre>
 npm run dev:local    ← prototype with mock providers
 npm run prototype:seed ← refresh prototype assets after editing the planning payload
 npm run dev          ← connected mode once real providers exist
-npx @pacaf/wizard@latest --from 8 ← bind real connectors when ready
+npx @pacaf/wizard-ux@latest --from 8 ← bind real connectors when ready
 npm run deploy       ← deploy changes after the app has been registered</pre>
           </div></div>
         </div>
@@ -1549,7 +1543,7 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
           <ul style="margin-top:8px; padding-left:20px; line-height:1.8;">
             <li>In a fresh repo before installing: <code>npx pacaf-update</code></li>
             <li>In a project that already has <code>@pacaf/scripts</code> as a devDep: <code>pnpm exec pacaf-update</code> or <code>npm run update</code> if scripts are wired</li>
-            <li>For the wizards specifically: <code>npx @pacaf/wizard-ux@latest</code> / <code>npx @pacaf/wizard@latest</code></li>
+            <li>For the wizard specifically: <code>npx @pacaf/wizard-ux@latest</code></li>
           </ul>
         </div>
       </div>
@@ -1592,10 +1586,7 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
       <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
       <p>Preferred path: rerun the wizard when you are ready to connect real data.</p>
       <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
-npx @pacaf/wizard-ux@latest
-
-<em># Or the terminal wizard:</em>
-npx @pacaf/wizard@latest --from 8</pre>
+npx @pacaf/wizard-ux@latest</pre>
       <p>The wizard will create the solution-level connection references, try to discover existing environment connections with <code>pac connection list</code>, and let you select one when matches are found.</p>
 
       <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
@@ -1789,10 +1780,7 @@ export default defineConfig(({ command }) =&gt; ({
       <h4>Adding a Data Source</h4>
       <p>Recommended order: prototype first, then rerun the wizard from the dedicated connector step once the planning payload is stable.</p>
       <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
-npx @pacaf/wizard-ux@latest
-
-<em># Or the terminal wizard:</em>
-npx @pacaf/wizard@latest --from 8</pre>
+npx @pacaf/wizard-ux@latest</pre>
       <pre><em># Dataverse (no connection ID needed):</em>
 pac code add-data-source -a dataverse -t myprefix_project
 
@@ -2170,7 +2158,7 @@ pac code push</pre>
       <div class="table-wrap"><table>
         <thead><tr><th>Action</th><th>How</th></tr></thead>
         <tbody>
-          <tr><td>Add connectors via wizard</td><td><code>npx @pacaf/wizard-ux@latest</code> → Step 8, or <code>npx @pacaf/wizard@latest --from 8</code></td></tr>
+          <tr><td>Add connectors via wizard</td><td><code>npx @pacaf/wizard-ux@latest</code> → Step 8</td></tr>
           <tr><td>Add Dataverse table manually</td><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td></tr>
           <tr><td>Add other connector manually</td><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td></tr>
           <tr><td>Map references after import</td><td>Power Apps Maker Portal &rarr; Solutions &rarr; Connection References</td></tr>
@@ -2184,15 +2172,14 @@ pac code push</pre>
       <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. The wizard compensates for this by discovering existing environment connections with <code>pac connection list</code> and letting you select one when possible. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
-      <p style="margin-bottom: var(--s2); font-size: 14px;">Both wizards share <code>.wizard-state.json</code>, so you can switch between them freely. The browser wizard lets you jump directly to any step from the step navigator.</p>
+      <p style="margin-bottom: var(--s2); font-size: 14px;">The wizard stores progress in <code>.wizard-state.json</code> and lets you jump directly to any step from the step navigator.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
-          <tr><td><code>npx @pacaf/wizard@latest</code></td><td>Resume the terminal wizard from where you left off</td></tr>
-          <tr><td><code>npx @pacaf/wizard@latest --from 7</code></td><td>Re-run from the scaffold step onward (including connector binding and deploy)</td></tr>
-          <tr><td><code>npx @pacaf/wizard@latest --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
-          <tr><td><code>npx @pacaf/wizard@latest --reset</code></td><td>Start completely fresh</td></tr>
-          <tr><td><code>npx @pacaf/wizard-ux@latest</code></td><td>Open the browser wizard — jump to any step from the step navigator</td></tr>
+          <tr><td><code>npx @pacaf/wizard-ux@latest</code></td><td>Open the browser wizard — resume, or jump to any step from the step navigator</td></tr>
+          <tr><td><code>npx @pacaf/wizard-ux@latest --from 7</code></td><td>Re-run from the scaffold step onward (including connector binding and deploy)</td></tr>
+          <tr><td><code>npx @pacaf/wizard-ux@latest --from 8</code></td><td>Run the dedicated connector-binding pass and select real connections</td></tr>
+          <tr><td><code>npx @pacaf/wizard-ux@latest --reset</code></td><td>Start completely fresh</td></tr>
         </tbody>
       </table></div>
 

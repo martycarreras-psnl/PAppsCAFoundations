@@ -1,8 +1,8 @@
 # WizardUX — Browser-Based Setup
 
-A browser-based UX for the PAppsCAFoundations setup wizard. Runs alongside the CLI wizard, sharing the same `.wizard-state.json` so you can switch between them at any time.
+The browser-based setup wizard for PAppsCAFoundations. This is the supported way to scaffold and configure a Code App — run it with `npx @pacaf/wizard-ux@latest`.
 
-> Both the CLI wizard at [`../wizard/`](../wizard) and this browser wizard are fully supported entry points. WizardUX now keeps the full nine-step setup flow in the browser, using server-side runners and live logs for long-running commands.
+> WizardUX keeps the full nine-step setup flow in the browser, using server-side runners and live logs for long-running commands.
 
 ## Quick start
 
@@ -36,7 +36,7 @@ This installs `wizard-ux` dependencies on first run, starts the Fastify server o
 | 8. Connectors | Native defer/notes step |
 | 9. Verify & deploy | Full form + live build/deploy output |
 
-All nine steps now stay inside WizardUX. App registration values are collected in browser forms, credentials can be read from or synced to 1Password, PAC auth output streams through the live log, scaffolding runs server-side, and verify/deploy can build and push without opening the old CLI wizard.
+All nine steps now stay inside WizardUX. App registration values are collected in browser forms, credentials can be read from or synced to 1Password, PAC auth output streams through the live log, scaffolding runs server-side, and verify/deploy can build and push — all in the browser.
 
 ## Architecture
 
@@ -59,14 +59,9 @@ wizard-ux/
 - Client secrets are held in memory on the server only — never sent back to the browser, never written to logs.
 - Auto-shutdown after 10 minutes of API inactivity.
 
-## How it differs from the CLI
+## Architecture note — shared internals
 
-The CLI ([`../wizard/`](../wizard)) is the authoritative pipeline. It calls the same `wizard/lib/*` helpers WizardUX does. You can:
-1. Start in WizardUX, finish in the CLI.
-2. Start in the CLI, finish in WizardUX.
-3. Use WizardUX as a state inspector while the CLI runs in another terminal.
-
-`.wizard-state.json` is the single source of truth for both.
+WizardUX is the user-facing entry point. Internally it reuses the same `wizard/lib/*` helpers from the [`@pacaf/wizard`](../wizard) package (a workspace dependency), so the setup pipeline logic lives in one place. `.wizard-state.json` is the single source of truth.
 
 ## Build for production
 

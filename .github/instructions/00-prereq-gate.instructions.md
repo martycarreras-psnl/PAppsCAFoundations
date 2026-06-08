@@ -174,7 +174,7 @@ When the user replies "ready" or "done" after installing, re-run only the comman
 
 ## Step 7 — Only if the user is invoking the wizard *from source*, gate on workspace install + build
 
-The system-level checks above cover the **default scenario**: the user (or you) runs `npx @pacaf/wizard-ux@latest` (or `npx @pacaf/wizard@latest`). That is a self-contained, published npm artifact — it does **not** read the local workspace, it does **not** need `pnpm install`, and it does **not** need anything to be built. It works the same whether the cwd is an empty folder, a downstream Code App, or even the PACAF monorepo itself.
+The system-level checks above cover the **default scenario**: the user (or you) runs `npx @pacaf/wizard-ux@latest`. That is a self-contained, published npm artifact — it does **not** read the local workspace, it does **not** need `pnpm install`, and it does **not** need anything to be built. It works the same whether the cwd is an empty folder, a downstream Code App, or even the PACAF monorepo itself.
 
 **Do not block on Step 7 just because the cwd looks like the PACAF source tree.** When the user says "run the wizard", "start the wizard", "set me up", or any similar bootstrap intent, your default action is `npx @pacaf/wizard-ux@latest` — no workspace check, no build, no questions about the monorepo. Run it and let the published artifact handle the rest.
 

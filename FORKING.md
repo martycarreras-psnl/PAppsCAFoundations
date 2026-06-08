@@ -211,7 +211,7 @@ The wizard pulls the upstream `@pacaf` packages from public npm. Your customizat
 
 ### C.5. Tradeoff
 
-You don't control the version of the tooling your users get. When upstream ships a `@pacaf/wizard@2.0.0`, every new project from your template gets it. If you want a steadier cadence, upgrade to Path A later.
+You don't control the version of the tooling your users get. When upstream ships a `@pacaf/wizard-ux@2.0.0`, every new project from your template gets it. If you want a steadier cadence, upgrade to Path A later.
 
 ---
 

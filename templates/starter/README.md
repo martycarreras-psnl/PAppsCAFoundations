@@ -6,16 +6,8 @@ This is the minimal starter for a [Power Apps Code App](https://learn.microsoft.
 
 Run the setup wizard. It scaffolds the Code App, configures auth, provisions the Power Platform solution, and (optionally) registers your first connectors and data sources:
 
-**Browser-based wizard (recommended):**
-
 ```bash
 npx @pacaf/wizard-ux@latest
-```
-
-**CLI wizard:**
-
-```bash
-npx @pacaf/wizard@latest
 ```
 
 That's it. The wizard handles `pnpm install`, `pac code init`, dependency selection, and the first smoke test. No `wizard/`, `scripts/`, or `docs/` directory is copied into your repo — those are kept centrally and updated via `npx pacaf-update`.

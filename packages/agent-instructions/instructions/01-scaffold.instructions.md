@@ -236,7 +236,6 @@ pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
 #    PAppsCAFoundations, so the project is always self-consistent and does not
 #    drift when external template repos change shape.
 npx @pacaf/wizard-ux@latest
-#    (headless/SSH only: npx @pacaf/wizard@latest)
 cd my-app
 
 # 4. Install dependencies
@@ -262,7 +261,6 @@ npm run dev:local
 #     re-run the Wizard UX from the connector step so it can create connection
 #     references and help discover existing connections.
 npx @pacaf/wizard-ux@latest --from 8
-#     (headless/SSH only: npx @pacaf/wizard@latest --from 8)
 
 # 11. Confirm the connector registration produced or refreshed src/generated/**
 #     If a table or connector is missing, re-run pac code add-data-source for it.
