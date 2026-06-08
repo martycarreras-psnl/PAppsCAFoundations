@@ -1014,6 +1014,12 @@ body {
   font-size: 0.78rem;
 }
 
+/* Light variant — readable dark text on a pale gradient background. */
+.advantage-callout--light .advantage-kicker { color: var(--accent-purple); }
+.advantage-callout--light h3 { color: var(--neutral-dark); }
+.advantage-callout--light p { color: var(--neutral-secondary); }
+.advantage-callout--light .advantage-note { color: var(--neutral-tertiary); }
+
 @media (max-width: 900px) {
   .pillars-grid { grid-template-columns: 1fr; }
   .advantage-callout {
@@ -2598,7 +2604,7 @@ body {
       </div>
     </div>
 
-    <div class="advantage-callout fade-in" style="margin-top:24px; background: linear-gradient(135deg, rgba(177,31,75,0.06) 0%, rgba(92,45,145,0.06) 100%); border-color: rgba(177,31,75,0.25);">
+    <div class="advantage-callout advantage-callout--light fade-in" style="margin-top:24px; background: linear-gradient(135deg, rgba(177,31,75,0.06) 0%, rgba(92,45,145,0.06) 100%); border-color: rgba(177,31,75,0.25);">
       <div class="advantage-callout-content">
         <div class="advantage-kicker">38 differentiators · 20 honest FAQs</div>
         <h3>Is PACAF actually worth it?</h3>
