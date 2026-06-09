@@ -152,6 +152,36 @@ export function selectDuplicateProfiles(profiles, keepName) {
 }
 
 /**
+ * Select every profile that must be removed before we finalize the discovery
+ * profile into its environment-scoped name. Two categories are unsafe:
+ *
+ *   1. Same-user + same-kind duplicates of the profile we are keeping. Once the
+ *      discovery profile is retargeted onto Dev it shares the (user, env, tenant)
+ *      key with these, which is what trips pac's SingleOrDefault crash (#102).
+ *   2. Any profile whose name already equals the target name we are about to
+ *      rename to. `pac auth name` cannot rename onto a name that is already
+ *      taken, and a leftover SPN/user profile from a prior run for the same Dev
+ *      environment collides here even though its user/kind differ.
+ *
+ * Pure (no I/O) so the selection rules can be unit-tested against fixtures.
+ */
+export function selectProfilesToPrune(profiles, keepName, targetName) {
+  const keep = profiles.find((p) => p.name === keepName);
+  const out = [];
+  const seen = new Set();
+  for (const p of profiles) {
+    if (p.name === keepName) continue;
+    const isUserKindDup = keep && p.user === keep.user && p.kind === keep.kind;
+    const isTargetCollision = targetName && p.name === targetName;
+    if ((isUserKindDup || isTargetCollision) && !seen.has(p.name)) {
+      seen.add(p.name);
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+/**
  * Detect the signature of the corrupted-auth-store crash so we can surface an
  * actionable remediation instead of the raw pac stack trace. The
  * "Sequence contains..." line lands in pac-log.txt; the console shows the
@@ -164,6 +194,25 @@ export function isDuplicateAuthStoreError(output) {
     || /InvalidOperationException/i.test(s);
 }
 
+/**
+ * Extract the most useful error text from a runSafeCapture result. pac writes
+ * its real error lines to STDOUT (e.g. "Error: The value 2 of --index is not
+ * valid..."), while runSafeCapture puts Node's generic "Command failed: ..."
+ * into `stderr` (from err.message). Reading stderr-first therefore shadows the
+ * real reason — so prefer an `Error:` line from stdout, then stdout, then
+ * stderr. Returns scrubbed text safe for display.
+ */
+export function extractPacError(result) {
+  const stdout = String(result?.stdout || '');
+  const stderr = String(result?.stderr || '');
+  const errLine = stdout
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .find((l) => /^Error:/i.test(l));
+  const detail = errLine || stdout.trim() || stderr.trim() || '';
+  return SCRUB.scrubSecrets(detail);
+}
+
 /** Fetch and parse `pac auth list` into structured rows. */
 function parseAuthProfiles(pac) {
   const res = SHELL.runSafeCapture(pac, ['auth', 'list']);
@@ -172,30 +221,37 @@ function parseAuthProfiles(pac) {
 }
 
 /**
- * Pre-flight auth hygiene. `pac auth name` crashes with
- * "Sequence contains more than one matching element" when the local auth store
- * holds duplicate profiles for the same user (a known pac CLI bug — its
- * AuthProfiles.Update uses SingleOrDefault). Prior wizard runs in other folders
- * leave stale `pp-<slug>-*` profiles behind, which is exactly the trigger.
+ * Pre-flight auth hygiene, run BEFORE the discovery profile is retargeted onto
+ * Dev. `pac auth name`/`delete` crash with "Sequence contains more than one
+ * matching element" when the local auth store holds two profiles that resolve
+ * to the same (user, environment, tenant) key — a known pac CLI bug whose
+ * AuthProfiles.Update/Delete uses SingleOrDefault.
  *
- * Before renaming the discovery profile, delete any *other* profile that shares
- * the same user + kind as the profile we're keeping. The discovery profile was
- * freshly authenticated for the current user in Step 4, so same-user leftovers
- * are stale and safe to remove. This both prevents the crash and stops profiles
- * accumulating across runs (issue #102, fixes 1 & 3).
+ * Two leftovers from prior wizard runs trigger this:
+ *   - same-user/kind duplicates of the discovery profile, and
+ *   - a profile already named exactly `targetName` (the env-scoped name we are
+ *     about to rename onto).
+ *
+ * Crucially this must happen while keys are still DISTINCT — i.e. before
+ * `pac env select` points the discovery profile at Dev. Removing them now
+ * prevents the ambiguous store from ever forming, which is the actual root
+ * cause behind the recurring "Could not finalize the auth profile" failure.
+ *
+ * Returns the number of profiles removed.
  */
-function pruneDuplicateAuthProfiles(log, pac, keepName) {
+function pruneConflictingAuthProfiles(log, pac, keepName, targetName) {
   const profiles = parseAuthProfiles(pac);
-  if (profiles.length === 0) return;
-  const dupes = selectDuplicateProfiles(profiles, keepName);
-  if (dupes.length === 0) return;
-  const keep = profiles.find((p) => p.name === keepName);
-  log.warn(`Found ${dupes.length} stale duplicate auth profile(s) for ${keep.user}; removing them to avoid a known pac CLI crash.`);
+  if (profiles.length === 0) return 0;
+  const dupes = selectProfilesToPrune(profiles, keepName, targetName);
+  if (dupes.length === 0) return 0;
+  log.warn(`Found ${dupes.length} conflicting auth profile(s) from a prior run; removing them to avoid a known pac CLI crash.`);
+  let removed = 0;
   for (const d of dupes) {
     const del = SHELL.runSafeCapture(pac, ['auth', 'delete', '--name', d.name]);
-    if (del.ok) log.ok(`Removed stale auth profile ${d.name}`);
+    if (del.ok) { log.ok(`Removed stale auth profile ${d.name}`); removed += 1; }
     else log.warn(`Could not remove stale auth profile ${d.name}. If finalize still fails, run \`pac auth clear\` and retry.`);
   }
+  return removed;
 }
 
 export default {
@@ -333,30 +389,58 @@ export default {
 
       const discoveryIdx = findProfileIndexByName(pac, DISCOVERY_PROFILE_NAME);
       if (discoveryIdx != null) {
+        // Pre-flight hygiene FIRST, while auth-store keys are still distinct.
+        // Removing same-user/kind duplicates and any existing profile already
+        // named `userProfileName` BEFORE we retarget the discovery profile onto
+        // Dev prevents the ambiguous (user, env, tenant) store that crashes both
+        // `pac auth delete` and `pac auth name` (issues #102 and the recurring
+        // "Could not finalize the auth profile" failure). Doing this after
+        // `env select` is the original defect — by then the keys already collide.
+        pruneConflictingAuthProfiles(log, pac, DISCOVERY_PROFILE_NAME, userProfileName);
+
         // Retarget the (already-authenticated) discovery profile to Dev, then
         // rename it to the environment-scoped name — no second sign-in.
         SHELL.runSafeCapture(pac, ['auth', 'select', '--name', DISCOVERY_PROFILE_NAME]);
         const sel = SHELL.runSafeCapture(pac, ['env', 'select', '--environment', devUrl]);
-        if (!sel.ok) throw new Error(`Could not target ${devUrl}: ${SCRUB.scrubSecrets(sel.stderr || sel.stdout || '')}`);
-        // Pre-flight hygiene: clear stale duplicate profiles that crash `pac auth name` (issue #102).
-        pruneDuplicateAuthProfiles(log, pac, DISCOVERY_PROFILE_NAME);
-        // Deletions can shift indices, so re-resolve the discovery profile's index.
-        const renameIdx = findProfileIndexByName(pac, DISCOVERY_PROFILE_NAME) ?? discoveryIdx;
-        const renamed = SHELL.runSafeCapture(pac, ['auth', 'name', '--index', String(renameIdx), '--name', userProfileName]);
-        if (!renamed.ok) {
-          const detail = SCRUB.scrubSecrets(renamed.stderr || renamed.stdout || '');
-          if (isDuplicateAuthStoreError(detail)) {
+        if (!sel.ok) throw new Error(`Could not target ${devUrl}: ${extractPacError(sel)}`);
+
+        // Re-resolve the discovery profile's index against the CURRENT store —
+        // never fall back to the pre-prune index, which may now be out of range.
+        const renameIdx = findProfileIndexByName(pac, DISCOVERY_PROFILE_NAME);
+        if (renameIdx == null) {
+          // Idempotent recovery: an interrupted prior run may have already
+          // renamed discovery into userProfileName. Accept that and move on.
+          if (findProfileIndexByName(pac, userProfileName) != null) {
+            SHELL.runSafeCapture(pac, ['auth', 'select', '--name', userProfileName]);
+            SHELL.runSafeCapture(pac, ['env', 'select', '--environment', devUrl]);
+            log.ok(`Reusing existing profile ${userProfileName} (targeting Dev).`);
+          } else {
             throw new Error([
-              'Could not finalize the auth profile: your local PAC auth store has duplicate or dual-active profiles.',
-              'This is a known pac CLI bug ("Sequence contains more than one matching element") that crashes `pac auth name`.',
-              'Fix it by clearing the local profiles, then click Save & run again:',
+              'Could not finalize the auth profile: the sign-in profile disappeared from the local PAC auth store.',
+              'This usually means the store still holds conflicting profiles. Clear them, then click Save & run again:',
               '  pac auth clear',
               '(After clearing you will be asked to sign in once more to recreate a single clean profile.)',
             ].join('\n'));
           }
-          throw new Error(`Could not finalize the auth profile: ${detail}`);
+        } else {
+          const renamed = SHELL.runSafeCapture(pac, ['auth', 'name', '--index', String(renameIdx), '--name', userProfileName]);
+          // pac writes errors to stdout; check both the result flag and the store.
+          const finalized = renamed.ok || findProfileIndexByName(pac, userProfileName) != null;
+          if (!finalized) {
+            const detail = extractPacError(renamed);
+            if (isDuplicateAuthStoreError(detail)) {
+              throw new Error([
+                'Could not finalize the auth profile: your local PAC auth store has duplicate or dual-active profiles.',
+                'This is a known pac CLI bug ("Sequence contains more than one matching element") that crashes `pac auth name`.',
+                'Fix it by clearing the local profiles, then click Save & run again:',
+                '  pac auth clear',
+                '(After clearing you will be asked to sign in once more to recreate a single clean profile.)',
+              ].join('\n'));
+            }
+            throw new Error(`Could not finalize the auth profile: ${detail}`);
+          }
+          log.ok(`Profile ${userProfileName} ready (targeting Dev).`);
         }
-        log.ok(`Profile ${userProfileName} ready (targeting Dev).`);
       } else if (findProfileIndexByName(pac, userProfileName) != null) {
         // Re-run after a previous success: discovery was already renamed.
         SHELL.runSafeCapture(pac, ['auth', 'select', '--name', userProfileName]);

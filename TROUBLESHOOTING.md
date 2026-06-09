@@ -296,7 +296,7 @@ EXCEPTION: System.InvalidOperationException: Sequence contains more than one mat
 
 This is an upstream `pac` CLI bug (`AuthProfiles.Update` uses `SingleOrDefault` against a store that can hold duplicates).
 
-**Fix:** The wizard now runs a pre-flight hygiene check that removes stale same-user duplicates before renaming, so most users never hit this. If it still fails, clear the local profiles and re-run:
+**Fix:** The wizard now runs its auth-store hygiene **before** retargeting the discovery profile onto Dev — while profile keys are still distinct — and removes both stale same-user duplicates *and* any leftover profile already holding the target name. It also re-resolves the profile index against the live store (never an out-of-range cached index) and reports pac's real error text instead of the generic `Command failed: …` wrapper. Most users never hit this. If it still fails, clear the local profiles and re-run:
 ```bash
 pac auth clear        # removes ALL local profiles — you'll sign in again
 ```
