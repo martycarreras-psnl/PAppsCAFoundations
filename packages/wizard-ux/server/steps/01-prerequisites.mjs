@@ -207,8 +207,12 @@ export default {
     // Note: The Dataverse-skills plugin manages its own Python SDK installation
     // via the dv-connect skill. No separate pip install needed here.
 
-    // Dataverse Python SDK (PowerPlatform-Dataverse-Client + pandas) — warning only.
-    // dv-connect can install this, so it does not block, but we surface it.
+    // Dataverse Python SDK (PowerPlatform-Dataverse-Client + pandas) — purely
+    // informational. It is NOT needed for scaffold/build/deploy, and the
+    // Dataverse-skills plugin installs it on demand via dv-connect. Emit at
+    // info level (not warn) so its absence never trips the step's warning /
+    // triage banner — telling the user to pip-install something they don't
+    // need yet is exactly the noise we want to avoid.
     const sdkOk = detectDataverseSdk(pythonCmd);
     if (sdkOk) {
       checks.push({ name: 'Dataverse Python SDK', ok: true, value: 'available', hint: null });
@@ -218,10 +222,10 @@ export default {
         name: 'Dataverse Python SDK',
         ok: false,
         value: null,
-        hint: 'Run: pip install PowerPlatform-Dataverse-Client pandas',
+        hint: 'Optional — dv-connect installs it when you start Dataverse work (pip install PowerPlatform-Dataverse-Client pandas)',
         optional: true,
       });
-      log.warn('Dataverse Python SDK — not found (pip install PowerPlatform-Dataverse-Client pandas)');
+      log.info('Dataverse Python SDK not found (optional — dv-connect installs it later when you start Dataverse work)');
     }
 
     // Dataverse-skills plugin — HARD GATE. All Dataverse work in this template

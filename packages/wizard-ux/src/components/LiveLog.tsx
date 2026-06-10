@@ -32,6 +32,7 @@ const useStyles = makeStyles({
     wordBreak: 'break-word',
   },
   err: { color: tokens.colorPaletteRedForeground1 },
+  warn: { color: tokens.colorPaletteYellowForeground1 },
   info: { color: tokens.colorNeutralForeground3, fontStyle: 'italic' },
   footer: {
     display: 'flex', alignItems: 'center', gap: '8px',
@@ -144,9 +145,17 @@ export function LiveLog({ lines, status, onClear }: Props) {
       <pre ref={ref} className={s.output} aria-live="polite">
         {lines.length === 0 ? (
           <span className={s.info}>No output yet. Save the form to begin.</span>
-        ) : lines.map((l, i) => (
-          <span key={i} className={l.stream === 'stderr' ? s.err : undefined}>{l.text}</span>
-        ))}
+        ) : lines.map((l, i) => {
+          // Color by intent, not the OS pipe: benign subprocess stderr (git,
+          // npm, vitest, pac progress) stays neutral; only wizard warn/fail
+          // lines are highlighted. Falls back to stream for older buffered
+          // lines that predate the `level` field.
+          const cls = l.level === 'error' ? s.err
+            : l.level === 'warn' ? s.warn
+            : l.level === 'info' ? undefined
+            : (l.stream === 'stderr' ? s.err : undefined);
+          return <span key={i} className={cls}>{l.text}</span>;
+        })}
       </pre>
       {footer && (
         <div className={`${s.footer}${footer.idle ? ` ${s.footerIdle}` : ''}`} aria-live="polite">

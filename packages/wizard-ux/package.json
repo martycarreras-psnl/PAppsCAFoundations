@@ -26,7 +26,7 @@
     "dev": "node server/index.mjs",
     "build": "vite build",
     "preview": "vite preview --port 5174",
-    "test": "node --test server/steps/05-environments.test.mjs",
+    "test": "node --test server/steps/05-environments.test.mjs server/lib/process-runner.test.mjs",
     "postinstall": "node scripts/fix-pty-perms.mjs"
   },
   "dependencies": {

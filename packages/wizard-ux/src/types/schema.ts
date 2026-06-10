@@ -112,6 +112,9 @@ export interface ApplyResponse {
 
 export interface LogLine {
   stream: 'stdout' | 'stderr';
+  // Severity of intent, independent of the OS pipe. Raw subprocess output is
+  // 'info' even on stderr; only the wizard's own log.warn/log.fail raise this.
+  level?: 'info' | 'warn' | 'error';
   text: string;
   ts: number;
 }
