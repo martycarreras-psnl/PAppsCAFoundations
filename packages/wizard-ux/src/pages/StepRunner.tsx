@@ -216,9 +216,12 @@ export function StepRunner() {
     }
   }, [stream.status, qc, stepNumber]);
 
-  // Auto-advance to next step after success — skip when there are warnings
+  // Auto-advance to next step after success — skip only when the wizard itself
+  // raised a warning/failure (log.warn/log.fail). Raw subprocess stderr (git,
+  // npm, vitest, pac all write normal progress there) must NOT count, or every
+  // successful step would falsely show the "review items" / triage banner.
   const hasWarnings = useMemo(
-    () => stream.lines.some((l) => l.stream === 'stderr'),
+    () => stream.lines.some((l) => l.level === 'warn' || l.level === 'error'),
     [stream.lines],
   );
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -576,9 +579,9 @@ export function StepRunner() {
                 </div>
               )}
 
-              {/* When a step completes with stderr lines, surface an agent-help
-                  banner alongside the success panel so the user knows they
-                  can have their coding agent triage the warnings. */}
+              {/* When a step raises a real warning/failure (log.warn/log.fail),
+                  surface an agent-help banner alongside the success panel.
+                  Benign subprocess stderr does NOT trigger this. */}
               {isComplete && hasWarnings && (
                 <AgentHelpBanner stepNumber={stepNumber} variant="warning" />
               )}

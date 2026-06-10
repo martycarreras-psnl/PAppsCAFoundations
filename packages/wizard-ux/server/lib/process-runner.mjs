@@ -16,7 +16,7 @@ class Run extends EventEmitter {
   constructor(id) {
     super();
     this.id = id;
-    this.lines = []; // { stream: 'stdout'|'stderr', text, ts }
+    this.lines = []; // { stream: 'stdout'|'stderr', level: 'info'|'warn'|'error', text, ts }
     this.status = 'pending'; // pending | running | done | error
     this.exitCode = null;
     this.error = null;
@@ -25,12 +25,17 @@ class Run extends EventEmitter {
     this.child = null;
   }
 
-  push(stream, text) {
+  push(stream, text, level = 'info') {
     // Defense-in-depth: scrub any secret-shaped values from text before it
     // hits the SSE log buffer. The buffer is streamed to the browser and
     // rendered in the UI; never let a real secret land there.
     const safe = SCRUB.scrubSecrets(text);
-    const evt = { stream, text: safe, ts: Date.now() };
+    // `level` reflects INTENT, not the OS pipe. Raw subprocess stderr is
+    // 'info' by default — git, npm, vitest and pac all write normal progress
+    // to stderr, so the pipe alone must never imply a warning. Only the
+    // wizard's own log.warn/log.fail set 'warn'/'error'. The UI keys its
+    // warning banner and red coloring off `level`, not `stream`.
+    const evt = { stream, level, text: safe, ts: Date.now() };
     this.lines.push(evt);
     if (this.lines.length > 1000) this.lines.shift();
     this.emit('line', evt);
@@ -106,8 +111,8 @@ export async function runInline(run, fn) {
   const log = {
     info: (msg) => run.push('stdout', `${msg}\n`),
     ok: (msg) => run.push('stdout', `✓ ${msg}\n`),
-    warn: (msg) => run.push('stderr', `⚠ ${msg}\n`),
-    fail: (msg) => run.push('stderr', `✗ ${msg}\n`),
+    warn: (msg) => run.push('stderr', `⚠ ${msg}\n`, 'warn'),
+    fail: (msg) => run.push('stderr', `✗ ${msg}\n`, 'error'),
   };
   try {
     const result = await fn(log);
