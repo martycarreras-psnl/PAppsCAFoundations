@@ -9,6 +9,38 @@ const noopLogger = {
   warn() {},
 };
 
+/**
+ * Normalize a publisher prefix to the Dataverse-valid form (2–8 lowercase
+ * letters/digits, must start with a letter) or return '' if it is missing or
+ * the placeholder. Mirrors the wizard's own prefix validation so we never seed
+ * an invalid or placeholder value into the project.
+ */
+export function normalizePublisherPrefix(raw) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (!value || value === 'yourprefix') return '';
+  return /^[a-z][a-z0-9]{1,7}$/.test(value) ? value : '';
+}
+
+/**
+ * Insert or update a `KEY=value` line in a .env file. Creates the file if it
+ * does not exist; preserves all other lines and the file's trailing newline.
+ */
+export function upsertEnvVar(envPath, key, value) {
+  const line = `${key}=${value}`;
+  if (!existsSync(envPath)) {
+    writeFileSync(envPath, `${line}\n`);
+    return;
+  }
+  const current = readFileSync(envPath, 'utf-8');
+  const pattern = new RegExp(`^${key}=.*$`, 'm');
+  if (pattern.test(current)) {
+    writeFileSync(envPath, current.replace(pattern, line));
+  } else {
+    const sep = current.length > 0 && !current.endsWith('\n') ? '\n' : '';
+    writeFileSync(envPath, `${current}${sep}${line}\n`);
+  }
+}
+
 export const REQUIRED_RUNTIME_PACKAGES = {
   react: '^18.3.1',
   'react-dom': '^18.3.1',
@@ -1285,7 +1317,7 @@ jobs:
   logger.ok('.github/workflows/ci.yml');
 }
 
-export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
+export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger, opts = {}) {
   // Thin layout: instead of copying instruction files, helper scripts, and
   // agent guidance from the foundations repo, we delegate to the published
   // <scope>/agent-instructions package. This is invoked once during scaffold
@@ -1293,6 +1325,15 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
   //
   // The wizard at this point has already created the project's package.json
   // with <scope>/agent-instructions as a devDependency, so it is installed.
+
+  // The publisher prefix decided during the wizard (Step 6). It is the most
+  // consequential naming value in the project, yet nothing machine-readable in
+  // the scaffolded app recorded it — so a later plan-mode schema agent had no
+  // concrete prefix to use and fell back to the `yourprefix` placeholder. We
+  // now thread it through to (a) the seeded planning payload, (b) .env as
+  // PP_PUBLISHER_PREFIX, and (c) pacaf.client.json. See issue: schema agent
+  // misses the wizard prefix.
+  const publisherPrefix = normalizePublisherPrefix(opts.publisherPrefix);
 
   const config = loadPacafConfig();
   const instructionsPkg = scopedPackageName('agent-instructions', config);
@@ -1331,8 +1372,19 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
     const schemaPlanExample = join(scriptsPkgDir, 'schema-plan.example.json');
     if (existsSync(schemaPlanExample)) {
       mkdirSync(join(projectDir, 'dataverse'), { recursive: true });
-      copyFileSync(schemaPlanExample, planningPayload);
-      logger.ok(`dataverse/planning-payload.json seeded from ${scopedPackageName('scripts', config)} schema-plan example`);
+      // Substitute the wizard's real publisher prefix into the example's
+      // `yourprefix_` placeholders so the planning artifact — which the schema
+      // agent reads as the re-runnable source of truth — carries the actual
+      // prefix. A verbatim copy left `yourprefix` in every table/column name,
+      // which is why the schema agent kept missing the prefix.
+      if (publisherPrefix) {
+        const seeded = readFileSync(schemaPlanExample, 'utf-8').split('yourprefix').join(publisherPrefix);
+        writeFileSync(planningPayload, seeded);
+        logger.ok(`dataverse/planning-payload.json seeded from ${scopedPackageName('scripts', config)} schema-plan example (publisher prefix "${publisherPrefix}_")`);
+      } else {
+        copyFileSync(schemaPlanExample, planningPayload);
+        logger.ok(`dataverse/planning-payload.json seeded from ${scopedPackageName('scripts', config)} schema-plan example`);
+      }
     }
   }
 
@@ -1357,12 +1409,29 @@ export function copyFoundationFiles(rootDir, projectDir, logger = noopLogger) {
     logger.ok('.env.template copied');
   }
 
+  // Persist the publisher prefix to .env as PP_PUBLISHER_PREFIX so the schema
+  // agent (and `<binPrefix>-update`) has a durable, machine-readable source of
+  // truth even if it regenerates the planning payload from scratch.
+  if (publisherPrefix) {
+    try {
+      upsertEnvVar(join(projectDir, '.env'), 'PP_PUBLISHER_PREFIX', publisherPrefix);
+      logger.ok(`Recorded PP_PUBLISHER_PREFIX=${publisherPrefix} in .env`);
+    } catch (e) {
+      logger.warn(`Could not record PP_PUBLISHER_PREFIX in .env: ${e.message}`);
+    }
+  }
+
   // Record the active branding in the project so subsequent invocations of
   // <binPrefix>-update know which scope to pull from.
   try {
     writeFileSync(
       join(projectDir, 'pacaf.client.json'),
-      JSON.stringify({ scope: config.scope, binPrefix: config.binPrefix, docsUrl: config.docsUrl }, null, 2) + '\n',
+      JSON.stringify({
+        scope: config.scope,
+        binPrefix: config.binPrefix,
+        docsUrl: config.docsUrl,
+        ...(publisherPrefix ? { publisherPrefix } : {}),
+      }, null, 2) + '\n',
     );
     logger.ok(`pacaf.client.json written (scope=${config.scope})`);
   } catch (e) {

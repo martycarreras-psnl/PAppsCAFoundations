@@ -197,7 +197,7 @@ export default async function stepScaffold() {
   writeStarterFiles(projectDir, appName, ui);
 
   // ── Copy instruction files ──
-  copyFoundationFiles(ROOT, projectDir, ui);
+  copyFoundationFiles(ROOT, projectDir, ui, { publisherPrefix: prefix });
 
   // ── pac code init ──
   ui.line('');
