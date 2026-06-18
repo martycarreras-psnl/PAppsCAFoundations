@@ -28,7 +28,10 @@ function runCommand(log, command, opts = {}) {
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
     child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
-    child.stderr.on('data', (chunk) => log.warn(String(chunk).trimEnd()));
+    // Subprocess stderr is normal progress/notices, not an error signal. Tag it
+    // info so a successful step doesn't raise the "finished with warnings"
+    // banner; genuine failure is detected from the non-zero exit code.
+    child.stderr.on('data', (chunk) => log.info(String(chunk).trimEnd()));
     child.on('error', (error) => {
       log.fail(`Failed to start command: ${error.message}`);
       resolvePromise(false);
@@ -45,13 +48,30 @@ function runFile(log, file, args, opts = {}) {
     const child = SHELL.spawnSafe(file, args, spawnOpts);
     child.stdout.setEncoding('utf-8');
     child.stderr.setEncoding('utf-8');
-    child.stdout.on('data', (chunk) => log.info(String(chunk).trimEnd()));
-    child.stderr.on('data', (chunk) => log.warn(String(chunk).trimEnd()));
+    let output = '';
+    // Subprocesses (pnpm, npm, git, pac) all write normal progress, update
+    // notices, and deprecation warnings to stderr. Tag that chatter as info,
+    // not warn — otherwise a fully successful step raises the yellow
+    // "finished with warnings" banner. Genuine failure is signalled by a
+    // non-zero exit code, which the caller already handles.
+    child.stdout.on('data', (chunk) => { output += chunk; log.info(String(chunk).trimEnd()); });
+    child.stderr.on('data', (chunk) => { output += chunk; log.info(String(chunk).trimEnd()); });
     child.on('error', (error) => {
       log.fail(`Failed to start ${file}: ${error.message}`);
       resolvePromise(false);
     });
-    child.on('close', (code) => resolvePromise(code === 0));
+    child.on('close', (code) => {
+      // pnpm v11 exits non-zero on ERR_PNPM_IGNORED_BUILDS even when the build
+      // scripts are pre-approved in package.json — the install itself still
+      // completed. Treat that specific case as success so it doesn't surface a
+      // false failure. Any other non-zero exit is a real failure.
+      if (code !== 0 && opts.tolerateIgnoredBuilds && /ERR_PNPM_IGNORED_BUILDS/.test(output)) {
+        log.info('Note: pnpm deferred some optional build scripts (ERR_PNPM_IGNORED_BUILDS). Dependencies installed successfully; this is safe to ignore.');
+        resolvePromise(true);
+        return;
+      }
+      resolvePromise(code === 0);
+    });
   });
 }
 
@@ -102,7 +122,7 @@ async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages 
   const noisyArgs = pnpm
     ? ['--reporter=append-only', ...baseArgs]
     : ['--loglevel=http', '--no-audit', '--no-fund', ...baseArgs];
-  return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv() });
+  return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv(), tolerateIgnoredBuilds: Boolean(pnpm) });
 }
 
 function toolCommand(name) {
