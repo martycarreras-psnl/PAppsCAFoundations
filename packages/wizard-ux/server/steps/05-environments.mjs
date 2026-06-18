@@ -244,7 +244,7 @@ function pruneConflictingAuthProfiles(log, pac, keepName, targetName) {
   if (profiles.length === 0) return 0;
   const dupes = selectProfilesToPrune(profiles, keepName, targetName);
   if (dupes.length === 0) return 0;
-  log.warn(`Found ${dupes.length} conflicting auth profile(s) from a prior run; removing them to avoid a known pac CLI crash.`);
+  log.info(`Cleaning up ${dupes.length} leftover auth profile(s) from a prior run to avoid a known pac CLI crash.`);
   let removed = 0;
   for (const d of dupes) {
     const del = SHELL.runSafeCapture(pac, ['auth', 'delete', '--name', d.name]);
