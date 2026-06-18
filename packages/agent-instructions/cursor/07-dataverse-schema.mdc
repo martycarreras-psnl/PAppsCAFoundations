@@ -6,6 +6,7 @@ alwaysApply: false
 # Dataverse Schema Design
 
 - Every table/column/option set uses the publisher prefix
+- Resolve the real publisher prefix from the project — never invent it or use `yourprefix`. Read it from `.env` (`PP_PUBLISHER_PREFIX=`), `pacaf.client.json` (`publisherPrefix`), the names already in `dataverse/planning-payload.json`, or the **Publisher Prefix** row in `README.md`; if all are missing, ask the user before creating schema.
 - Dataverse schema, data, query, and solution operations are owned by the [Dataverse-skills](https://github.com/microsoft/Dataverse-skills) plugin — there are no `pacaf-validate` / `pacaf-generate` / `pacaf-register` scripts
 - Discover existing schema first (`07a`), then provision with `dv-metadata`, then register with `pac code add-data-source`
 - Option set values start at `{CHOICE_VALUE_PREFIX}0000`

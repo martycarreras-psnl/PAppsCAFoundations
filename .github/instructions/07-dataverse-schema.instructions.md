@@ -182,6 +182,14 @@ When creating a Choice column in Dataverse you have two options: a **global** op
 
 Every global option set name must begin with your solution publisher prefix (e.g. `agtpo_`, `contoso_`, `cr8b4_`). This prefix is set when you create your solution publisher in the Power Platform admin center.
 
+> **Resolve the concrete prefix from the project — never invent it or use `yourprefix`.** The setup wizard records the real prefix in the project so you never have to guess. Read it, in priority order, from:
+> 1. **`.env`** → the `PP_PUBLISHER_PREFIX=` line (the canonical machine-readable source).
+> 2. **`pacaf.client.json`** → the `publisherPrefix` field.
+> 3. **`dataverse/planning-payload.json`** → the prefix already present on every `schemaName` / `logicalName` (the wizard seeds this artifact with your real prefix, not a placeholder).
+> 4. **`README.md`** → the **Publisher Prefix** row in the Power Platform table.
+>
+> If every one of these is missing or still literally says `yourprefix`, stop and ask the user for their publisher prefix before creating any schema — do not improvise one. A wrong prefix cannot be changed after data exists.
+
 ```
 <publisher_prefix>_<descriptivename>
 
@@ -192,6 +200,7 @@ Every global option set name must begin with your solution publisher prefix (e.g
 ❌ IdeaStatus         (no prefix — will collide across orgs)
 ❌ idea_status        (wrong format)
 ❌ agtpo_IdeaStatus   (camelCase — use all lowercase)
+❌ yourprefix_ideastatus  (placeholder — resolve the real prefix from the project first)
 ```
 
 The logical name must be all lowercase, no spaces, no hyphens — underscores only after the prefix.

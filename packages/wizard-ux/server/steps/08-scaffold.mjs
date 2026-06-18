@@ -352,7 +352,7 @@ export default {
     log.ok('Folder structure created');
 
     SCAFFOLD.writeStarterFiles(projectDir, appName, foundationLogger);
-    SCAFFOLD.copyFoundationFiles(PACKAGE_DIR, projectDir, foundationLogger);
+    SCAFFOLD.copyFoundationFiles(PACKAGE_DIR, projectDir, foundationLogger, { publisherPrefix: state.PUBLISHER_PREFIX });
 
     const pac = SHELL.pacPath();
     if (pac) {
