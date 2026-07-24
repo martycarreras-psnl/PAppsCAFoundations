@@ -47,6 +47,27 @@ SPN auth still works for `pac solution export/import`, `pac org who`, etc.
 
 ---
 
+## Package installs (Microsoft-managed devices / CFS)
+
+### `dotnet tool install` or `pip install` fails with connection refused / DNS / 403 (not a cert error)
+
+**Cause:** Microsoft-managed devices block **direct** access to the public package registries via policy (Central Feed Services). The blocked endpoints include `api.nuget.org`, `nuget.org/api/v2`, `pypi.org/simple`, and `files.pythonhosted.org`. npm was blocked in an earlier wave. The tell-tale symptom is a **connection refused / DNS failure / HTTP 403** against those domains — *not* a `CERTIFICATE_VERIFY_FAILED`/SSL error (that's the separate corporate-SSL-inspection case, which `--trusted-host` addresses).
+
+**Fix:** Point each package manager at the approved Microsoft proxy feed. Many managed devices already have this pushed by policy, in which case installs just work and no action is needed.
+
+```bash
+# NuGet / dotnet (PAC CLI install)
+dotnet nuget add source https://packagefeedproxy.microsoft.io/nuget/v3/index.json -n CFS
+dotnet nuget disable source nuget.org   # only if nuget.org is still listed and blocked
+
+# pip (Dataverse-skills SDK: PowerPlatform-Dataverse-Client + pandas)
+pip config set global.index-url https://packagefeedproxy.microsoft.io/pypi/simple
+```
+
+> The `packagefeedproxy.microsoft.io` feeds are **Microsoft-internal** — they are not reachable from non-Microsoft networks. If you are an external user and a public registry is blocked, that is your own corporate proxy, not CFS; use your organization's approved feed instead. For enforcement phases and exception processes, Microsoft employees should consult the Central Feed Services (CFS) guidance on EngHub.
+
+---
+
 ## Authentication & Secrets
 
 ### Project lives inside OneDrive / Dropbox / iCloud — DLP alert on `.env.local`

@@ -141,7 +141,7 @@ export default {
       if (bad) { log.fail(`PAC CLI ${pacVer} — known-bad version`); allOk = false; }
       else log.ok(`PAC CLI ${pacVer}`);
     } else {
-      checks.push({ name: 'PAC CLI', ok: false, value: null, hint: 'Run: dotnet tool install -g Microsoft.PowerApps.CLI.Tool' });
+      checks.push({ name: 'PAC CLI', ok: false, value: null, hint: 'Run: dotnet tool install -g Microsoft.PowerApps.CLI.Tool  (on a Microsoft-managed device where NuGet is blocked, first add the CFS proxy: dotnet nuget add source https://packagefeedproxy.microsoft.io/nuget/v3/index.json -n CFS)' });
       log.fail('PAC CLI — not found'); allOk = false;
     }
 

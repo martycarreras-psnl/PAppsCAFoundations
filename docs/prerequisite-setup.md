@@ -240,6 +240,16 @@ This is the same command on both macOS and Windows:
 dotnet tool install -g Microsoft.PowerApps.CLI.Tool
 ```
 
+> **On a Microsoft-managed device?** Direct access to the public NuGet registry (`api.nuget.org`, `nuget.org/api/v2`) may be blocked by policy (Central Feed Services). If this install fails with a **connection refused / DNS / 403** error — *not* a certificate error — point NuGet at the approved proxy feed and retry:
+>
+> ```bash
+> dotnet nuget add source https://packagefeedproxy.microsoft.io/nuget/v3/index.json -n CFS
+> dotnet nuget disable source nuget.org   # only if nuget.org is still listed and blocked
+> dotnet tool install -g Microsoft.PowerApps.CLI.Tool
+> ```
+>
+> Many managed devices already have this configured by policy — in that case the plain install just works and no action is needed. This proxy is Microsoft-internal; it is not reachable from non-Microsoft networks.
+
 > **"command not found" after installing?** The .NET global tools directory may not be on your system PATH yet. Close and reopen your VS Code terminal. If it still doesn't work:
 >
 > - **macOS:** Add this to your shell config (`~/.zshrc` or `~/.bashrc`):
@@ -306,6 +316,14 @@ brew install python@3
 python3 --version   # macOS — should print Python 3.x.x
 python --version    # Windows — should print Python 3.x.x
 ```
+
+> **On a Microsoft-managed device?** Direct access to the public Python Package Index (`pypi.org/simple`, `files.pythonhosted.org`) may be blocked by policy (Central Feed Services), which affects `pip install` (e.g. the Dataverse-skills `PowerPlatform-Dataverse-Client` + `pandas` step). If a `pip install` fails with a **connection refused / DNS / 403** error — *not* a certificate error — point pip at the approved proxy feed:
+>
+> ```bash
+> pip config set global.index-url https://packagefeedproxy.microsoft.io/pypi/simple
+> ```
+>
+> Many managed devices already have this configured by policy — in that case `pip install` just works and no action is needed. This proxy is Microsoft-internal; it is not reachable from non-Microsoft networks. See [docs/dataverse-skills-setup.md](dataverse-skills-setup.md) for the full Dataverse SDK install walkthrough.
 
 ---
 

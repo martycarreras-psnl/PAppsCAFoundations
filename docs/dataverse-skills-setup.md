@@ -88,6 +88,11 @@ py -m pip --version    # 🪟 (most reliable on Windows)
   pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <package>
   ```
   The durable fix is to have IT add your corporate root CA to the certifi store; the trusted-host flags are a stopgap.
+- **Blocked public registry on a Microsoft-managed device** (errors are a **connection refused / DNS failure / 403** against `pypi.org` or `files.pythonhosted.org` — *not* a certificate error) → policy (Central Feed Services) blocks direct access to the public PyPI registry. The `--trusted-host` flags above will **not** help here — the domain itself is unreachable. Point pip at the approved proxy feed instead:
+  ```bash
+  pip config set global.index-url https://packagefeedproxy.microsoft.io/pypi/simple
+  ```
+  Many managed devices already have this configured by policy, in which case `pip install` just works. This proxy is Microsoft-internal and is not reachable from non-Microsoft networks.
 
 ---
 

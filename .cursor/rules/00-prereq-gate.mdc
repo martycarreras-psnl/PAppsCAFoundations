@@ -77,6 +77,7 @@ Then stop. Do not auto-`winget`/`brew`/`choco`/`apt` — those have their own el
 - `pac` lives in `%USERPROFILE%\.dotnet\tools` — restart terminal after `dotnet tool install`.
 - `npx` exit code 9009 = Node missing or terminal not restarted.
 - Corporate SSL inspection → cert errors on `npm`/`dotnet`/`pip`. Diagnose, do not retry.
+- **CFS blocked registry (Microsoft-managed devices)** → connection refused / DNS / 403 on `api.nuget.org`, `pypi.org`, `files.pythonhosted.org` (npm blocked earlier), NOT a cert error. Don't use `--trusted-host`. Fix: `pip config set global.index-url https://packagefeedproxy.microsoft.io/pypi/simple` and `dotnet nuget add source https://packagefeedproxy.microsoft.io/nuget/v3/index.json -n CFS` (Microsoft-internal, often pre-configured by policy). External users → own corporate feed.
 - OneDrive Files On-Demand → permission errors. Recommend "Always keep on this device" or move repo.
 
 ## macOS gotchas

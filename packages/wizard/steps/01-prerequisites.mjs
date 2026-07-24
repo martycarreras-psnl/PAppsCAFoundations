@@ -76,6 +76,10 @@ export default async function stepPrerequisites() {
           ui.line('NOTE: You may need to restart your terminal or add ~/.dotnet/tools to PATH.');
         } else {
           ui.fail('Installation failed. Try manually.');
+          ui.line('  On a Microsoft-managed device, the public NuGet registry may be blocked');
+          ui.line('  (Central Feed Services). If the error is connection/DNS/403 (not a cert error):');
+          ui.line('    dotnet nuget add source https://packagefeedproxy.microsoft.io/nuget/v3/index.json -n CFS');
+          ui.line('    dotnet tool install -g Microsoft.PowerApps.CLI.Tool');
           allOk = false;
         }
       } else {
