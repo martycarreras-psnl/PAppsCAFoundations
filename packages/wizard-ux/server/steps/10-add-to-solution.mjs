@@ -1,4 +1,4 @@
-// Step 11 — Add the Code App to your Solution (manual).
+// Step 10 — Add the Code App to your Solution (manual).
 //
 // This is a MANUAL step, not a terminal/automation step. `pac code push -s`
 // only associates the Code App with a solution when that solution already
@@ -14,7 +14,7 @@
 // supplied to the frontend by GET /api/state (see routes/state.mjs).
 export default {
   meta: {
-    number: 11,
+    number: 10,
     title: 'Add App to Solution',
     description:
       'Required manual step — open the Maker Portal and add your deployed Code App to your target solution.',

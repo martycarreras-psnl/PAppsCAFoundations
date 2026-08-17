@@ -258,9 +258,9 @@ pac code init
 npm run dev:local
 
 # 10. When the planning payload is stable and you are ready to bind real data,
-#     re-run the Wizard UX from the connector step so it can create connection
-#     references and help discover existing connections.
-npx @pacaf/wizard-ux@latest --from 8
+#     use the Code Apps plugin (/add-datasource) or the PAC CLI directly.
+#     Connector binding is deliberately NOT a setup-wizard step.
+pac code add-data-source -a <connector_api_id> -c <connection_id>
 
 # 11. Confirm the connector registration produced or refreshed src/generated/**
 #     If a table or connector is missing, re-run pac code add-data-source for it.

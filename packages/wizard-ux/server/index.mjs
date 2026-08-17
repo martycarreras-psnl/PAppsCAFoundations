@@ -16,6 +16,7 @@ import ptyRoutes from './routes/pty.mjs';
 import onepasswordRoutes from './routes/onepassword.mjs';
 import configSeedRoutes from './routes/config-seed.mjs';
 import { detectCloudSync, cloudSyncWarning } from '../../wizard/lib/cloud-sync-detect.mjs';
+import { migrateStepNumbering } from './lib/state-bridge.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UX_DIR = resolve(__dirname, '..');
@@ -79,6 +80,7 @@ app.addHook('onRequest', async (req) => {
 });
 
 // Routes
+migrateStepNumbering(ROOT_DIR);
 await app.register(stateRoutes, { prefix: '/api/state', rootDir: ROOT_DIR });
 await app.register(systemRoutes, { prefix: '/api/system', rootDir: ROOT_DIR });
 await app.register(stepsRoutes, { prefix: '/api/steps', rootDir: ROOT_DIR });

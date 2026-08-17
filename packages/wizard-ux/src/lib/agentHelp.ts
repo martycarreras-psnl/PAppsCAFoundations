@@ -74,25 +74,18 @@ const HELP: Record<number, AgentHelp> = {
       'My PACAF wizard Step 8 (Scaffold) failed — please look at the log, check `pac auth list` and my workspace path, and tell me how to recover.',
   },
   9: {
-    title: 'Need help binding connectors?',
-    what:
-      'Connector failures are almost always one of: the connection ID doesn’t exist in the chosen environment, you pasted a URL from the wrong tenant, or the connector’s API name (`shared_xxx`) was mistyped.',
-    prompt:
-      'My PACAF wizard Step 9 (Bind Connectors) failed — please check my connection IDs against the Power Apps maker portal and tell me which ones are wrong.',
-  },
-  10: {
     title: 'Need help with build or deploy?',
     what:
       '`npm run build` failures point at app code or TypeScript; `pac code push` failures usually mean the target solution doesn’t exist in that environment, the App Registration lacks privileges, or a connection reference isn’t mapped.',
     prompt:
-      'My PACAF wizard Step 10 (Verify & Deploy) failed — please look at the log, decide whether it’s a build error or a push error, and tell me how to fix it.',
+      'My PACAF wizard Step 9 (Verify & Deploy) failed — please look at the log, decide whether it’s a build error or a push error, and tell me how to fix it.',
   },
-  11: {
+  10: {
     title: 'Need help adding the app to your solution?',
     what:
       'This is a manual portal step. If you can’t find the app under your solution, the publisher prefix likely doesn’t match the solution’s prefix, or you’re looking in the wrong environment.',
     prompt:
-      'My PACAF wizard Step 11 (Add App to Solution) is stuck — please confirm I’m in the right environment and solution, and walk me through adding the Code App.',
+      'My PACAF wizard Step 10 (Add App to Solution) is stuck — please confirm I’m in the right environment and solution, and walk me through adding the Code App.',
   },
 };
 

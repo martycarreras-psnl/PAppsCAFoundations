@@ -99,16 +99,22 @@ Detect the source tree: presence of **all** of `pnpm-workspace.yaml`, `packages/
 If detected, before suggesting `pnpm --filter ... dev`, `node packages/.../bin/...`, or any local wizard invocation:
 
 ```bash
+# Is pnpm itself available? Check this FIRST — the two below are meaningless
+# without it, and `corepack` cannot always self-provision.
+command -v pnpm >/dev/null && pnpm --version || echo "❌ pnpm missing"
 [ -d node_modules ] && [ -d packages/wizard-ux/node_modules ] && echo "✅ installed" || echo "❌ run: pnpm install"
 [ -d packages/wizard-ux/dist ] && echo "✅ built" || echo "❌ run: pnpm --filter @pacaf/wizard-ux build"
 ```
 
-If either fails, stop and tell the user:
+If `pnpm` is missing, fix only that first — install the exact version pinned in the root `package.json` `packageManager` field with `npm install -g pnpm@<version>`. Prefer this over `corepack`, which downloads on first use and fails on a restricted or offline network. This one **is** safe to run for the user: userland npm global install, no admin rights, no PATH changes.
+
+If either of the other two fails, stop and tell the user:
 
 ```
 🛑 Monorepo source tree — workspace not ready
 
 Run:
+  npm install -g pnpm@<version from packageManager field>   # only if pnpm is missing
   pnpm install
   pnpm --filter @pacaf/wizard-ux build
 
@@ -116,5 +122,7 @@ End users do NOT need this — `npx @pacaf/wizard-ux@latest` is self-contained.
 ```
 
 Does **not** apply to downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
+
+**Never treat `pnpm` as a general prerequisite.** It is deliberately absent from the prerequisite precheck — the scaffold prefers `pnpm` when on PATH and falls back to `npm` when absent. Demanding it from someone simply building an app is a false alarm.
 
 Full details: `.github/instructions/00-prereq-gate.instructions.md`

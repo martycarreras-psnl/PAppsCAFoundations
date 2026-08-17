@@ -29,11 +29,6 @@ export const CONFIG_SEED_KEYS = [
 
   // Agent preference
   { key: 'CODING_AGENT', type: 'string', label: 'Coding agent' },
-
-  // Connectors
-  { key: 'CONNECTOR_API_IDS',        type: 'string[]',  label: 'Selected connector apiIds' },
-  { key: 'CONNECTOR_CONNECTION_IDS', type: 'stringMap', label: 'Connection IDs by apiId' },
-  { key: 'CUSTOM_CONNECTORS',        type: 'string[]',  label: 'Custom connector entries' },
 ];
 
 const KEY_BY_NAME = new Map(CONFIG_SEED_KEYS.map((s) => [s.key, s]));

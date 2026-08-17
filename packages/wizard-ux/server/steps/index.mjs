@@ -12,11 +12,16 @@ import step5 from './05-environments.mjs';
 import step6 from './06-publisher.mjs';
 import step7 from './07-solution.mjs';
 import step8 from './08-scaffold.mjs';
-import step9 from './09-connectors.mjs';
-import step10 from './10-verify-deploy.mjs';
-import step11 from './11-add-to-solution.mjs';
+import step9 from './09-verify-deploy.mjs';
+import step10 from './10-add-to-solution.mjs';
 
-export const STEPS = [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10, step11];
+// Connector binding is deliberately NOT a setup step. It is phase 7 of the
+// prototype-first golden path (docs/prototype-golden-path.md) and cannot be
+// answered correctly here: at setup time there is no stable planning payload,
+// no prototype, and usually zero connections in the environment. Bind
+// connectors later via the Code Apps plugin (/add-datasource) or
+// `pac code add-data-source`. See issue: helixone Step 9 dead-end.
+export const STEPS = [step1, step2, step3, step4, step5, step6, step7, step8, step9, step10];
 export const TOTAL_STEPS = STEPS.length;
 
 export function getStep(n) {

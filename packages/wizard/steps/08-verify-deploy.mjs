@@ -16,7 +16,7 @@ import {
 } from '../lib/pac-target.mjs';
 
 export default async function stepVerifyAndDeploy() {
-  ui.stepHeader(9, TOTAL_STEPS, 'Build, Verify & Deploy');
+  ui.stepHeader(8, TOTAL_STEPS, 'Build, Verify & Deploy');
 
   const projectDir = stateGet('PROJECT_DIR');
   const appName = stateGet('APP_NAME');
@@ -170,12 +170,11 @@ export default async function stepVerifyAndDeploy() {
   ui.line('  npm run dev:local       <- prototype with mock providers (no auth needed)');
   ui.line('  npm run prototype:seed  <- refresh domain contracts + mock assets after editing the planning payload');
   ui.line('  review dataverse/prototype-feedback.md and update the planning payload');
-  ui.line('  node wizard/index.mjs --from 8  <- bind real connectors when ready');
   ui.line('  npm run dev             <- connected mode once real providers exist');
   ui.line(`  pac code push -s "${solUniqueName}"  <- deploy (cached user auth; -s keeps the app in its solution)`);
   ui.line('');
-  ui.line('To add connectors later:');
-  ui.line('  node wizard/index.mjs --from 8    (re-run connector setup)');
+  ui.line('To add connectors once the prototype is stable:');
+  ui.line('  /add-datasource    (Code Apps plugin — recommended)');
   ui.line('  — or manually —');
   ui.line('  pac code add-data-source -a dataverse -t <table_logical_name>');
   ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');

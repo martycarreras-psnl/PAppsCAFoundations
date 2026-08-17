@@ -120,16 +120,22 @@ This source-tree gate fires **only** when the user explicitly typed a source-tre
 If the user asked for one of the above **and** the cwd contains all three of `pnpm-workspace.yaml`, `packages/wizard-ux/package.json`, `packages/agent-instructions/package.json`:
 
 ```bash
+# Is pnpm itself available? Check this FIRST — the two below are meaningless
+# without it, and `corepack` cannot always self-provision.
+command -v pnpm >/dev/null && pnpm --version || echo "❌ pnpm missing"
 [ -d node_modules ] && [ -d packages/wizard-ux/node_modules ] && echo "✅ installed" || echo "❌ run: pnpm install"
 [ -d packages/wizard-ux/dist ] && echo "✅ built" || echo "❌ run: pnpm --filter @pacaf/wizard-ux build"
 ```
 
-If either fails:
+If `pnpm` is missing, fix only that first — install the exact version pinned in the root `package.json` `packageManager` field with `npm install -g pnpm@<version>`. Prefer this over `corepack`, which downloads on first use and fails on a restricted or offline network. This one **is** safe to run for the user: userland npm global install, no admin rights, no PATH changes.
+
+If either of the other two fails:
 
 ```
 🛑 Monorepo source tree — workspace not ready
 
 You asked to run from source (`pnpm --filter ...` / `node packages/...`). Run:
+  npm install -g pnpm@<version from packageManager field>   # only if pnpm is missing
   pnpm install
   pnpm --filter @pacaf/wizard-ux build
 
@@ -140,5 +146,7 @@ If you just want to *use* the wizard, you don't need any of this —
 Does **not** apply to:
 - Downstream Code App repos (no `pnpm-workspace.yaml`, no `packages/wizard-ux/`).
 - Any `npx @pacaf/...` invocation, regardless of cwd.
+
+**Never treat `pnpm` as a general prerequisite.** It is deliberately absent from the Step 1 precheck and the wizard's own prerequisite step — the scaffold prefers `pnpm` when on PATH and falls back to `npm` when absent. Demanding it from someone simply building an app is a false alarm.
 
 Full details: `.github/instructions/00-prereq-gate.instructions.md`

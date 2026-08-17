@@ -17,17 +17,38 @@ or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any addi
 ## Getting Started
 
 1. **Fork the repository** and clone your fork locally.
-2. **Install dependencies** for the wizard:
+2. **Install pnpm.** This is a pnpm workspace, and the version is pinned by the
+   `packageManager` field in the root `package.json`:
    ```bash
-   cd wizard && npm install
+   npm install -g pnpm@10.18.3
    ```
-3. **Run the existing tests** to confirm everything passes:
+   `corepack pnpm ...` also works, but it downloads the package manager on first
+   use and fails on a restricted or offline network.
+3. **Install dependencies** for the whole workspace:
    ```bash
-   node --test scripts/tests/*.test.mjs
+   pnpm install
    ```
-4. **Make your changes** on a feature branch.
-5. **Run tests again** to confirm nothing is broken.
-6. **Open a pull request** against `main`.
+4. **Run the existing tests** to confirm everything passes:
+   ```bash
+   pnpm -r --if-present run test
+   ```
+5. **Make your changes** on a feature branch.
+6. **Build, lint, and test again** to confirm nothing is broken:
+   ```bash
+   pnpm -r --if-present run build
+   pnpm -r --if-present run lint
+   pnpm -r --if-present run test
+   ```
+7. **Add a changeset** if you touched anything under `packages/`, `.github/instructions/`,
+   `.claude/rules/`, or `.cursor/rules/` — publication is gated on it:
+   ```bash
+   pnpm exec changeset
+   ```
+8. **Open a pull request** against `main`.
+
+> `pnpm` is required only to work on this repo. People *using* the template never
+> need it — `npx @pacaf/wizard-ux@latest` is self-contained and the scaffold falls
+> back to `npm` when `pnpm` is absent.
 
 ## What We're Looking For
 

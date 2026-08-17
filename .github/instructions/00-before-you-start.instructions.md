@@ -153,7 +153,7 @@ For each connector your app uses, in each environment (dev, test, prod):
 | Azure Blob Storage | `shared_azureblob` |
 | HTTP with Entra ID | `shared_webcontents` |
 
-> The wizard's connector step shows the list above as a checklist, then asks **"Add another connector by URL or apiId"** in a loop. Paste the full Maker Portal connection URL of any other connector (e.g. Approvals, Outlook Tasks, a custom connector you've published to the environment) and the wizard will register it as a data source — extracting the apiId and the connection ID from the URL in one shot. You can also paste a bare `shared_xxx` apiId if you only want to create the connection reference now and bind the connection later.
+> **You do not need to do this at setup time.** Connector binding is deliberately not part of the setup wizard — it is the last phase of the prototype-first golden path. Most projects reach the end of setup with **zero** connections in the environment, and that is correct. Come back to this step when the planning payload and prototype are stable, then bind connectors with the Code Apps plugin (`/add-datasource`) or `pac code add-data-source`. Both accept a full Maker Portal connection URL and extract the apiId and connection ID for you.
 
 ---
 

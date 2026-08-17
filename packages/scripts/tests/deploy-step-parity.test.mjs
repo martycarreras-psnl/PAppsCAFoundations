@@ -5,8 +5,8 @@
 // The "Verify & Deploy" step is implemented TWICE, because the two wizards have
 // completely different I/O models:
 //
-//   • packages/wizard/steps/09-verify-deploy.mjs          (CLI — @inquirer prompts)
-//   • packages/wizard-ux/server/steps/10-verify-deploy.mjs (browser — log stream)
+//   • packages/wizard/steps/08-verify-deploy.mjs          (CLI — @inquirer prompts)
+//   • packages/wizard-ux/server/steps/09-verify-deploy.mjs (browser — log stream)
 //
 // `npx @pacaf/wizard-ux@latest` (the DEFAULT scaffolder) runs the second copy.
 // In issue #81 a critical `pac code push` solution-association fix was applied
@@ -43,8 +43,8 @@ const PAIRED_STEPS = [
   {
     name: '09-verify-deploy (pac code push solution association)',
     files: [
-      join(PACKAGES_DIR, 'wizard', 'steps', '09-verify-deploy.mjs'),
-      join(PACKAGES_DIR, 'wizard-ux', 'server', 'steps', '10-verify-deploy.mjs'),
+      join(PACKAGES_DIR, 'wizard', 'steps', '08-verify-deploy.mjs'),
+      join(PACKAGES_DIR, 'wizard-ux', 'server', 'steps', '09-verify-deploy.mjs'),
     ],
     requiredInBoth: [
       {

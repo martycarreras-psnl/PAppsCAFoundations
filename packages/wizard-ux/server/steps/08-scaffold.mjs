@@ -207,7 +207,7 @@ pac code push
 |-------------|-----|
 ${envRows}
 
-Connector binding is intentionally deferred until the prototype is stable. Use WizardUX step 9 or \`pac code add-data-source\` when you are ready for real data.
+Connector binding is intentionally not part of setup. Build the prototype first with mock data (\`npm run dev:local\`), settle the planning payload, then bind real data with the Code Apps plugin (\`/add-datasource\`) or \`pac code add-data-source\`.
 `, 'utf-8');
 }
 
@@ -396,7 +396,7 @@ export default {
       log.warn('PAC CLI not found; skipping pac code init.');
     }
 
-    log.info('Connector binding is deferred to step 9 after prototype validation.');
+    log.info('Dataverse is bound at the environment level. Other connectors are not part of setup — add them after prototype validation with /add-datasource or pac code add-data-source.');
 
     log.info('Running smoke tests...');
     if (await runCommand(log, 'npm run test:smoke', { cwd: projectDir })) log.ok('Smoke tests passed');

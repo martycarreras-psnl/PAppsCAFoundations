@@ -281,12 +281,13 @@ export default async function stepScaffold() {
   ui.line('');
   ui.divider();
   ui.line('');
-  ui.line('Connector binding is now a dedicated later step.');
+  ui.line('Connector binding is not part of setup at all.');
   ui.line('The expected flow is plan → prototype → refine the planning payload → bind real connectors.');
   ui.line('');
-  ui.line('Skipping connector setup during initial scaffold.');
-  ui.line('When the prototype is stable, move to the dedicated connector step:');
-  ui.line('  node wizard/index.mjs --from 8');
+  ui.line('Dataverse is already bound at the environment level. When the prototype is');
+  ui.line('stable, bind other connectors with the Code Apps plugin or the PAC CLI:');
+  ui.line('  /add-datasource            (Code Apps plugin — recommended)');
+  ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
 
   // ── Smoke tests — verify the scaffold is healthy before proceeding ──
   ui.line('');
@@ -618,6 +619,10 @@ export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canR
   }
 }
 
+// No longer part of the setup flow — connector binding is a post-prototype task
+// (see docs/prototype-golden-path.md phase 7). Kept exported so an on-demand
+// "bind connectors" task can reuse it; the supported path is the Code Apps
+// plugin's /add-datasource or `pac code add-data-source`.
 export async function setupConnectors(pac, projectDir) {
   const rootDir = getRootDir();
   const prefix = stateGet('PUBLISHER_PREFIX');

@@ -403,6 +403,38 @@ export function Summary() {
           </div>
         </section>
 
+        {/* What comes after setup — the prototype-first golden path */}
+        <section>
+          <span className={s.sectionLabel}>What's next</span>
+          <Title3 as="h2" className={s.sectionTitle}>Build the prototype before you bind real data</Title3>
+
+          <div className={s.card} style={{ marginTop: '20px', display: 'grid', gap: '12px' }}>
+            <Body1>
+              <strong>1. Plan.</strong> Ask your coding agent to walk you through the business problem.
+              It will decompose the narrative, sharpen terminology into <code>CONTEXT.md</code>, and
+              produce <code>dataverse/planning-payload.json</code>.
+            </Body1>
+            <Body1>
+              <strong>2. Prototype.</strong> Run <code>npm run prototype:seed</code> then{' '}
+              <code>npm run dev:local</code>. The app runs entirely on mock providers, so you can
+              shape the UX before the data model hardens.
+            </Body1>
+            <Body1>
+              <strong>3. Provision.</strong> Once the payload is stable, use the Dataverse-skills
+              plugin (<code>dv-metadata</code>) to create the tables.
+            </Body1>
+            <Body1>
+              <strong>4. Connect.</strong> Only now bind real data — via the Code Apps plugin
+              (<code>/add-datasource</code>) or <code>pac code add-data-source</code>.
+            </Body1>
+            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+              Connector binding is deliberately not a setup step. Dataverse is already bound at the
+              environment level by the URL you confirmed earlier; every other connector is a
+              post-prototype decision, and most environments have no connections to choose from yet.
+            </Caption1>
+          </div>
+        </section>
+
         {!stateQ.data && (
           <MessageBar intent="info">
             <MessageBarBody>Loading state…</MessageBarBody>

@@ -1,11 +1,11 @@
-// wizard/steps/10-dataverse-plugin.mjs — Dataverse-skills plugin guidance
+// wizard/steps/09-dataverse-plugin.mjs — Dataverse-skills plugin guidance
 import { select } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
 import { detectAgent, agentChoices } from '@pacaf/scripts/detect-agent.mjs';
 
 export default async function stepDataversePlugin() {
-  ui.stepHeader(10, TOTAL_STEPS, 'Dataverse-skills Plugin');
+  ui.stepHeader(9, TOTAL_STEPS, 'Dataverse-skills Plugin');
 
   ui.line('The Dataverse-skills plugin teaches your coding agent to provision');
   ui.line('Dataverse schema, import data, manage solutions, and administer');

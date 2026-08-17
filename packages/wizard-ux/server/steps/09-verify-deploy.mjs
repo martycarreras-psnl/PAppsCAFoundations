@@ -1,4 +1,4 @@
-// Step 10 - Verify & Deploy. Browser-native build and optional pac code push.
+// Step 9 - Verify & Deploy. Browser-native build and optional pac code push.
 import { existsSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -114,7 +114,7 @@ function verifyUserProfile(pac, projectDir, state, credentialValues) {
 
 export default {
   meta: {
-    number: 10,
+    number: 9,
     title: 'Verify & Deploy',
     description: 'Build the project, optionally push it to Power Platform, and surface the live app URL when available.',
     canRunInBrowser: true,
