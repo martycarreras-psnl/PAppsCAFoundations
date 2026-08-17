@@ -53,8 +53,11 @@ jobs:
     # Block PRs that change publishable source under packages/* but don't include
     # a changeset entry. See .github/instructions/10-publishing.instructions.md.
     # Only runs on pull_request — push events to main are already past the gate.
+    # Skips changesets' own release PR: it bumps packages/*/package.json while
+    # DELETING the .changeset/*.md files it consumes, so the guard would always
+    # fail there and red-X the one PR that actually publishes.
     name: Changeset required for package changes
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
