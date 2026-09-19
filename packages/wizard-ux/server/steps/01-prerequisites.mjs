@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
 import { pacPath, runSafe } from '@pacaf/wizard/lib/shell.mjs';
+import { checkNode, resolvePython, checkPythonSdk, pythonDisplayCommand } from '@pacaf/wizard/lib/prerequisites.mjs';
 
 function hasCommand(name) {
   try {
@@ -73,15 +74,6 @@ function detectDataversePlugin() {
   return false;
 }
 
-/** Verify the Dataverse Python SDK (PowerPlatform-Dataverse-Client + pandas) imports. */
-function detectDataverseSdk(pythonCmd) {
-  if (!pythonCmd) return false;
-  const exec = pythonCmd === 'py' ? 'py -3' : pythonCmd;
-  const out = tryRun(`${exec} -c "import pandas, PowerPlatform_Dataverse_Client"`);
-  // tryRun returns '' on success (no stdout), null on non-zero exit.
-  return out !== null;
-}
-
 export default {
   meta: {
     number: 1,
@@ -99,15 +91,14 @@ export default {
     let hasOp = false;
 
     // Node
-    if (hasCommand('node')) {
-      const ver = tryRun('node --version') || '';
-      const major = parseInt(ver.replace(/^v/, ''), 10);
-      const ok = major >= 20;
-      checks.push({ name: 'Node.js', ok, value: ver, hint: ok ? null : 'Version 20+ required (https://nodejs.org/)' });
-      if (ok) log.ok(`Node.js ${ver}`); else { log.fail(`Node.js ${ver} — version 20+ required`); allOk = false; }
+    const node = checkNode();
+    checks.push({ name: 'Node.js', ok: node.ok, value: node.version, hint: node.ok ? null : `${node.message}\n${node.remediation}` });
+    if (node.ok) {
+      log.ok(`Node.js ${node.version} (running wizard process)`);
     } else {
-      checks.push({ name: 'Node.js', ok: false, value: null, hint: 'Not installed (https://nodejs.org/)' });
-      log.fail('Node.js — not found'); allOk = false;
+      log.fail(node.message);
+      log.info(node.remediation);
+      allOk = false;
     }
 
     // Git
@@ -155,46 +146,19 @@ export default {
       log.info('1Password CLI not found (optional)');
     }
 
-    // Python 3 (used by Dataverse-skills plugin)
-    // On Windows, `python3` may resolve to the Microsoft Store App Execution Alias stub
-    // (%LOCALAPPDATA%\Microsoft\WindowsApps\python3.exe) which exits non-zero and prints
-    // "Python was not found; run without arguments to install from the Microsoft Store..."
-    // We treat any command whose --version output doesn't start with "Python 3" as absent
-    // and fall through to the next candidate. Priority order:
-    //   python3 → python → py -3   (py launcher is Windows-only)
-    function tryPythonCmd(cmd) {
-      const raw = tryRun(`${cmd} --version`) || '';
-      // Store stub returns empty (non-zero exit trapped by tryRun) or the "not found" message
-      if (!raw.startsWith('Python 3')) return null;
-      return raw.replace('Python ', '').trim();
-    }
-
-    let pythonCmd = null;
-    let pythonVersion = null;
-
-    const candidates = ['python3', 'python'];
-    if (platform() === 'win32') candidates.push('py');
-
-    for (const candidate of candidates) {
-      if (!hasCommand(candidate)) continue;
-      const ver = candidate === 'py' ? tryRun('py -3 --version')?.replace('Python ', '').trim() || null
-                                     : tryPythonCmd(candidate);
-      if (ver) {
-        pythonCmd = candidate === 'py' ? 'py' : candidate;
-        pythonVersion = ver;
-        break;
-      }
-    }
-
+    const python = resolvePython(_state.PYTHON_CMD);
+    const pythonCmd = python.command;
+    const pythonVersion = python.version;
     if (pythonCmd) {
       checks.push({ name: 'Python', ok: true, value: pythonVersion, hint: null });
-      log.ok(`Python ${pythonVersion}${pythonCmd === 'py' ? ' (via py launcher)' : ''}`);
+      log.ok(`Python ${pythonVersion} (${pythonCmd})`);
     } else {
       const winHint = platform() === 'win32'
         ? ' On Windows, ensure "Add python.exe to PATH" was checked during install, or disable the Microsoft Store python3 alias in Settings → Apps → Advanced app settings → App execution aliases.'
         : '';
       checks.push({ name: 'Python', ok: false, value: null, hint: `Required for Dataverse-skills plugin (https://www.python.org/downloads/).${winHint}` });
-      log.warn('Python 3 — not found (required for Dataverse-skills plugin)');
+      log.warn('Python 3 — no working interpreter found (required for Dataverse-skills plugin)');
+      for (const attempt of python.attempts) log.info(`${attempt.command}: ${attempt.diagnostic}`);
       if (platform() === 'win32') {
         log.info('  → Install Python 3 from https://www.python.org/downloads/ — check "Add python.exe to PATH"');
         log.info('  → Or disable the Store stub: Settings → Apps → Advanced app settings → App execution aliases → turn off python3.exe');
@@ -213,8 +177,11 @@ export default {
     // info level (not warn) so its absence never trips the step's warning /
     // triage banner — telling the user to pip-install something they don't
     // need yet is exactly the noise we want to avoid.
-    const sdkOk = detectDataverseSdk(pythonCmd);
-    if (sdkOk) {
+    const sdk = checkPythonSdk(python);
+    const sdkInstall = pythonCmd
+      ? `${pythonDisplayCommand(pythonCmd)} -m pip install PowerPlatform-Dataverse-Client pandas`
+      : 'Resolve Python first, then use that interpreter with -m pip (docs/dataverse-skills-setup.md)';
+    if (sdk.ok) {
       checks.push({ name: 'Dataverse Python SDK', ok: true, value: 'available', hint: null });
       log.ok('Dataverse Python SDK (PowerPlatform-Dataverse-Client + pandas)');
     } else {
@@ -222,10 +189,12 @@ export default {
         name: 'Dataverse Python SDK',
         ok: false,
         value: null,
-        hint: 'Optional — dv-connect installs it when you start Dataverse work (pip install PowerPlatform-Dataverse-Client pandas)',
+        hint: `${sdk.diagnostic}\nOptional until Dataverse work. ${sdk.status === 'missing' ? sdkInstall : 'See docs/dataverse-skills-setup.md.'}`,
         optional: true,
       });
-      log.info('Dataverse Python SDK not found (optional — dv-connect installs it later when you start Dataverse work)');
+      log.info(`Dataverse Python SDK ${sdk.status} (optional until Dataverse work). ${pythonCmd ? 'Python is installed.' : ''}`);
+      log.info(sdk.diagnostic);
+      if (sdk.status === 'missing') log.info(`Install with the same interpreter: ${sdkInstall}`);
     }
 
     // Dataverse-skills plugin — HARD GATE. All Dataverse work in this template
@@ -242,7 +211,7 @@ export default {
         name: 'Dataverse-skills plugin',
         ok: false,
         value: null,
-        hint: `Required (${agent.label}). Install: ${agent.install} — then run: pip install PowerPlatform-Dataverse-Client pandas, and restart your editor.`,
+        hint: `Required (${agent.label}). Install: ${agent.install} — SDK setup: ${sdkInstall}; restart your editor.`,
       });
       log.fail('Dataverse-skills plugin — not installed');
       // Plain-language hard-block guidance. The FIRST thing the user reads is the
@@ -258,7 +227,7 @@ export default {
         log.info('     1. Open your terminal.');
         log.info('     2. claude plugin marketplace add <claude-plugins-official repo>');
         log.info('     3. claude plugin install dataverse@claude-plugins-official');
-        log.info('     4. pip install PowerPlatform-Dataverse-Client pandas');
+        log.info(`     4. SDK setup (when needed): ${sdkInstall}`);
         log.info('     5. Close and reopen Claude Code, then click "Run checks".');
       } else {
         log.info('  ▶ GitHub Copilot CLI (default):');
@@ -267,7 +236,7 @@ export default {
         log.info('     3. Start it: type  copilot  and press Enter. First time: follow the sign-in prompt.');
         log.info('     4. At the Copilot prompt, type:  /plugin install dataverse@awesome-copilot');
         log.info('     5. Wait for "Installed", then type  /exit');
-        log.info('     6. Run:  pip install PowerPlatform-Dataverse-Client pandas');
+        log.info(`     6. SDK setup (when needed): ${sdkInstall}`);
         log.info('     7. Restart your editor so the MCP tools load, then click "Run checks".');
       }
       log.info('');

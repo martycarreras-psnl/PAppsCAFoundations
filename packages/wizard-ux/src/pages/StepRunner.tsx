@@ -200,6 +200,7 @@ export function StepRunner() {
       setRunId(data.runId);
     },
   });
+  useEffect(() => { apply.reset(); }, [stepNumber, apply.reset]);
 
   const stream = useStepStream(stepNumber, runId);
 
@@ -311,6 +312,7 @@ export function StepRunner() {
       return;
     }
     submittedAnswersRef.current = answers;
+    setRunId(null);
     apply.mutate(answers);
   }
 
@@ -318,7 +320,10 @@ export function StepRunner() {
     stepsQ.data?.steps.find((x) => x.number === stepNumber)?.status ?? 'pending';
 
   const isRunning = apply.isPending || stream.status === 'running';
-  const isComplete = stream.status === 'done';
+  const isComplete = !apply.isPending && stream.status === 'done';
+  const savedVerificationFailure = stepNumber === 8 &&
+    stateQ.data?.state.SMOKE_TEST_STATUS === 'failed' &&
+    stream.status === 'idle' && !apply.isPending;
   const total = stepsQ.data?.totalSteps ?? 9;
   const isLastStep = stepNumber >= total;
   const canRun = meta?.canRunInBrowser;
@@ -495,6 +500,15 @@ export function StepRunner() {
               )}
 
               {/* Error states — compact */}
+              {savedVerificationFailure && (
+                <MessageBar intent="warning">
+                  <MessageBarBody>
+                    Project files were generated, but the last smoke verification failed.
+                    Inspect npm run test:smoke, fix the reported error, then Re-run this step.
+                    Deployment stays blocked until smoke verification passes.
+                  </MessageBarBody>
+                </MessageBar>
+              )}
               {apply.isError && (
                 <>
                   <MessageBar intent="error">
@@ -504,7 +518,7 @@ export function StepRunner() {
                 </>
               )}
 
-              {stream.status === 'error' && (
+              {!apply.isPending && stream.status === 'error' && (
                 <>
                   <MessageBar intent="error">
                     <MessageBarBody>{stream.error || 'Step failed — see output above.'}</MessageBarBody>
@@ -617,6 +631,9 @@ export function StepRunner() {
                   {stepNumber <= 1 ? 'Home' : 'Back'}
                 </Button>
                 <div className={s.spacer} />
+                {canRun && isComplete && (
+                  <Button onClick={submit} disabled={isRunning}>Re-run</Button>
+                )}
                 {canRun ? (
                   <Button
                     appearance="primary"

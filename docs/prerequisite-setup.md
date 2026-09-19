@@ -10,13 +10,16 @@ Everything you need to install before running the PACAF wizard for the first tim
 
 ## Quick Check — Do I Already Have Everything?
 
-Paste this into your VS Code terminal to check all prerequisites at once:
+Run these in your VS Code terminal:
 
 ```
-node --version && git --version && dotnet --version && pac help && python3 --version
+node --version
+git --version
+dotnet --version
+pac help
 ```
 
-If every line prints a version number (no "command not found" errors), you're ready — skip to the [wizard](../README.md#-i-just-want-to-build-a-code-app).
+Then check Python with `python3 --version` on macOS/Linux or `py -3 --version` on Windows (fall back to a real `python.exe`, not a Microsoft Store alias). If every command succeeds and Node is a supported LTS below, skip to the [wizard](../README.md#-i-just-want-to-build-a-code-app).
 
 If anything fails, work through the sections below in order.
 
@@ -24,7 +27,7 @@ If anything fails, work through the sections below in order.
 
 ## 1. Node.js — runs the wizard and all build tooling
 
-You need **Node.js version 20 or higher**. This also installs `npm`, the package manager that downloads everything else.
+You need **Node.js 22 or 24 LTS**; **24 is recommended**. This also installs `npm`, the package manager that downloads everything else. The supported lines were checked against the [official release schedule](https://github.com/nodejs/Release/blob/main/schedule.json) on 2026-09-19: Node 20 is EOL, odd releases are unsupported, and Node 26 is not yet LTS.
 
 ### Check
 
@@ -32,23 +35,18 @@ You need **Node.js version 20 or higher**. This also installs `npm`, the package
 node --version
 ```
 
-If you see `v20.x.x` or higher, move on to [Git](#2-git--version-control).
+If you see `v22.x.x` or `v24.x.x`, move on to [Git](#2-git--version-control). The wizard checks its **running process**, not another Node executable on PATH. It hard-blocks unsupported versions but never installs or switches Node for you.
 
 ### Install
 
 <details>
 <summary><strong>macOS</strong></summary>
 
-The easiest way is with [Homebrew](https://brew.sh/), a package manager for macOS. If you don't have Homebrew yet, install it first:
+Use the [official Node installer](https://nodejs.org/) or your existing version manager. If you already use [Homebrew](https://brew.sh/):
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-Follow the on-screen instructions — it will ask for your password. When it finishes, **close and reopen your VS Code terminal**, then install Node.js:
-
-```bash
-brew install node@20
+brew install node@24
+brew link --overwrite --force node@24
 ```
 
 </details>
@@ -57,18 +55,35 @@ brew install node@20
 <summary><strong>Windows</strong></summary>
 
 1. Go to [https://nodejs.org](https://nodejs.org/)
-2. Click the **LTS** download button (it will say something like "20.x.x LTS")
+2. Choose the supported **24.x LTS** line
 3. Run the downloaded installer — accept all defaults, click Next through every screen
 4. **Close and reopen your VS Code terminal** after the install finishes
 
 </details>
 
+### Switching an existing installation
+
+Choose **one** method matching your machine; Homebrew is not a universal prerequisite. These commands are for you to run, not an automatic wizard action:
+
+| Existing tool | Command |
+|---|---|
+| nvm (macOS/Linux) or nvm-windows | `nvm install 24` then `nvm use 24` |
+| fnm | `fnm install 24` then `fnm use 24` |
+| Volta | `volta install node@24` |
+| Homebrew (macOS only) | `brew install node@24` then `brew link --overwrite --force node@24` |
+| winget (Windows only) | `winget install OpenJS.NodeJS.LTS` |
+| No version manager | [Official installer](https://nodejs.org/) |
+
+After switching, close and reopen the terminal, verify the version, **stop and restart the wizard**, then retry. Clicking Re-run in an already-running wizard cannot switch its Node process.
+
 ### Verify
 
 ```
-node --version   # should print v20.x.x or higher
+node --version   # should print v22.x.x or v24.x.x
 npm --version    # should print 10.x.x or higher
 ```
+
+If Step 8 wrote the project but smoke tests failed, the files are still there; verification has **not** passed. Inspect `npm run test:smoke` output before changing auth or recreating the app. A Vitest worker crash is not proof of a PAC/solution problem. Vitest 2 already defaults to the forks pool; setting it again is not a demonstrated fix. Keep genuine verification warnings until a successful retry, and do not deploy an unverified scaffold.
 
 ---
 
@@ -276,17 +291,9 @@ Python powers the [Dataverse-skills plugin](https://github.com/microsoft/Dataver
 
 ### Check
 
-```
-python3 --version
-```
+Use the recorded `PYTHON_CMD` from `.wizard-state.json` if available. Otherwise run `python3 --version` on macOS/Linux, or `py -3 --version` on Windows. Only fall back to a non-Store `python.exe` on Windows; never bare `python` on macOS.
 
-On Windows, also try:
-
-```
-python --version
-```
-
-If you see `Python 3.x.x`, you're done!
+Python 3 is installed if that command prints its version. The Dataverse SDK requires **3.10+**; a working 3.9 is incompatible, not missing. Before reinstalling, probe the canonical paths in the [Dataverse setup guide](dataverse-skills-setup.md#step-1--install-python-3). Missing SDK packages are a separate diagnosis.
 
 ### Install
 
@@ -313,8 +320,8 @@ brew install python@3
 ### Verify
 
 ```
-python3 --version   # macOS — should print Python 3.x.x
-python --version    # Windows — should print Python 3.x.x
+python3 --version   # macOS/Linux — Python 3.10+ for SDK work
+py -3 --version     # Windows — Python 3.10+ for SDK work
 ```
 
 > **On a Microsoft-managed device?** Direct access to the public Python Package Index (`pypi.org/simple`, `files.pythonhosted.org`) may be blocked by policy (Central Feed Services), which affects `pip install` (e.g. the Dataverse-skills `PowerPlatform-Dataverse-Client` + `pandas` step). If a `pip install` fails with a **connection refused / DNS / 403** error — *not* a certificate error — point pip at the approved proxy feed:
@@ -346,7 +353,7 @@ Both should print `Python 3.x.x`. If you see that, you're done.
 
 This means either the launcher isn't installed, or the Store stub is intercepting the call.
 
-1. **Reinstall Python from [python.org](https://www.python.org/downloads/)** — during install, expand **Customize installation** and make sure **`py launcher`** and **`Add python.exe to PATH`** are both checked. Choose **Install for all users** if you have admin rights.
+1. **Check for a working non-Store `python.exe` or canonical launcher path first** (see [the setup guide](dataverse-skills-setup.md#step-1--install-python-3)). If none works, install from [python.org](https://www.python.org/downloads/) with **`py launcher`** and **`Add python.exe to PATH`** checked.
 2. **Disable the Store stub** — Settings → **Apps** → **Advanced app settings** → **App execution aliases** → turn **off** the entries for `python.exe` and `python3.exe`.
 3. **Close and reopen your VS Code terminal**, then re-run the check.
 
@@ -363,10 +370,13 @@ py -3 --version    # Python 3.x.x
 Run the full check one more time to confirm everything is installed:
 
 ```
-node --version && git --version && dotnet --version && pac help && python3 --version
+node --version
+git --version
+dotnet --version
+pac help
 ```
 
-You should see version numbers for each tool and no errors. You're ready to [create your repo and run the wizard](../README.md#-i-just-want-to-build-a-code-app).
+Check the recorded Python command separately (`python3 --version` on macOS/Linux or `py -3 --version` on Windows). With supported Node LTS and working tools, you're ready to [create your repo and run the wizard](../README.md#-i-just-want-to-build-a-code-app).
 
 ---
 

@@ -16,6 +16,9 @@ import {
 } from '../lib/pac-target.mjs';
 
 export default async function stepVerifyAndDeploy() {
+  if (stateGet('SMOKE_TEST_STATUS') === 'failed') {
+    throw new Error('Project files were generated, but smoke verification failed. Inspect npm run test:smoke, fix the test/worker error, then re-run the Scaffold step to record a passing result before deployment.');
+  }
   ui.stepHeader(8, TOTAL_STEPS, 'Build, Verify & Deploy');
 
   const projectDir = stateGet('PROJECT_DIR');

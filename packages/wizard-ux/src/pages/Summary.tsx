@@ -222,9 +222,10 @@ export function Summary() {
 
   const completed = stateQ.data?.completed ?? 0;
   const total = stateQ.data?.totalSteps ?? 9;
-  const next = stateQ.data?.next ?? 1;
+  const verificationFailed = st.SMOKE_TEST_STATUS === 'failed';
+  const next = verificationFailed ? 8 : stateQ.data?.next ?? 1;
   const percent = Math.round((completed / Math.max(1, total)) * 100);
-  const isDone = completed >= total;
+  const isDone = completed >= total && !verificationFailed;
   const launchUrl = stateQ.data?.powerApp?.launchUrl || '';
   const launchTarget = stateQ.data?.powerApp?.targetEnv || st.WIZARD_TARGET_ENV || 'dev';
 
@@ -238,6 +239,14 @@ export function Summary() {
       />
 
       <div className={s.body}>
+        {verificationFailed && (
+          <MessageBar intent="warning">
+            <MessageBarBody>
+              Project files were generated, but smoke verification failed. Deployment is blocked.
+              Return to Step 8 to fix the test error and re-run verification.
+            </MessageBarBody>
+          </MessageBar>
+        )}
         {/* Progress overview */}
         <div className={s.progressCard}>
           <div className={s.progressText}>

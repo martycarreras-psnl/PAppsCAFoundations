@@ -69,9 +69,9 @@ const HELP: Record<number, AgentHelp> = {
   8: {
     title: 'Need help with the scaffold?',
     what:
-      '`pac code init` failures are usually caused by an expired `pac auth` profile mid-run, a corporate proxy / SSL inspection blocking npm, a OneDrive-synced workspace path, or insufficient privileges in the target environment.',
+      'First identify the failing phase: dependency installation, Power Platform registration, or smoke verification. If only smoke tests fail, the generated files remain on disk; inspect the test output and running Node LTS version before changing authentication or recreating the app.',
     prompt:
-      'My PACAF wizard Step 8 (Scaffold) failed — please look at the log, check `pac auth list` and my workspace path, and tell me how to recover.',
+      'My PACAF wizard Step 8 needs attention — identify the failing phase from the log, distinguish generated files from smoke-test verification, check supported Node LTS if a worker crashed, and preserve the existing project while recovering.',
   },
   9: {
     title: 'Need help with build or deploy?',

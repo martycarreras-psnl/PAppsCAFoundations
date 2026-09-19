@@ -6,28 +6,33 @@ This is the minimal starter for a [Power Apps Code App](https://learn.microsoft.
 
 You need VS Code with a coding-agent extension (GitHub Copilot Chat, Claude Code, Cursor, …) signed in — that's how you drive the wizard. All commands below run in the VS Code terminal (`` Ctrl+` `` on Windows, `` ⌃` `` on macOS).
 
-Quick check — paste this into the terminal to verify everything at once:
+Quick check — run these commands:
 
 ```bash
-node --version && git --version && dotnet --version && pac help && python3 --version
+node --version
+git --version
+dotnet --version
+pac help
 ```
 
-If every line prints a version number with no errors, you're ready to run the wizard.
+Then run `python3 --version` on macOS/Linux, or `py -3 --version` on Windows (fall back to a real `python.exe`, never the Microsoft Store alias). If every command succeeds and Node is one of the supported LTS lines below, you're ready to run the wizard.
 
 | Tool | Why | Version |
 |---|---|---|
-| Node.js | Runs the wizard and all build tooling (installs npm) | v20+ |
+| Node.js | Runs the wizard and all build tooling (installs npm) | 22 or 24 LTS (24 recommended) |
 | Git | Version control; the wizard commits scaffolded files | 2.x+ |
 | .NET SDK | Required by the PAC CLI | 8.x+ |
 | PAC CLI | Registers and deploys the Code App to Power Platform (`dotnet tool install -g Microsoft.PowerApps.CLI.Tool`) | latest |
-| Python 3 | Recommended — powers the Dataverse-skills plugin | 3.x+ |
+| Python 3 | Recommended — powers the Dataverse-skills plugin | 3.10+ for the SDK |
 | GitHub CLI (optional) | Convenience for repo/PR/auth from the terminal | 2.x+ |
 
 **Install notes**
 
 - After installing any tool, close and reopen the VS Code terminal so PATH changes take effect.
-- Windows: install Node.js from [nodejs.org](https://nodejs.org/) (LTS), .NET from [dotnet.microsoft.com](https://dotnet.microsoft.com/download), and tick "Add python.exe to PATH" when installing Python. Use `py -3 --version` if `python3` opens the Microsoft Store.
-- macOS: easiest via [Homebrew](https://brew.sh/): `brew install node@20 git dotnet-sdk python@3`.
+- Windows: install Node.js from [nodejs.org](https://nodejs.org/) (24 LTS), .NET from [dotnet.microsoft.com](https://dotnet.microsoft.com/download), and tick "Add python.exe to PATH" when installing Python. Prefer `py -3 --version`; do not probe the `python3` Store alias.
+- macOS: use the official Node installer or an existing version manager. If you already use [Homebrew](https://brew.sh/), select `node@24`, not the current non-LTS line.
+- Node 20 is EOL and Node 25/26 are unsupported as of September 2026. The wizard detects and blocks unsupported Node; it never changes your global installation. After switching Node, restart the wizard, not just the step.
+- The wizard records `PYTHON_CMD`. SDK installs must use that interpreter with `-m pip`; a missing SDK import means **Python is installed**, not that Python needs reinstalling. See the [Dataverse setup guide](https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/docs/dataverse-skills-setup.md).
 - PAC CLI `command not found` after install → add `$HOME/.dotnet/tools` (macOS) or `%USERPROFILE%\.dotnet\tools` (Windows) to PATH, then restart the terminal.
 
 > **On a Microsoft-managed device?** Direct access to the public PyPI and NuGet registries may be blocked by policy (Central Feed Services). If `dotnet tool install` or `pip install` fail with a **connection / DNS / 403** error (not a certificate error), point your package managers at the approved proxy feeds:

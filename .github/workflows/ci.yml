@@ -9,8 +9,11 @@ on:
 
 jobs:
   validate:
-    name: Lint + build + test
+    name: Lint + build + test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['22', '24']
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -24,7 +27,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
 
       - name: Print versions
         run: |
@@ -72,7 +75,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -161,5 +164,4 @@ jobs:
             exit 1
           fi
           echo "All changed publishable packages are named in a changeset entry."
-
 
