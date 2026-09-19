@@ -92,7 +92,7 @@ it('shows persisted smoke failure on resume, then replaces it after passing veri
     </QueryClientProvider>,
   );
   expect(screen.getByText(/last smoke verification failed/)).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Re-run' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Retry verification' }));
   await waitFor(() => expect(Source.instances).toHaveLength(1));
   Source.instances[0].emit('line', { text: 'Smoke tests passed', stream: 'stdout', level: 'info', ts: 1 });
   saved.state = { SMOKE_TEST_STATUS: 'passed' };

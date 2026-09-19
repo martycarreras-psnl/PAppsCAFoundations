@@ -85,6 +85,8 @@ npm --version    # should print 10.x.x or higher
 
 If Step 8 wrote the project but smoke tests failed, the files are still there; verification has **not** passed. Inspect `npm run test:smoke` output before changing auth or recreating the app. A Vitest worker crash is not proof of a PAC/solution problem. Vitest 2 already defaults to the forks pool; setting it again is not a demonstrated fix. Keep genuine verification warnings until a successful retry, and do not deploy an unverified scaffold.
 
+When a smoke failure is recorded, Step 8's **Retry verification** runs only `npm run test:smoke` in the recorded project directory. It does not regenerate source/configuration, reinstall dependencies, initialize an app, or commit files. Fix the test error in your existing project, then retry; a passing result clears the saved warning and unblocks deployment. The CLI Scaffold step uses the same verification-only recovery.
+
 ---
 
 ## 2. Git — version control

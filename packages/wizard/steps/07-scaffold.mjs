@@ -10,6 +10,7 @@ import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN, ha
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
+import { retrySmokeVerification } from '../lib/scaffold-verification.mjs';
 import {
   extractConnectionId,
   extractConnectorApiId,
@@ -55,6 +56,12 @@ export {
 
 export default async function stepScaffold() {
   ui.stepHeader(7, TOTAL_STEPS, 'Scaffolding Your Code App');
+  if (stateGet('SMOKE_TEST_STATUS') === 'failed') {
+    const update = await retrySmokeVerification(stateGet('PROJECT_DIR'), runLive, ui);
+    stateSet('SMOKE_TEST_STATUS', update.SMOKE_TEST_STATUS);
+    setCompletedStep(7);
+    return;
+  }
 
   const ROOT = getRootDir();
   const appName = stateGet('APP_NAME');

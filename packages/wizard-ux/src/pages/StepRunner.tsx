@@ -331,6 +331,7 @@ export function StepRunner() {
   // Single smart CTA label
   const ctaLabel = (() => {
     if (isRunning) return meta?.readOnly ? 'Checking…' : 'Running…';
+    if (savedVerificationFailure) return 'Retry verification';
     if (isComplete && hasWarnings) return isLastStep ? 'Finish' : 'Continue';
     if (isComplete) return isLastStep ? 'Finish' : 'Continuing…';
     if (status === 'done' && hasUnsavedChanges) return 'Save & re-run';
@@ -504,7 +505,8 @@ export function StepRunner() {
                 <MessageBar intent="warning">
                   <MessageBarBody>
                     Project files were generated, but the last smoke verification failed.
-                    Inspect npm run test:smoke, fix the reported error, then Re-run this step.
+                    Inspect npm run test:smoke, fix the reported error, then Retry verification.
+                    This retry only runs tests in the existing project; it does not regenerate files.
                     Deployment stays blocked until smoke verification passes.
                   </MessageBarBody>
                 </MessageBar>

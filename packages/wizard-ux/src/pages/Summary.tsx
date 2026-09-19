@@ -243,7 +243,7 @@ export function Summary() {
           <MessageBar intent="warning">
             <MessageBarBody>
               Project files were generated, but smoke verification failed. Deployment is blocked.
-              Return to Step 8 to fix the test error and re-run verification.
+              Fix the test error, then use Step 8's verification-only retry; existing files are preserved.
             </MessageBarBody>
           </MessageBar>
         )}

@@ -4,6 +4,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { assertSupportedNode } from '@pacaf/wizard/lib/prerequisites.mjs';
+import { retrySmokeVerification } from '@pacaf/wizard/lib/scaffold-verification.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
@@ -270,6 +271,12 @@ export default {
 
   async apply(answers, state, log) {
     assertSupportedNode();
+    if (state.SMOKE_TEST_STATUS === 'failed') {
+      const stateUpdate = await retrySmokeVerification(
+        state.PROJECT_DIR, (command, opts) => runCommand(log, command, opts), log,
+      );
+      return { stateUpdate, completedStep: 8, result: { scaffold: 'preserved', verification: 'passed' } };
+    }
     const appName = state.APP_NAME || 'Power Apps Code App';
     const projectDir = resolve(String(answers.PROJECT_DIR || process.cwd()).trim());
     const foundationLogger = makeFoundationLogger(log);

@@ -146,7 +146,7 @@ export default {
 
   async apply(answers, state, log) {
     if (state.SMOKE_TEST_STATUS === 'failed') {
-      throw new Error('Project files were generated, but smoke verification failed. Inspect npm run test:smoke, fix the test/worker error, then re-run Step 8 to record a passing result before deployment.');
+      throw new Error('Project files were generated, but smoke verification failed. Inspect npm run test:smoke, fix the test/worker error, then re-run Step 8 (verification only; existing files are preserved) to record a passing result before deployment.');
     }
     const projectDir = resolve(String(state.PROJECT_DIR || PROJECT_DIR));
     if (!existsSync(join(projectDir, 'package.json'))) throw new Error(`No package.json found in ${projectDir}. Run Step 8 first.`);

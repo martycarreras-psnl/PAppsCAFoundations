@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -8,7 +8,7 @@ import Fastify from 'fastify';
 import stepsRoutes from '../routes/steps.mjs';
 import { getStep } from '../steps/index.mjs';
 import { getRun } from './process-runner.mjs';
-import { readState } from './state-bridge.mjs';
+import { readState, writeState } from './state-bridge.mjs';
 
 async function setup(t) {
   const rootDir = mkdtempSync(join(tmpdir(), 'pacaf-prereq-'));
@@ -18,8 +18,8 @@ async function setup(t) {
   return { app, rootDir };
 }
 
-async function apply(app) {
-  const response = await app.inject({ method: 'POST', url: '/steps/1/apply', payload: { answers: {} } });
+async function apply(app, step = 1) {
+  const response = await app.inject({ method: 'POST', url: `/steps/${step}/apply`, payload: { answers: {} } });
   assert.equal(response.statusCode, 200);
   const run = getRun(response.json().runId);
   if (run.status === 'running' || run.status === 'pending') await once(run, 'end');
@@ -66,4 +66,41 @@ test('resumed deployment is blocked by persisted smoke failure before any build 
     () => getStep(9).apply({ PUSH_TO_POWER_PLATFORM: true }, { SMOKE_TEST_STATUS: 'failed' }, {}),
     /re-run Step 8.*passing result/,
   );
+});
+
+test('verification-only retry preserves custom project files and persists passed only after real smoke success', async (t) => {
+  const { app, rootDir } = await setup(t);
+  const projectDir = join(rootDir, 'existing-project');
+  mkdirSync(projectDir);
+  writeFileSync(join(projectDir, 'package.json'), JSON.stringify({
+    private: true,
+    scripts: {
+      'test:smoke': 'node smoke.cjs',
+      postinstall: 'node -e "throw new Error(\'install must not run\')"',
+    },
+  }));
+  writeFileSync(join(projectDir, 'smoke.cjs'), "process.exit(require('node:fs').existsSync('test-fails') ? 1 : 0);");
+  writeFileSync(join(projectDir, 'App.tsx'), 'export const app = "developer fixes must survive";');
+  writeFileSync(join(projectDir, 'vite.config.ts'), 'custom configuration');
+  writeFileSync(join(projectDir, 'power.config.json'), '{"appId":"existing-app"}');
+  writeFileSync(join(projectDir, 'test-fails'), '');
+  writeState(rootDir, { PROJECT_DIR: projectDir, SMOKE_TEST_STATUS: 'failed', COMPLETED_STEP: 8 });
+
+  const snapshot = () => Object.fromEntries(readdirSync(projectDir).sort().map((name) => [name, readFileSync(join(projectDir, name), 'utf8')]));
+  const beforeFailure = snapshot();
+  const failed = await apply(app, 8);
+  assert.equal(failed.status, 'error');
+  assert.match(failed.error, /still failed/);
+  assert.equal(readState(rootDir).SMOKE_TEST_STATUS, 'failed');
+  assert.deepEqual(snapshot(), beforeFailure);
+
+  rmSync(join(projectDir, 'test-fails'));
+  const beforeSuccess = snapshot();
+  const passed = await apply(app, 8);
+  assert.equal(passed.status, 'done');
+  assert.equal(readState(rootDir).SMOKE_TEST_STATUS, 'passed');
+  assert.equal(readState(rootDir).COMPLETED_STEP, 8);
+  assert.deepEqual(snapshot(), beforeSuccess);
+  assert.ok(passed.lines.some((line) => /verification passed/.test(line.text)));
+  assert.ok(passed.lines.every((line) => !/Writing starter|Installing dependencies|\$.*(?:init|install|commit)/.test(line.text)));
 });
