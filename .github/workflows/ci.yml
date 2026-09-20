@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
+          package-manager-cache: false
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -35,6 +36,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '25'
+          package-manager-cache: false
       - name: Assert actual unsupported runtime is rejected without installing dependencies
         env:
           PACAF_TEST_REJECT_NODE25: '1'
