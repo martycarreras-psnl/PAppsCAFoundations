@@ -35,7 +35,7 @@ pac help
 On **Windows**, also run:
 
 ```powershell
-py -V
+py -3 --version
 ```
 
 On **macOS / Linux**, run:
@@ -45,6 +45,10 @@ python3 --version
 ```
 
 For each command that fails or returns a Microsoft Store stub (Windows `python3` often resolves to a stub that prompts to install — that counts as a fail), record it.
+
+**Node is a hard gate, not a minimum-major check.** PACAF supports Node **22 or 24 LTS** (24 recommended), checked against the [official release schedule](https://github.com/nodejs/Release/blob/main/schedule.json) on 2026-09-19. Node 20 is EOL; odd releases and Node 26 (not yet LTS) are unsupported. Re-check the schedule when updating this policy; do not assume every even major is supported. The wizard checks `process.versions.node`, not a possibly different `node` on PATH. Detect and guide only: never install or switch global Node automatically. Link to [the per-manager instructions](../../docs/prerequisite-setup.md#1-nodejs--runs-the-wizard-and-all-build-tooling). After switching, **restart the wizard process**; clicking Re-run cannot change its interpreter.
+
+**Resolve Python once, independently of packages.** Read `PYTHON_CMD` from `.wizard-state.json` if present, verify that exact interpreter, and reuse it for all subsequent probes and `-m pip` commands. Normalize legacy `py` to `py -3`. Otherwise prefer `py -3`, then a real `python.exe` on Windows; never probe `python3` or execute a `Microsoft\WindowsApps` Store alias. On macOS/Linux use `python3`, never fall back to bare `python`. Probe canonical paths below before declaring Python absent. Record the successful command (including `-3`, or the absolute path) as `PYTHON_CMD`. A working Python 3.9 is **installed but incompatible with the SDK's Python 3.10+ requirement**, not missing.
 
 ## Step 2 — If everything passes
 
@@ -63,7 +67,7 @@ Many "command not found" reports are actually **`PATH` problems, not install pro
 | `pac` | `$HOME/.dotnet/tools/pac` | `%USERPROFILE%\.dotnet\tools\pac.exe` |
 | `dotnet` | `/usr/local/share/dotnet/dotnet`, `$HOME/.dotnet/dotnet` | `%ProgramFiles%\dotnet\dotnet.exe` |
 | `node` | `/usr/local/bin/node`, `/opt/homebrew/bin/node`, `$HOME/.nvm/versions/node/*/bin/node` | `%ProgramFiles%\nodejs\node.exe` |
-| `python3` | `/usr/local/bin/python3`, `/opt/homebrew/bin/python3` | (use `py -V` instead) |
+| Python | `/usr/local/bin/python3`, `/opt/homebrew/bin/python3`, `/usr/bin/python3` | `py -3`, real `python.exe` on PATH, `%LOCALAPPDATA%\Programs\Python\Launcher\py.exe -3`, `%WINDIR%\py.exe -3` |
 | `git` | `/usr/bin/git`, `/usr/local/bin/git`, `/opt/homebrew/bin/git` | `%ProgramFiles%\Git\cmd\git.exe` |
 
 ### Diagnostic checks to run
@@ -151,7 +155,7 @@ Then **stop**. Do **not** advise the user to run `dotnet tool install`, `npm ins
 
 On Windows, the following situations are mistaken for PACAF bugs almost weekly. When the user is on Windows, name them up front instead of letting them surprise the user later:
 
-1. **`python3` resolves to the Microsoft Store stub.** Running `python3 --version` opens the Store. Always test with `py -V` on Windows. The wizard's prereq check already handles this fallback — but only after Node.js + `npx` work.
+1. **`python3` resolves to the Microsoft Store stub.** Running `python3 --version` opens the Store. Prefer `py -3 --version` on Windows; fall back only to a real non-Store `python.exe`. Record the working command as `PYTHON_CMD`. The wizard's prereq check already handles this fallback — but only after Node.js + `npx` work.
 2. **PowerShell not the default terminal.** VS Code on Windows may default to `cmd.exe` or Git Bash. Some commands (notably `pac auth create` and `dotnet tool install`) behave better in PowerShell. Tell the user: open the VS Code Command Palette (`Ctrl+Shift+P`) → **Terminal: Select Default Profile** → choose **PowerShell** (not Windows PowerShell 5.1 if Pwsh 7 is installed) → open a new terminal.
 3. **`pac` installed but not on PATH.** `dotnet tool install -g Microsoft.PowerApps.CLI.Tool` puts `pac.exe` in `%USERPROFILE%\.dotnet\tools`. That folder must be on PATH, which the .NET SDK installer adds — but only after the terminal is restarted. If `pac help` fails right after `dotnet tool install`, the fix is **close and reopen the terminal**, not reinstall.
 4. **`npx` exits with code 9009 ("not recognized").** Means Node.js is not on PATH. Don't try to `npx` again with different syntax — Node.js is missing or the terminal needs restarting.
@@ -278,12 +282,35 @@ The plugin install is **manual** (see why below). Detect it without trying to in
      && echo "✅ Dataverse-skills plugin files present" \
      || echo "❌ Dataverse-skills plugin not found"
    ```
-2. **Python 3 + SDK importable.** The plugin's runtime needs Python 3 and the `PowerPlatform-Dataverse-Client` SDK plus `pandas`:
+2. **Interpreter first, packages second.** Reuse the verified `PYTHON_CMD` from Step 1; if absent, resolve it using that OS-aware procedure. Do not reinstall Python because an import fails. Keep stderr visible and report the interpreter version/path separately from package availability.
+
+   The distribution is `PowerPlatform-Dataverse-Client`; its import namespace is **`PowerPlatform.Dataverse`** (not `PowerPlatform_Dataverse_Client` or `microsoft_powerplatform_dataverse_client`). Confirmed by the [SDK package's official usage example](https://pypi.org/project/PowerPlatform-Dataverse-Client/). Check each import separately:
+
    ```bash
-   python3 -c "import pandas, PowerPlatform_Dataverse_Client" 2>/dev/null \
-     && echo "✅ Dataverse Python SDK present" \
-     || echo "❌ Dataverse Python SDK missing — pip install PowerPlatform-Dataverse-Client pandas"
+   # macOS/Linux: PYTHON_CMD is the recorded executable (quote paths with spaces).
+   "$PYTHON_CMD" --version
+   "$PYTHON_CMD" -m pip show PowerPlatform-Dataverse-Client pandas
+   "$PYTHON_CMD" -c "import pandas"
+   "$PYTHON_CMD" -c "from PowerPlatform.Dataverse.client import DataverseClient"
    ```
+
+   ```powershell
+   # Windows: represent recorded "py -3" as executable + arguments, never & "py -3".
+   # For a recorded absolute python.exe path use that path and $PythonArgs = @().
+   $PythonExe = "py"
+   $PythonArgs = @("-3")
+   & $PythonExe @PythonArgs --version
+   & $PythonExe @PythonArgs -m pip show PowerPlatform-Dataverse-Client pandas
+   & $PythonExe @PythonArgs -c "import pandas"
+   & $PythonExe @PythonArgs -c "from PowerPlatform.Dataverse.client import DataverseClient"
+   ```
+
+   - Interpreter-not-found **after** canonical-path probes: report Python missing or broken PATH.
+   - Python below 3.10: report **installed but SDK-incompatible**; select a compatible interpreter before installing packages.
+   - `ModuleNotFoundError` for `pandas` / `PowerPlatform`: report **Python installed; SDK/package missing**. Install only the missing SDK dependencies with the same interpreter: `"$PYTHON_CMD" -m pip install PowerPlatform-Dataverse-Client pandas` (POSIX) or `& $PythonExe @PythonArgs -m pip install PowerPlatform-Dataverse-Client pandas` (PowerShell), then rerun the imports. This userland package install is allowed; it is not a Python reinstall.
+   - Missing pip, a transitive dependency, permissions, binary/import errors, or network/certificate errors: preserve the diagnostic and repair that specific environment problem per [the setup guide](../../docs/dataverse-skills-setup.md). Do not relabel it as absent Python. For externally managed Python use a venv and record its executable; never use `--break-system-packages`.
+
+   SDK checks are optional/informational during scaffold-only prerequisites; they become mandatory only for Dataverse work.
 3. **MCP verified.** Confirm the Dataverse MCP tools are actually reachable from your session (e.g. a `list_tables` call succeeds). A freshly installed plugin only exposes its MCP tools **after the editor/CLI is restarted**.
 
 If all three pass, proceed with the Dataverse work normally.
@@ -308,14 +335,14 @@ the Dataverse plugin reliably.
   3. Start it: type  copilot  and press Enter. First time: follow the sign-in prompt.
   4. At the Copilot prompt, type:  /plugin install dataverse@awesome-copilot
   5. Wait for "Installed", then type  /exit
-  6. Run:  pip install PowerPlatform-Dataverse-Client pandas
+  6. If SDK packages are missing, use the verified PYTHON_CMD with -m pip (Step 8.2).
   7. Restart your editor so the MCP tools load, then say "ready".
 
 ▶ Claude / Claude Code:
   1. Open your terminal.
   2. Add the catalog:   claude plugin marketplace add <claude-plugins-official repo>
   3. Install:           claude plugin install dataverse@claude-plugins-official
-  4. Run:               pip install PowerPlatform-Dataverse-Client pandas
+  4. If SDK packages are missing, use the verified PYTHON_CMD with -m pip (Step 8.2).
   5. Close and reopen Claude Code, then say "ready".
 
 Why I can't do this for you: the plugin install is an interactive command and a
@@ -325,7 +352,7 @@ coding-agent session cannot perform either step.
 Full guide: docs/dataverse-skills-setup.md
 ```
 
-Then **stop**. Do not attempt Dataverse operations, do not hand-roll Web API / FetchXML calls as a workaround, and do not try to script the plugin install. The `pip install PowerPlatform-Dataverse-Client pandas` step is safe and agent-agnostic — you may run that one for the user — but the plugin install itself is manual.
+Then **stop**. Do not attempt Dataverse operations, do not hand-roll Web API / FetchXML calls as a workaround, and do not try to script the plugin install. The paired-interpreter SDK install in Step 8.2 is safe and agent-agnostic — you may run that one for the user — but the plugin install itself is manual. If the plugin is already present and only SDK packages are missing, install/verify those packages instead of showing this plugin-missing block.
 
 ### When the user says "ready"
 

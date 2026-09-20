@@ -2,7 +2,8 @@
 import { confirm } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
 import { hasCommand, run, runLive, pacPath } from '../lib/shell.mjs';
-import { stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
+import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
+import { assertSupportedNode, resolvePython, checkPythonSdk, pythonDisplayCommand } from '../lib/prerequisites.mjs';
 
 export default async function stepPrerequisites() {
   ui.stepHeader(1, TOTAL_STEPS, 'Checking Your Machine');
@@ -11,21 +12,8 @@ export default async function stepPrerequisites() {
   let hasOp = false;
 
   // ── Node.js ──
-  if (hasCommand('node')) {
-    const ver = run('node --version') || '';
-    const major = parseInt(ver.replace(/^v/, ''), 10);
-    if (major >= 20) {
-      ui.ok(`Node.js ${ver}`);
-    } else {
-      ui.fail(`Node.js ${ver} — version 20+ required`);
-      ui.line('  Install: https://nodejs.org/');
-      allOk = false;
-    }
-  } else {
-    ui.fail('Node.js — not found');
-    ui.line('  Install: https://nodejs.org/');
-    allOk = false;
-  }
+  assertSupportedNode();
+  ui.ok(`Node.js ${process.version} (running wizard process)`);
 
   // ── Git ──
   if (hasCommand('git')) {
@@ -101,19 +89,20 @@ export default async function stepPrerequisites() {
   }
 
   // ── Python 3 (used by Dataverse-skills plugin) ──
-  const pythonCmd = hasCommand('python3') ? 'python3' : hasCommand('python') ? 'python' : null;
-  if (pythonCmd) {
-    const pyVer = run(`${pythonCmd} --version`)?.replace('Python ', '') || '';
-    const pyMajor = parseInt(pyVer, 10);
-    if (pyMajor >= 3) {
-      ui.ok(`Python ${pyVer}`);
-      stateSet('PYTHON_CMD', pythonCmd);
-    } else {
-      ui.warn(`Python ${pyVer} — Python 3+ required for Dataverse-skills plugin`);
-      ui.line('  Install: https://www.python.org/downloads/');
+  const python = resolvePython(stateGet('PYTHON_CMD'));
+  stateSet('PYTHON_CMD', python.command);
+  if (python.command) {
+    ui.ok(`Python ${python.version} (${python.command})`);
+    const sdk = checkPythonSdk(python);
+    if (sdk.ok) ui.ok('Dataverse Python SDK available');
+    else {
+      ui.info(`Python is installed. Dataverse SDK ${sdk.status} (optional until Dataverse work).`);
+      ui.line(sdk.diagnostic);
+      if (sdk.status === 'missing') ui.line(`  ${pythonDisplayCommand(python.command)} -m pip install PowerPlatform-Dataverse-Client pandas`);
     }
   } else {
-    ui.warn('Python 3 — not found (required for Dataverse-skills plugin)');
+    ui.warn('Python 3 — no working interpreter found (required for Dataverse-skills plugin)');
+    for (const attempt of python.attempts) ui.line(`  ${attempt.command}: ${attempt.diagnostic}`);
     ui.line('  Install: https://www.python.org/downloads/');
   }
 

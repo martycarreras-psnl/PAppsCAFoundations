@@ -22,7 +22,8 @@
     "README.md"
   ],
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.mjs",
+    "test": "node --test lib/*.test.mjs"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",
@@ -31,7 +32,7 @@
     "chalk": "^5.3.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^22.0.0 || ^24.0.0"
   },
   "keywords": [
     "power-apps",

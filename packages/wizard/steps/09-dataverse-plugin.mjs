@@ -1,7 +1,8 @@
 // wizard/steps/09-dataverse-plugin.mjs — Dataverse-skills plugin guidance
 import { select } from '@inquirer/prompts';
 import * as ui from '../lib/ui.mjs';
-import { stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
+import { stateGet, stateSet, setCompletedStep, TOTAL_STEPS } from '../lib/state.mjs';
+import { pythonDisplayCommand } from '../lib/prerequisites.mjs';
 import { detectAgent, agentChoices } from '@pacaf/scripts/detect-agent.mjs';
 
 export default async function stepDataversePlugin() {
@@ -55,8 +56,11 @@ export default async function stepDataversePlugin() {
   // ── Python SDK reminder ──
   ui.line('Prerequisites for the plugin:');
   ui.line('');
-  ui.line('  1. Python 3 must be installed');
-  ui.line('  2. pip install PowerPlatform-Dataverse-Client pandas');
+  ui.line('  1. Python 3.10+ must be installed (a missing SDK does not mean Python is missing)');
+  const pythonCmd = stateGet('PYTHON_CMD');
+  ui.line(pythonCmd
+    ? `  2. ${pythonDisplayCommand(pythonCmd)} -m pip install PowerPlatform-Dataverse-Client pandas`
+    : '  2. Resolve Python in Step 1, then use its recorded PYTHON_CMD with -m pip; see docs/dataverse-skills-setup.md');
   ui.line('');
   ui.line('After installing the plugin, ask your agent:');
   ui.line('');

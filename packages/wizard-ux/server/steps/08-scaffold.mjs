@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from 
 import { spawn, execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { assertSupportedNode } from '@pacaf/wizard/lib/prerequisites.mjs';
+import { retrySmokeVerification } from '@pacaf/wizard/lib/scaffold-verification.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
@@ -299,6 +301,13 @@ export default {
   },
 
   async apply(answers, state, log) {
+    assertSupportedNode();
+    if (state.SMOKE_TEST_STATUS === 'failed') {
+      const stateUpdate = await retrySmokeVerification(
+        state.PROJECT_DIR, (command, opts) => runCommand(log, command, opts), log,
+      );
+      return { stateUpdate, completedStep: 8, result: { scaffold: 'preserved', verification: 'passed' } };
+    }
     const appName = state.APP_NAME || 'Power Apps Code App';
     const projectDir = resolve(String(answers.PROJECT_DIR || process.cwd()).trim());
     const foundationLogger = makeFoundationLogger(log);
@@ -423,8 +432,12 @@ export default {
     log.info('Dataverse is bound at the environment level. Add connectors after prototype validation with /add-datasource or npm run pa -- app add data-source.');
 
     log.info('Running smoke tests...');
-    if (await runCommand(log, 'npm run test:smoke', { cwd: projectDir })) log.ok('Smoke tests passed');
-    else log.warn('Smoke tests did not pass. Continue development, then rerun npm run test:smoke.');
+    const smokeOk = await runCommand(log, 'npm run test:smoke', { cwd: projectDir });
+    if (smokeOk) log.ok('Smoke tests passed');
+    else {
+      log.warn('Project files were generated, but smoke verification failed. The scaffold has not been verified; do not deploy yet.');
+      log.info(`Wizard Node: ${process.version}. In the project terminal check node --version, then run npm run test:smoke and inspect the test/worker error. After switching to supported LTS Node, restart the wizard. A worker crash alone is not evidence of a PAC auth or solution failure.`);
+    }
 
     if (existsSync(join(projectDir, '.git'))) {
       log.ok('Git repo already initialized');
@@ -471,7 +484,9 @@ export default {
         SOLUTION_ID: recordedTarget.solutionId,
         PA_ACCOUNT: recordedTarget.account,
         GIT_REMOTE: finalRemoteUrl || state.GIT_REMOTE || '',
+        SMOKE_TEST_STATUS: smokeOk ? 'passed' : 'failed',
       },
+      result: { scaffold: 'written', verification: smokeOk ? 'passed' : 'failed' },
       completedStep: 8,
     };
   },

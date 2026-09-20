@@ -8,6 +8,9 @@ import { join } from 'node:path';
 import { localCodeAppTool } from '../lib/code-app-target.mjs';
 
 export default async function stepVerifyAndDeploy() {
+  if (stateGet('SMOKE_TEST_STATUS') === 'failed') {
+    throw new Error('Project files were generated, but smoke verification failed. Inspect npm run test:smoke, fix the test/worker error, then re-run the Scaffold step (verification only; existing files are preserved) to record a passing result before deployment.');
+  }
   ui.stepHeader(8, TOTAL_STEPS, 'Build, Verify & Deploy');
   const projectDir = stateGet('PROJECT_DIR');
   const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');

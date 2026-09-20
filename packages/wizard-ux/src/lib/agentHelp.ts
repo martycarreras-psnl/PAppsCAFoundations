@@ -69,9 +69,9 @@ const HELP: Record<number, AgentHelp> = {
   8: {
     title: 'Need help with the scaffold?',
     what:
-      '`pa app init` uses the project-local CLI and a separate pa account, not PAC profiles. Check the selected environment and tenant, local CLI dependency, and npm/network errors. Existing power.config.json must be preserved.',
+      'First identify the failing phase: dependency installation, project-local pa initialization, or smoke verification. pa authentication is separate from PAC; resource tenancy is verified through read-only GDS with explicit Azure login. If only smoke tests fail, inspect test output and Node LTS, then retry verification without rewriting existing files or bindings.',
     prompt:
-      'My PACAF wizard Step 8 (Scaffold) failed — inspect the log, npm run pa -- auth status --json, and target identity. Preserve power.config.json and existing bindings while diagnosing.',
+      'My PACAF wizard Step 8 needs attention — identify the failing phase, distinguish generated files from smoke verification, check Node LTS and separate pa/GDS identity when relevant, and preserve power.config.json, bindings and customized files while recovering.',
   },
   9: {
     title: 'Need help with build or deploy?',

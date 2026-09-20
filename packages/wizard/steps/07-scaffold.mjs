@@ -10,6 +10,7 @@ import { pacPath, runLive, run, runSafeLive, runSafe, runSafeCapture, IS_WIN, ha
 import { dvGet, dvPost } from '../lib/dataverse.mjs';
 import { getSecret, recoverSecret, setSecret } from '../lib/secrets.mjs';
 import { discoverConnectionsForApiId } from '../lib/connection-discovery.mjs';
+import { retrySmokeVerification } from '../lib/scaffold-verification.mjs';
 import {
   extractConnectionId,
   extractConnectorApiId,
@@ -54,6 +55,12 @@ export {
 
 export default async function stepScaffold() {
   ui.stepHeader(7, TOTAL_STEPS, 'Scaffolding Your Code App');
+  if (stateGet('SMOKE_TEST_STATUS') === 'failed') {
+    const update = await retrySmokeVerification(stateGet('PROJECT_DIR'), runLive, ui);
+    stateSet('SMOKE_TEST_STATUS', update.SMOKE_TEST_STATUS);
+    setCompletedStep(7);
+    return;
+  }
 
   const ROOT = getRootDir();
   const appName = stateGet('APP_NAME');
@@ -288,10 +295,11 @@ export default async function stepScaffold() {
   if (smokeOk) {
     ui.ok('Smoke tests passed — scaffold is healthy and ready to develop');
   } else {
-    ui.warn('Smoke tests did not pass. This is usually a dependency issue.');
-    ui.line('  You can diagnose later with: npm run test:smoke');
-    ui.line('  Continuing with scaffold — tests can be fixed before deployment.');
+    ui.warn('Project files were generated, but smoke verification failed. Do not deploy yet.');
+    ui.line(`  Wizard Node: ${process.version}. Check node --version in the project terminal, then run npm run test:smoke.`);
+    ui.line('  Inspect the test/worker error; do not assume a PAC auth or solution failure. After switching to supported Node LTS, restart the wizard.');
   }
+  stateSet('SMOKE_TEST_STATUS', smokeOk ? 'passed' : 'failed');
 
   // ── Git initialization ──
   ui.line('');
@@ -393,7 +401,7 @@ Use the Code Apps plugin's \`/add-datasource\` workflow after the prototype is v
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22 or 24 LTS (24 recommended)
 - [PAC CLI](https://learn.microsoft.com/power-platform/developer/cli/introduction) (\`dotnet tool install -g Microsoft.PowerApps.CLI.Tool\`)
 - An authenticated PAC profile (\`pac auth list\` to verify)
 

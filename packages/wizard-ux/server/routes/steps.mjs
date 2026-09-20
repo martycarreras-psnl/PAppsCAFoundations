@@ -2,6 +2,7 @@
 import { STEPS, getStep, TOTAL_STEPS } from '../steps/index.mjs';
 import { readState, writeState, getCompletedStep } from '../lib/state-bridge.mjs';
 import { newRun, runInline } from '../lib/process-runner.mjs';
+import { assertSupportedNode } from '@pacaf/wizard/lib/prerequisites.mjs';
 
 export default async function stepsRoutes(app, { rootDir }) {
   // GET /api/steps — list with status
@@ -40,6 +41,11 @@ export default async function stepsRoutes(app, { rootDir }) {
     if (!step.meta.canRunInBrowser) {
       return reply.code(409).send({ error: 'Step cannot run in WizardUX' });
     }
+    // A saved state or direct URL must not bypass the runtime gate.
+    if (n !== 1) {
+      try { assertSupportedNode(); }
+      catch (error) { return reply.code(409).send({ error: error.message }); }
+    }
     const answers = req.body?.answers || {};
     const run = newRun();
 
@@ -49,6 +55,9 @@ export default async function stepsRoutes(app, { rootDir }) {
       const outcome = await runInline(run, async (log) => {
         const result = await step.apply(answers, state, log);
         if (result?.stateUpdate) writeState(rootDir, result.stateUpdate);
+        if (result?.result?.allOk === false) {
+          throw new Error('Prerequisites blocked. Resolve the required checks above, then restart the wizard if you changed Node.');
+        }
         if (result?.completedStep != null) {
           writeState(rootDir, { COMPLETED_STEP: Math.max(getCompletedStep(readState(rootDir)), result.completedStep) });
         }

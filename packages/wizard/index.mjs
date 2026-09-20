@@ -12,6 +12,7 @@ import {
   loadState, getCompletedStep, setCompletedStep, resetState, stateGet, stateSet, TOTAL_STEPS,
 } from './lib/state.mjs';
 import { detectCloudSync, cloudSyncWarning } from './lib/cloud-sync-detect.mjs';
+import { assertSupportedNode } from './lib/prerequisites.mjs';
 
 import stepPrerequisites from './steps/01-prerequisites.mjs';
 import stepProjectAndEnv from './steps/02-project-and-env.mjs';
@@ -39,6 +40,7 @@ const steps = [
 ];
 
 async function main() {
+  assertSupportedNode();
   // Handle --reset flag
   if (process.argv.includes('--reset')) {
     resetState();

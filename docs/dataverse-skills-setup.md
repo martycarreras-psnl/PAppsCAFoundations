@@ -41,7 +41,11 @@ pac help
 
 ## Step 1 — Install Python 3
 
-**Do:** Install Python 3 and put it on PATH.
+**Do:** Resolve an existing Python before installing anything. The SDK requires **Python 3.10+**. A working 3.9 interpreter is installed but SDK-incompatible, not missing.
+
+The wizard records **`PYTHON_CMD`** in `.wizard-state.json`. Verify and reuse that command for every check and install below. On macOS/Linux default to `python3`, never bare `python`. On Windows prefer `py -3`, then a real `python.exe`; skip executables under `Microsoft\WindowsApps` (Store aliases). Normalize old recorded `py` to `py -3`. If PATH lookup fails, check `/opt/homebrew/bin/python3`, `/usr/local/bin/python3`, `/usr/bin/python3` on POSIX or `%LOCALAPPDATA%\Programs\Python\Launcher\py.exe -3` / `%WINDIR%\py.exe -3` on Windows before calling Python missing.
+
+When a canonical executable works, record its absolute path and report the PATH problem rather than asking for a reinstall. Quote paths containing spaces; in PowerShell use `& 'C:\path with spaces\python.exe'`. A launcher must be invoked as `py -3`, not `& 'py -3'`.
 
 **Command:**
 
@@ -58,11 +62,11 @@ brew install python@3
 **Verify:**
 
 ```bash
-python3 --version    # 🍎 prints: Python 3.x.x
-py -3 --version      # 🪟 prints: Python 3.x.x
+python3 --version    # 🍎 prints: Python 3.10+ (or use the recorded executable)
+py -3 --version      # 🪟 prints: Python 3.10+ (or use recorded python.exe)
 ```
 
-**If it fails:** 🪟 On Windows, `python3` often resolves to the **Microsoft Store stub** — a placeholder that exits without printing a version (or opens the Store). Always test with `py -3 --version` on Windows. If even `py` is missing, reinstall from python.org with **`py launcher`** and **`Add python.exe to PATH`** both checked, and disable the Store aliases under Settings → Apps → Advanced app settings → App execution aliases (turn off `python.exe` and `python3.exe`). See [docs/prerequisite-setup.md → section 7](prerequisite-setup.md#7-python-launcher-py--windows-only).
+**If it fails:** 🪟 On Windows, `python3` often resolves to the **Microsoft Store stub**. Try `py -3 --version`, then a non-Store `python.exe`, then the canonical paths above. Only if none works should you install from python.org with **`py launcher`** and **`Add python.exe to PATH`** checked. See [docs/prerequisite-setup.md → section 7](prerequisite-setup.md#7-python-launcher-py--windows-only).
 
 ---
 
@@ -73,8 +77,8 @@ py -3 --version      # 🪟 prints: Python 3.x.x
 **Command:**
 
 ```bash
-pip --version          # 🍎
-py -m pip --version    # 🪟 (most reliable on Windows)
+python3 -m pip --version    # 🍎 substitute the recorded PYTHON_CMD if different
+py -3 -m pip --version      # 🪟 same interpreter selected in Step 1
 ```
 
 **Reference:** [pip — Installation](https://pip.pypa.io/en/stable/installation/).
@@ -82,7 +86,7 @@ py -m pip --version    # 🪟 (most reliable on Windows)
 **Verify:** Prints something like `pip 24.x from .../pip (python 3.x)`. The Python version in parentheses must be 3.10 or newer.
 
 **If it fails:**
-- *"No module named pip"* → bootstrap it: `python3 -m ensurepip --upgrade` (🍎) or `py -m ensurepip --upgrade` (🪟).
+- *"No module named pip"* → Python is present; bootstrap pip in the selected interpreter: `python3 -m ensurepip --upgrade` (🍎) or `py -3 -m ensurepip --upgrade` (🪟).
 - **Corporate SSL inspection** (errors mentioning `SSLError`, `CERTIFICATE_VERIFY_FAILED`, or a proxy) → your network intercepts TLS. As a scoped workaround for installs from PyPI:
   ```bash
   pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <package>
@@ -103,8 +107,8 @@ py -m pip --version    # 🪟 (most reliable on Windows)
 **Command:**
 
 ```bash
-pip install PowerPlatform-Dataverse-Client pandas          # 🍎
-py -m pip install PowerPlatform-Dataverse-Client pandas     # 🪟
+python3 -m pip install PowerPlatform-Dataverse-Client pandas  # 🍎
+py -3 -m pip install PowerPlatform-Dataverse-Client pandas    # 🪟
 ```
 
 **Reference:** [PowerPlatform-Dataverse-Client (PyPI)](https://pypi.org/project/PowerPlatform-Dataverse-Client/) · [pandas (PyPI)](https://pypi.org/project/pandas/).
@@ -112,16 +116,18 @@ py -m pip install PowerPlatform-Dataverse-Client pandas     # 🪟
 **Verify:**
 
 ```bash
-python3 -c "import pandas; from microsoft_powerplatform_dataverse_client import __name__ as n; print('ok', pandas.__version__)"   # 🍎
-py -c "import pandas; from microsoft_powerplatform_dataverse_client import __name__ as n; print('ok', pandas.__version__)"        # 🪟
+python3 -c "import pandas; from PowerPlatform.Dataverse.client import DataverseClient; print('ok', pandas.__version__)"  # 🍎
+py -3 -c "import pandas; from PowerPlatform.Dataverse.client import DataverseClient; print('ok', pandas.__version__)"    # 🪟
 ```
 
-Prints `ok <pandas-version>`. If the import line errors, the install didn't land in the same interpreter you're testing with.
+Prints `ok <pandas-version>`. The PyPI distribution name is **`PowerPlatform-Dataverse-Client`**, but the import namespace is **`PowerPlatform.Dataverse`**. Neither `PowerPlatform_Dataverse_Client` nor `microsoft_powerplatform_dataverse_client` is the package's import name. Keep stderr visible; a failed import does not mean Python is missing.
 
 **If it fails:**
-- **Multiple Pythons** → the most common cause. `pip` installed into a different interpreter than the one running your verify command. Pin them together: use `python3 -m pip install ...` (🍎) / `py -m pip install ...` (🪟) so the installer and the runtime are the same interpreter.
+- **`ModuleNotFoundError` for pandas or PowerPlatform** → Python is installed; the package is missing from that interpreter. Check `python3 -m pip show PowerPlatform-Dataverse-Client pandas` / `py -3 -m pip show PowerPlatform-Dataverse-Client pandas`, then install with the paired command above.
+- **Multiple Pythons** → use the recorded `PYTHON_CMD` for both `-m pip` and the import; never bare `pip`. If you select a different interpreter, verify and update the recorded command first.
+- **Externally managed environment (PEP 668)** → create a project virtual environment with the selected interpreter (`python3 -m venv .venv` or `py -3 -m venv .venv`). Record `.venv/bin/python` (POSIX) or `.venv\Scripts\python.exe` (Windows) as an absolute `PYTHON_CMD` and use it for installs/probes. Do not use `--break-system-packages`.
 - **SSL / proxy** → re-run with the `--trusted-host` flags from Step 2.
-- **`pip install` succeeds but import fails** → close and reopen the terminal, then re-run the verify (a stale shell can mask a freshly installed package).
+- **Package is installed but import fails** → preserve the traceback. A missing transitive dependency, binary incompatibility, or permission error needs its own repair; a reinstall of Python or a hidden stderr check is not a diagnosis.
 
 ---
 
