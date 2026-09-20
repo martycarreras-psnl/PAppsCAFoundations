@@ -8,6 +8,38 @@ on:
   workflow_dispatch:
 
 jobs:
+  prerequisites-windows:
+    name: Native Windows prerequisites (Node ${{ matrix.node }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node: ['22', '24']
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test standalone prerequisite helper without installing dependencies
+        run: node --test packages/wizard/lib/prerequisites.test.mjs packages/wizard/lib/prerequisites-native.test.mjs
+
+  prerequisites-node25:
+    name: Reject running Node 25
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '25'
+      - name: Assert actual unsupported runtime is rejected without installing dependencies
+        env:
+          PACAF_TEST_REJECT_NODE25: '1'
+        run: node --test packages/wizard/lib/prerequisites-native.test.mjs
+
   validate:
     name: Lint + build + test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
@@ -164,4 +196,3 @@ jobs:
             exit 1
           fi
           echo "All changed publishable packages are named in a changeset entry."
-
