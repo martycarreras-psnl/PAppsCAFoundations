@@ -217,9 +217,9 @@ export function AddToSolutionStep({ solution, stepNumber, totalSteps, onBack, on
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div className={s.stepNum} style={{ width: 36, height: 36, borderRadius: 10 }}>{stepNumber}</div>
         <div style={{ flex: 1 }}>
-          <Title2 style={{ margin: 0 }}>Add your Code app to your solution</Title2>
+          <Title2 style={{ margin: 0 }}>Verify your Code app in your solution</Title2>
           <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-            Step {stepNumber} of {totalSteps} · required manual step
+            Step {stepNumber} of {totalSteps} · solution membership check
           </Caption1>
         </div>
       </div>
@@ -228,16 +228,15 @@ export function AddToSolutionStep({ solution, stepNumber, totalSteps, onBack, on
       <div className={s.requiredBanner}>
         <WarningFilled className={s.requiredIcon} />
         <Body1 style={{ fontWeight: 600 }}>
-          This step is required and can’t be done from the terminal — you must add the Code app to
-          your solution by hand in the Maker Portal. A deployed Code app is <em>not</em> automatically
-          included in your solution.
+          Guarded deployment passes the recorded solution GUID to Power Apps CLI.
+          Verify the app appears in that solution before exporting or promoting it.
         </Body1>
       </div>
 
       <Body1 className={s.intro}>
-        Your app is deployed, but Power Platform does not reliably bind a Code app to its solution
-        during <code>pac code push</code>. Follow the three steps below to add it yourself — it takes
-        under a minute.
+        After publishing with <code>npm run deploy</code>, open the recorded environment and
+        solution. If you skipped publishing, deploy first. If the app is already listed,
+        no manual addition is needed; otherwise use the recovery steps below.
       </Body1>
 
       {/* Steps */}

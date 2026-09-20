@@ -2670,7 +2670,7 @@ body {
           </tr>
           <tr>
             <td>Deployment</td>
-            <td>Manual pac code push, no CI/CD blueprint, no solution export</td>
+            <td>Manual publish without target guards, no CI/CD blueprint, no solution export</td>
             <td class="highlight-col"><span class="check">✓</span> Documented CI/CD blueprint + solution export script + Power Platform Pipelines model</td>
           </tr>
           <tr>
@@ -2742,7 +2742,7 @@ body {
         <div class="timeline-marker">6</div>
         <div class="timeline-content">
           <h4>Build, Test, Deploy</h4>
-          <p>Swap mock providers for real adapters. Run the full test suite. Build with Vite. Deploy via pac code push to dev, then promote through Power Platform Pipelines to test and production. CI/CD enforces the gate: no test evidence, no deploy.</p>
+          <p>Swap mock providers for real adapters. Run the full test suite. Deploy through pacaf-deploy: verified target/auth, Vite build, and pinned local Power Apps CLI publish. Then promote through Power Platform Pipelines to test and production. CI/CD enforces the gate: no test evidence, no deploy.</p>
           <span class="timeline-tag">Instructions: 01–06</span>
         </div>
       </div>
@@ -2880,7 +2880,7 @@ body {
             <div class="arch-layer-icon" style="background: rgba(16,124,16,0.1); color: var(--accent-green);">🗄</div>
             <div class="arch-layer-text">
               <strong>Generated SDK + Dataverse</strong>
-              <span>Auto-generated TypeScript from pac code add-data-source</span>
+              <span>Auto-generated TypeScript from local pa app add data-source</span>
             </div>
           </div>
           <div class="arch-connector">↕</div>
@@ -2906,7 +2906,7 @@ body {
       <span class="section-label">Connector Ecosystem</span>
       <h2>Access Everything.<br><span class="gradient-text">Build Nothing From Scratch.</span></h2>
       <p class="subtitle">
-        Every Power Platform connector generates a strongly-typed TypeScript SDK. No REST endpoints to discover, no auth to configure, no middleware to build. Just <code style="background: var(--neutral-lighter); padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em;">pac code add-data-source</code> and write your business logic.
+        Power Platform connectors generate strongly-typed TypeScript services. Use the Code Apps plugin with the pinned local CLI via <code style="background: var(--neutral-lighter); padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em;">npm run pa -- app add data-source</code>, then wrap generated services behind provider contracts.
       </p>
     </div>
 
@@ -3049,7 +3049,7 @@ body {
     <div class="quote-content fade-in">
       <div class="quote-mark">"</div>
       <p class="quote-text">
-        Most teams spend their first month discovering the hard way that Dataverse tables need solution context, that <code style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">pac code push</code> rejects service principals, and that the generated SDK breaks without <code style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">moduleResolution: "bundler"</code>. Foundations encodes every one of those lessons — so your team starts building features on day one, not debugging platform quirks.
+        Teams discover the hard way that Dataverse tables need solution context, that Code App publishing needs verified app/environment identity and separate CLI authentication, and that generated SDK compatibility matters. Foundations encodes those lessons — so your team starts building features rather than debugging platform quirks. SPN updates are opt-in for existing apps with maker-granted edit access, never automatic permission grants.
       </p>
       <p class="quote-attribution">— The experience of every team that built Code Apps before this template existed</p>
     </div>
@@ -3120,7 +3120,7 @@ body {
             <ul>
               <li><code>list_tables</code> / <code>describe_table</code> — discover existing schema before proposing anything new</li>
               <li><code>dv-metadata</code> — provision tables, columns, relationships, and option sets</li>
-              <li><code>pac code add-data-source</code> — register each table as a Code App data source, regenerating the SDK</li>
+              <li>Local <code>pa app add data-source</code> — register each table as a Code App data source, regenerating services behind provider adapters</li>
             </ul>
           </div>
         </div>
@@ -3145,7 +3145,7 @@ body {
         </button>
         <div class="accordion-panel">
           <div class="accordion-panel-content">
-            Supports 1Password CLI integration (secrets never touch disk) or AES-256-GCM encrypted <code>.env.local</code> (machine-specific decryption keys). A pre-commit hook blocks accidental secret commits. CI/CD uses GitHub secrets with SPN profiles for solution export/import, and separate user profiles for <code>pac code push</code> to dev.
+            Supports 1Password CLI integration or AES-256-GCM encrypted <code>.env.local</code> for PAC credentials. PAC and the local Power Apps CLI have separate auth. User publishing additionally requires explicit Azure CLI login for read-only GDS verification of environment ID, tenant, and URL; home-account equality is insufficient. Existing-app SPN updates require opt-in, secret-store injection, environment access, and maker-granted edit access.
           </div>
         </div>
       </div>

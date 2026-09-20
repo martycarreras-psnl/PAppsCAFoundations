@@ -3,6 +3,11 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: pacaf-seed [dataverse/planning-payload.json]\nGenerate prototype assets from the planning payload.');
+  process.exit(0);
+}
+
 const DEFAULT_PLAN_PATH = 'dataverse/planning-payload.json';
 const planPath = resolve(process.cwd(), process.argv[2] || DEFAULT_PLAN_PATH);
 

@@ -54,6 +54,9 @@ All five packages are published to public npm under [`@pacaf/*`](https://www.npm
 |---|---|
 | `pacaf-update` | Refresh `@pacaf/scripts` + `@pacaf/agent-instructions` and re-sync instruction files |
 | `pacaf-migrate-thin` | Convert a derived repo from the in-tree tooling layout to consume `@pacaf/*` packages |
+| `pacaf-migrate-pa` | Check/apply/roll back an existing app's local Code App CLI migration without reinitializing it |
+| `pacaf-pa` | Resolve the exact-pinned project-local Power Apps CLI; never download a fallback executable |
+| `pacaf-deploy` | Validate durable target/auth identities, build, then publish through the local CLI |
 | `pacaf-instructions` | `sync` / `check` / `list` agent-guidance projections |
 | `pacaf-seed` | Seed prototype assets (mock providers, hooks, components) |
 | `pacaf-discover-connection` | Discover existing Power Platform connections by API ID |
@@ -63,6 +66,20 @@ All five packages are published to public npm under [`@pacaf/*`](https://www.npm
 | `pacaf-detect-agent` | Detect which coding agent is in use (Copilot / Claude / Cursor) |
 | `pacaf-generate-agent-guidance` | Regenerate Claude/Cursor projections from the canonical instructions |
 | `pacaf-decrypt-secret` | Decrypt a `.env.local` secret encrypted by the wizard |
+
+### Code App CLI and PAC have distinct roles
+
+Code App init, local hosting, publish, and connector generation use **local `@microsoft/power-apps-cli@1.0.2`**, installed as an exact devDependency. Runtime SDK **`@microsoft/power-apps@1.4.0`** is separate. PAC remains for solution export/import/pack/unpack and environment/admin operations; Dataverse-skills continues to own schema/data/security.
+
+Generated projects use `npm run pa -- …` (`pacaf-pa`), never bare `npx pa`, and `npm run deploy` (`pacaf-deploy --target dev`). Deployment validates durable `.power-apps-targets.json` identities against `power.config.json` and separate `pa` authentication. Solution **GUIDs** go to `pa`; solution **unique names** remain for PAC. No unsupported environment flag is appended to push.
+
+Connected development runs Vite on 3000 and the Power Apps local host on 8080 with `--config-only` and companion shutdown. Mock-only development remains standalone. SPN publishing is opt-in for an already-published app with environment access and maker-granted app edit access; migration never grants access.
+
+**User publishing prerequisite:** CLI 1.0.2 status/home-account equality cannot prove the resource tenant. User publish and first creation therefore require separate explicit Azure CLI login with Global Discovery Service access. The helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing discovery rows/access fail closed, with no auto-login or unguarded fallback. Offline preflight does not call Azure or establish cloud readiness.
+
+Existing apps: use the reviewable **[CLI migration/rollback procedure](MIGRATION.md#code-app-cli-migration-pac-code-to-local-pa)**. Do not reinitialize, recreate bindings, switch registries, or upgrade global tools to migrate.
+
+Project policy can survive updates through declared `.pacaf/policy-overlays.json` whole-file replacements. These are project-owned copies that need deliberate merging of upstream changes; see [policy preservation](MIGRATION.md#preserve-downstream-policy-across-updates). Unexpected local edits and failed package/instruction updates must not be silently ignored.
 
 ---
 

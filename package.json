@@ -18,7 +18,8 @@
     "rebrand": "node packages/rebrand/bin/pacaf-rebrand.mjs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.10"
+    "@changesets/cli": "^2.27.10",
+    "@microsoft/power-apps-cli": "1.0.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

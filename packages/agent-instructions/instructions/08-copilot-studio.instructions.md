@@ -49,10 +49,10 @@ Use this guidance when the user wants to:
 
 Before writing any integration code, these must be true:
 
-1. **The Code App is initialized** — `power.config.json` exists, `pac code init` has been run
+1. **The Code App is initialized** — the wizard produced `power.config.json`; do not reinitialize an existing app
 2. **A Copilot Studio agent exists and is published** — the user must have created and published an agent in [Copilot Studio](https://copilotstudio.microsoft.com/)
 3. **The user knows the agent name** — found in Copilot Studio → Channels → Web app → connection string URL. Format: `cr3e1_customerSupportAgent` (publisher prefix + agent name, case-sensitive)
-4. **PAC auth is working** — `pac org who` shows the correct environment
+4. **Power Apps CLI auth is working** — `npm run pa -- auth status --json` matches the expected account/tenant and `power.config.json` pins the correct environment (PAC auth is separate)
 
 If any prerequisite is missing, guide the user to complete it before writing code.
 
@@ -86,7 +86,7 @@ If the script exits non-zero, stop and surface the error before proceeding.
 ### Check for an existing connection
 
 ```bash
-pac connection list
+npm run pa -- connection list --json
 ```
 
 Look for a connection with API ID: `/providers/Microsoft.PowerApps/apis/shared_microsoftcopilotstudio`
@@ -111,7 +111,7 @@ Record this Connection ID — you need it for the next step.
 ## Step 2: Add the Copilot Studio Connector to the Code App
 
 ```bash
-pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>
+npm run pa -- app add data-source --connector "shared_microsoftcopilotstudio" --connection-id "<connectionId>"
 ```
 
 Replace `<connectionId>` with the actual Connection ID from Step 1.
@@ -543,17 +543,17 @@ The agent's topics and knowledge must be configured to handle this input format 
 ### 502 or server errors
 
 - You are likely using the wrong method. Switch to `ExecuteCopilotAsyncV2`
-- Verify the Copilot Studio connection is healthy: `pac connection list`
+- Verify the Copilot Studio connection is healthy: `npm run pa -- connection list --json`
 
 ### Connection not found
 
 - Create the connection in the Power Apps Maker Portal (see Step 1)
-- Re-run `pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>`
+- Register using `npm run pa -- app add data-source --connector "shared_microsoftcopilotstudio" --connection-id "<connectionId>"`
 
 ### Generated service missing `ExecuteCopilotAsyncV2`
 
-- Re-run `pac code add-data-source -a "shared_microsoftcopilotstudio" -c <connectionId>` to refresh the generated service
-- If still missing, check your PAC CLI version — update if needed: `dotnet tool update -g Microsoft.PowerApps.CLI.Tool`
+- Refresh with `npm run pa -- app refresh data-source --name "<registered-data-source-name>"`
+- If still missing, verify the pinned local CLI (`npm run pa -- --version`) and connector schema. Do not upgrade global PAC to repair Code App generation.
 
 ### Property casing inconsistencies
 

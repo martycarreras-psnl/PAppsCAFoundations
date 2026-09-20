@@ -69,21 +69,21 @@ const HELP: Record<number, AgentHelp> = {
   8: {
     title: 'Need help with the scaffold?',
     what:
-      '`pac code init` failures are usually caused by an expired `pac auth` profile mid-run, a corporate proxy / SSL inspection blocking npm, a OneDrive-synced workspace path, or insufficient privileges in the target environment.',
+      '`pa app init` uses the project-local CLI and a separate pa account, not PAC profiles. Check the selected environment and tenant, local CLI dependency, and npm/network errors. Existing power.config.json must be preserved.',
     prompt:
-      'My PACAF wizard Step 8 (Scaffold) failed — please look at the log, check `pac auth list` and my workspace path, and tell me how to recover.',
+      'My PACAF wizard Step 8 (Scaffold) failed — inspect the log, npm run pa -- auth status --json, and target identity. Preserve power.config.json and existing bindings while diagnosing.',
   },
   9: {
     title: 'Need help with build or deploy?',
     what:
-      '`npm run build` failures point at app code or TypeScript; `pac code push` failures usually mean the target solution doesn’t exist in that environment, the App Registration lacks privileges, or a connection reference isn’t mapped.',
+      '`npm run deploy` validates .power-apps-targets.json and the independent pa account, builds, then publishes with the solution GUID. Check the exact failed guard rather than resetting the app. SPN updates require an existing app and maker-granted edit access.',
     prompt:
       'My PACAF wizard Step 9 (Verify & Deploy) failed — please look at the log, decide whether it’s a build error or a push error, and tell me how to fix it.',
   },
   10: {
     title: 'Need help adding the app to your solution?',
     what:
-      'This is a manual portal step. If you can’t find the app under your solution, the publisher prefix likely doesn’t match the solution’s prefix, or you’re looking in the wrong environment.',
+      'Guarded deployment passes the recorded solution GUID. Verify the target environment and solution first; add the existing Code App only if membership is actually missing.',
     prompt:
       'My PACAF wizard Step 10 (Add App to Solution) is stuck — please confirm I’m in the right environment and solution, and walk me through adding the Code App.',
   },

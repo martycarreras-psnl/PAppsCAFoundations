@@ -17,6 +17,9 @@
     "pacaf-discover-connection": "./discover-copilot-connection.mjs",
     "pacaf-pac": "./op-pac.mjs",
     "pacaf-pac-safe": "./pac-safe.mjs",
+    "pacaf-pa": "./pa.mjs",
+    "pacaf-deploy": "./deploy.mjs",
+    "pacaf-migrate-pa": "./bin/pacaf-migrate-pa.mjs",
     "pacaf-setup-auth": "./setup-auth.mjs",
     "pacaf-decrypt-secret": "./decrypt-secret.mjs",
     "pacaf-detect-agent": "./detect-agent.mjs",
@@ -26,13 +29,14 @@
   },
   "files": [
     "bin/",
+    "lib/",
     "*.mjs",
     "schema-plan.example.json",
     "tests/",
     "README.md"
   ],
   "scripts": {
-    "test": "node --test tests/shell.test.mjs tests/connection-discovery.test.mjs tests/pac-target.test.mjs tests/routing-guard.test.mjs tests/deploy-step-parity.test.mjs tests/publisher-prefix-seeding.test.mjs",
+    "test": "node --test tests/shell.test.mjs tests/connection-discovery.test.mjs tests/pac-target.test.mjs tests/routing-guard.test.mjs tests/deploy-step-parity.test.mjs tests/publisher-prefix-seeding.test.mjs tests/pa-deploy.test.mjs tests/pa-cli-contract.test.mjs tests/migrate-pa.test.mjs tests/packaging-update.test.mjs tests/package-tarball.test.mjs tests/guidance-payload.test.mjs ../wizard/tests/code-app-target.test.mjs",
     "test:legacy": "echo 'agent-guidance-drift, scaffold-prototype-path, and seed-prototype-assets tests need rewriting for the monorepo layout (paths to scripts/AGENTS.md, scripts/seed-prototype-assets.mjs, etc. are stale). See issue TBD.' && exit 1"
   },
   "engines": {

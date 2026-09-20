@@ -22,7 +22,7 @@ But the runway is brutal. Before your first deploy you have to:
 - Create a PAC CLI auth profile with the right credentials, in the right shape
 - Spin up a solution **inside** the Maker Portal so it inherits the publisher
 - Create connections (the authenticated instances) **before** you import your solution, in every environment, and capture their GUIDs from URLs
-- Run `pac code init`, set up `power.config.json`, configure Vite for port 3000 and relative asset paths, set up the right testing harness, and write smoke tests
+- Run local `pa app init`, preserve `power.config.json` identity, configure Vite for port 3000 and relative asset paths, set up the right testing harness, and write smoke tests
 - Then — finally — start writing UI code
 
 Get any of that wrong in the wrong order and you spend a day or two unwinding it. There's no autopilot.
@@ -74,7 +74,7 @@ The nine steps are self-contained, idempotent, and re-runnable:
 6. **Solution** — created via API, linked to the publisher
 7. **Scaffold the Code App** — React + Fluent UI v9 + TanStack Query + TypeScript, with Vitest, smoke tests, and prototype assets all wired up — and the smoke tests run automatically before the wizard moves on
 8. **Bind Connectors** — discover existing environment connections, create connection references, register data sources
-9. **Verify & Deploy** — `npm run build`, optional `pac code push`
+9. **Verify & Deploy** — guarded `pacaf-deploy --target dev` validates target/auth, builds, and publishes through the pinned local Power Apps CLI
 
 ### 3. A "plan first, prototype second, connect later" methodology
 
@@ -148,7 +148,7 @@ A short list of things Foundations decides for you so you don't have to:
 - The auth model (Power Platform host hands you Entra-authenticated identity; no MSAL, no Auth0)
 - The data model (connectors and Dataverse — never bypass the generated SDK with a raw fetch)
 - The testing stack (Vitest + Testing Library + MSW for connector mocking; Playwright when you need it)
-- The deployment story (`pac code push` for dev, solution export/import for test/prod CI/CD)
+- The deployment story (guarded local `pa` publish for dev, PAC solution export/import for test/prod CI/CD; separate authentication)
 
 You disagree with a choice? You can override it. But if you don't disagree, you don't have to think about it. That's the deal.
 

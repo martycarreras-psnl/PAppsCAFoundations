@@ -301,11 +301,9 @@ export default async function stepAuthSetup() {
     }
 
     // ── Offer to create user (interactive) auth profile ──
-    // pac code commands (push, add-data-source, run) reject SPN tokens.
-    // Creating the user profile now prevents a confusing auth failure in steps 7-9.
     ui.line('');
-    ui.warn('All pac code commands (push, add-data-source, run) require user auth — SPN is rejected.');
-    ui.line('  Creating a user auth profile now avoids a confusing failure later.');
+    ui.line('PAC user profiles support interactive solution ALM/admin.');
+    ui.line('  Code Apps use separate pa authentication during scaffold; PAC profiles are not reused.');
     ui.line('');
     const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
     const userProfileName = buildPacProfileName({ rootDir: ROOT, targetKey, profileType: 'user', url: devUrl });
@@ -352,7 +350,7 @@ export default async function stepAuthSetup() {
         ]);
       }
       if (userOk) {
-        ui.ok(`User profile ${userProfileName} created — pac code commands will work.`);
+        ui.ok(`PAC user profile ${userProfileName} created for solution ALM/admin.`);
         // Switch back to SPN profile for steps 5-6 (publisher/solution creation via Dataverse API)
         const spnProfileName = buildPacProfileName({ rootDir: ROOT, targetKey, profileType: 'spn', url: devUrl });
         runSafeCapture(pac, ['auth', 'select', '--name', spnProfileName]);
@@ -363,7 +361,7 @@ export default async function stepAuthSetup() {
       }
     } else {
       ui.line('');
-      ui.line('You can create it later before running pac code commands:');
+      ui.line('You can create it later for interactive PAC solution ALM/admin:');
       ui.line(`  ${pac} auth create --name ${userProfileName} --environment ${devUrl} --deviceCode`);
     }
   }

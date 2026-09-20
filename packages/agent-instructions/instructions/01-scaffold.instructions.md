@@ -18,8 +18,9 @@ Every Code App uses this exact stack — no substitutions without team lead appr
 | Bundler | Vite | 5.x | Fast HMR; official templates use Vite |
 | Server State | TanStack Query | v5 | Declarative caching, deduplication, background refresh for connector calls |
 | Routing | React Router | v6 | Nested layouts, data loaders, the FluentSample pattern |
-| Power Apps SDK | `@microsoft/power-apps` | ^1.0.3 | Connector access, auth context, platform integration |
-| CLI | Power Platform CLI (PAC) | latest | Scaffold, add data sources, deploy |
+| Power Apps SDK | `@microsoft/power-apps` | 1.4.0 (exact) | Connector access, auth context, platform integration |
+| Code App CLI | local `@microsoft/power-apps-cli` | 1.0.2 (exact devDependency) | Initialize, run local host, generate data sources, publish |
+| ALM/admin CLI | Power Platform CLI (PAC) | Team-tested version | Solution lifecycle and environment administration; separate authentication |
 
 ## Project Structure
 
@@ -31,7 +32,7 @@ my-code-app/
 │   ├── instructions/          # These instruction files (committed to repo)
 │   └── workflows/
 │       ├── ci.yml             # Build + lint + test on every PR
-│       └── deploy.yml         # pac code push to target environment
+│       └── deploy.yml         # guarded publish / PAC solution ALM
 ├── src/
 │   ├── components/            # Reusable UI components (buttons, cards, dialogs)
 │   │   └── Layout/
@@ -43,7 +44,7 @@ my-code-app/
 │   │   ├── Dashboard/
 │   │   └── Settings/
 │   ├── hooks/                 # Custom React hooks (useConnector, useCurrentUser, etc.)
-│   ├── generated/             # PAC CLI output — NEVER edit manually
+│   ├── generated/             # Power Apps CLI output — NEVER edit manually
 │   │   ├── services/          # Connector service classes
 │   │   └── models/            # TypeScript interfaces for connector entities
 │   ├── utils/                 # Pure helper functions (formatDate, parseError, etc.)
@@ -57,7 +58,8 @@ my-code-app/
 │   ├── e2e/                   # Playwright end-to-end tests
 │   └── setup/                 # Test utilities, global setup, mock factories
 ├── public/                    # Static assets (favicon, manifest)
-├── power.config.json          # PAC-generated — do not edit
+├── power.config.json          # CLI-managed app identity and bindings — preserve on migration
+├── .power-apps-targets.json    # Durable non-secret deployment identities
 ├── vite.config.ts             # Vite configuration
 ├── tsconfig.json              # TypeScript configuration
 ├── .eslintrc.cjs              # ESLint configuration
@@ -100,18 +102,11 @@ This is the single most important rule for team development. Every Code App must
 
 ### Create the Solution Before Writing Any Code
 
-The solution comes first, before scaffolding, before `pac code init`. Here's why: the Code App is only added to your solution on the **first** `pac code push`, and only when you pass the solution's **unique** name via `-s`/`--solutionName`. `pac code init` does **not** have a solution flag and there is no "active solution context" for Code Apps — so the solution must already exist before that first push, and you must know its unique name.
+The solution comes first, before scaffolding and `pa app init`. Use the wizard or Dataverse-skills `dv-solution` to discover/create it; local `pac solution init` alone does not provision a cloud solution.
 
-```bash
-# 1. Create the solution in your dev environment (via the Power Apps Maker Portal or CLI)
-pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
+Record both its **GUID** (`solutionId`, used by `pa app push --solution-id`) and **unique name** (`solutionName`, used by PAC ALM), bound to the same environment in `.power-apps-targets.json`. There is no implicit "active solution" supplied by PAC authentication. `pa app init --display-name "<name>" --environment-id "<id>"` initializes local metadata, not solution membership.
 
-# 2. Then proceed with Code App scaffolding (see Scaffolding section below)
-```
-
-> **Critical — solution association happens on the FIRST push, not on init.** The Dataverse `canvasapps` record for a Code App is created by the first `pac code push`. If that first push omits `-s <UniqueName>`, the app is created **outside** any solution and a later `-s` re-push will **not** retroactively add it. Recovering means deleting the app in the environment and pushing again with `-s` from a clean state. Always push with `-s "<SolutionUniqueName>"` from the very first deploy. See `04-deployment.instructions.md`.
-
-> **`-s` requires the solution UNIQUE name, never the friendly display name.** `pac code push -s "AI PMO"` (display name) reports success but silently does nothing; the correct form is `pac code push -s "AIPMO"` (unique name). Resolve and verify the unique name with `pac solution list` before your first push.
+First creation requires explicit user-mode `--allow-create`, a verified solution GUID, and empty target `appId` (`""`), followed by persistence of the returned app ID. **Separate, explicitly authorized Azure CLI login with Global Discovery Service access is required** to verify environment ID, tenant, and URL independently of `pa` identity. A matching home-account tenant is insufficient. Missing discovery access fails closed, without auto-login. Never delete/reinitialize an existing app or bypass the guard to complete setup. See `04-deployment.instructions.md`.
 
 See `04-deployment.instructions.md` for full solution lifecycle management, including exporting, unpacking for source control, and promoting across environments.
 
@@ -138,7 +133,7 @@ pac solution add-reference --component-name yourprefix_ProjectTask --component-t
 ```
 
 ### The `generated/` folder is sacrosanct
-Files under `src/generated/` are produced when `pac code add-data-source` registers a connector or Dataverse table. Never modify them by hand. If the connector schema changes, re-add or refresh the data source — do not patch generated files. If you need to extend a generated type, create a wrapper in `src/types/` that extends it:
+Files under `src/generated/` are produced when `pacaf-pa app add data-source` registers a connector or Dataverse table. Never modify them by hand. If the connector schema changes, use `pacaf-pa app refresh data-source --name "<data-source-name>"` — do not patch generated files. Verify generated paths and provider compatibility after regeneration. If you need to extend a generated type, create a wrapper in `src/types/` that extends it:
 
 ```typescript
 // src/types/ProjectExtended.ts
@@ -199,13 +194,13 @@ The `verbatimModuleSyntax: false` setting is specifically required for Power App
 
 ## Prerequisites
 
-Before scaffolding, you must have a working PAC CLI authentication profile connected to your development environment via the team's Service Principal (App Registration). This enables headless deployment — no browser popups.
+The wizard establishes separate authentication for PAC solution/admin operations and the local Power Apps CLI. A PAC SPN profile does not establish the account used by `pa`. Initial app creation uses user authentication; SPN publishing is an opt-in existing-app update path.
 
 If you haven't set this up yet, complete the steps in `00-environment-setup.instructions.md` first. Once done, verify:
 
 ```bash
-pac org who
-# Expected: shows your org name and environment URL — no browser popup
+pac org who                    # PAC ALM context only
+npm run pa -- auth status --json # Separate Power Apps CLI account/tenant
 ```
 
 Before you add connectors, generate schema, or start building pages around assumed entities, complete the narrative-first planning flow if the business scope is still emerging:
@@ -220,56 +215,23 @@ Scaffolding is not the moment to lock in a premature data model. If the user is 
 
 > **Code Apps plugin required.** Before scaffolding, verify the Code Apps plugin (`code-apps-preview@power-platform-skills`) is installed in your agent. If it is, invoke **`/create-code-app`** — it walks through prerequisites, scaffold, connector selection, and baseline deploy in one guided flow. If the plugin is not installed, the hard gate in `00-prereq-gate.instructions.md` Step 9 applies — stop and direct the user to install it first.
 
-The manual steps below are the reference implementation of what `/create-code-app` automates. Follow them only when the plugin is unavailable.
+Use the PACAF wizard, not the plugin's generic `degit` scaffold. If the plugin is unavailable, stop at the prerequisite gate rather than bypassing it. The wizard owns initialization; do not run init again after it completes.
 
 ```bash
-# 1. Verify authentication is working (should show org info — no browser popup)
-pac org who
-
-# 2. Create your solution FIRST (or verify it exists in the Power Apps Maker Portal)
-#    This ensures every artifact is tracked from the start.
-#    If you prefer, create the solution in the Power Apps Maker Portal instead.
-pac solution init --publisher-name YourPublisher --publisher-prefix yourprefix
-
-# 3. Scaffold the starter project
-#    Prefer the wizard — it writes the entire starter payload locally from
-#    PAppsCAFoundations, so the project is always self-consistent and does not
-#    drift when external template repos change shape.
+# 1. Scaffold through the wizard (includes solution discovery and local CLI init)
 npx @pacaf/wizard-ux@latest
-cd my-app
 
-# 4. Install dependencies
-npm install
-
-# 5. Add Fluent UI and TanStack Query
-npm install @fluentui/react-components @tanstack/react-query react-router-dom
-
-# 6. Copy the .env.template and fill in your credentials (if not already done)
-cp .env.template .env.local
-# Fill in PP_TENANT_ID, PP_APP_ID, PP_CLIENT_SECRET, PP_ENV_DEV
-
-# 7. Initialize Code App metadata (registers the app in your active solution)
-pac code init
-
-# 8. If the app's business scope is still being defined, stop here and complete
-#    the planning flow before choosing connectors or Dataverse tables.
-
-# 9. Build in prototype mode first.
+# 2. Complete planning; build in prototype mode first
 npm run dev:local
 
-# 10. When the planning payload is stable and you are ready to bind real data,
-#     use the Code Apps plugin (/add-datasource) or the PAC CLI directly.
-#     Connector binding is deliberately NOT a setup-wizard step.
-pac code add-data-source -a <connector_api_id> -c <connection_id>
+# 3. Once planning/prototype are stable, invoke the matching Code Apps skill.
+#    The skill uses this local runner; binding is not a setup-wizard step.
+npm run pa -- app add data-source --connector "<connector-api-id>" --connection-id "<connection-id>"
 
-# 11. Confirm the connector registration produced or refreshed src/generated/**
-#     If a table or connector is missing, re-run pac code add-data-source for it.
+# 4. Inspect generated output and adapt behind provider contracts.
+#    Register live field metadata for every new Dataverse table.
 
-# 12. Verify your solution contains the Code App and connection references
-#     Open Power Apps Maker Portal → Solutions → YourSolution
-#     You should see: the Code App, connection reference(s), and any tables you've added
-
-# 13. Start connected development (Vite + PAC Code Run on port 3000)
+# 5. Start connected dev (Vite 3000 + Power Apps local host 8080)
 npm run dev
 ```
 
@@ -277,7 +239,7 @@ npm run dev
 
 **Connector binding is intentionally deferred.** During the initial scaffold, do not ask the developer for connection IDs up front. The expected method is: plan the workflow, prototype the UX with mock providers, refine `dataverse/planning-payload.json`, and only then bind real connectors.
 
-When moving into connected mode, prefer a later wizard flow that can inspect existing environment connections with `pac connection list`, filter by connector API ID, and let the developer select the right one. If no match is discovered, then prompt for manual creation in Maker Portal or for a pasted Connection ID.
+When moving into connected mode, invoke `/list-connections` and use `npm run pa -- connection list --json` in the verified app environment. Filter by connector API ID and let the developer select the right connection. If no match is discovered, then prompt for creation in Maker Portal or a pasted Connection ID.
 
 ## Package.json Scripts
 
@@ -286,8 +248,10 @@ Every project must define these scripts:
 ```json
 {
   "scripts": {
-    "dev": "concurrently \"vite --port 3000\" \"pac code run\"",
-    "dev:local": "VITE_USE_MOCK=true vite --port 3000",
+    "dev": "concurrently --kill-others-on-fail \"vite --port 3000 --strictPort\" \"pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000\"",
+    "dev:local": "cross-env VITE_USE_MOCK=true vite --port 3000",
+    "pa": "pacaf-pa",
+    "prebuild": "pacaf-patch-datasources",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
@@ -296,16 +260,20 @@ Every project must define these scripts:
     "test:watch": "vitest",
     "test:smoke": "vitest run --reporter=verbose src/App.test.tsx",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && pac code push -s \"YourSolutionUniqueName\""
+    "deploy": "pacaf-deploy --target dev"
   }
 }
 ```
 
 The `test:smoke` script runs the built-in smoke tests that ship with every scaffold. These pass immediately after setup — the wizard verifies this during Step 7 before declaring success. If smoke tests fail, the scaffold is broken.
 
-> **Never emit a bare `pac code push`.** Every push must carry `-s "<SolutionUniqueName>"` (the solution's **unique** name, not its friendly display name) so the Code App is registered as a component of your solution. A bare `pac code push` creates the app **outside** any solution — silently, with a `App pushed successfully` message — and that cannot be reliably fixed by a later re-push. The wizard generates this `deploy` script for you with the correct unique name baked in (via `pacaf-pac-safe`, which auto-injects `-s` from your saved solution name); the example above is the shape to follow if you write it by hand.
+Keep exact dependency pins and the chosen package-manager lockfile. `pacaf-pa` resolves the installed local CLI only; it must never download an executable on demand. Do not use bare `npx pa`, global updates, registry bypasses, or `PAC_BIN` to redirect PAC wrappers.
 
-> **Auth note for `deploy`:** The `pac code push` in the deploy script requires a **user (interactive) auth profile** to be active — SPN auth is rejected by the BAP API. Select your repo-scoped user profile before running `npm run deploy`. The wizard creates this profile automatically; for manual setup see `00-environment-setup.instructions.md`.
+Native authentication dependency build scripts (keytar/MSAL extensions) require user-reviewed approval through the existing package-manager policy. Never automatically modify the build allowlist or blanket-approve dependency scripts.
+
+`pacaf-deploy` owns preflight, build, and publish; a failed build must never reach push. It checks durable target metadata and uses a solution GUID. Use `npm run deploy -- --preflight` for non-mutating validation. See `04-deployment.instructions.md` for initial creation and opt-in SPN updates.
+
+`--config-only` is required with a separate Vite process: CLI 1.0.2 otherwise starts the app's dev command too, risking duplicate servers/recursion. `--kill-others-on-fail` stops the companion when either process fails. Do not remove the prebuild guard just because legacy generator output no longer needs the missing-parameters repair.
 
 ## Local Development with Vite
 
@@ -313,7 +281,7 @@ Local development has two modes depending on where you are in the development li
 
 ### Mode 1: Prototype Mode (Mock Data — No Power Platform Required)
 
-This is the fastest way to start building. Vite runs standalone with hot module replacement (HMR). No `pac code run`, no auth profiles, no connections. Your app renders instantly in the browser using mock data.
+This is the fastest way to start building. Vite runs standalone with hot module replacement (HMR). No Power Apps local host, no auth profiles, no connections. Your app renders instantly in the browser using mock data.
 
 **When to use:** Prototyping UI, building components, iterating on layout and design, demoing to stakeholders, onboarding new developers.
 
@@ -322,7 +290,7 @@ This is the fastest way to start building. Vite runs standalone with hot module 
 npm run dev:local
 ```
 
-This runs `VITE_USE_MOCK=true vite --port 3000`. Vite serves your app at `http://localhost:3000` with sub-second HMR — save a file, see the change instantly.
+This runs `cross-env VITE_USE_MOCK=true vite --port 3000`. Vite serves your app at `http://localhost:3000` with sub-second HMR — save a file, see the change instantly.
 
 **What works in this mode:**
 - All React components, routing, and Fluent UI styling
@@ -332,7 +300,7 @@ This runs `VITE_USE_MOCK=true vite --port 3000`. Vite serves your app at `http:/
 
 **What does NOT work in this mode:**
 - Real connector calls (generated services require the Power Apps runtime)
-- `pac code run` features (platform context, auth context, connection consent)
+- `pa app run` features (platform context, auth context, connection consent)
 - `PowerProvider` context values that come from the Power Platform sandbox
 
 **Required setup for mock data:**
@@ -431,24 +399,24 @@ Prototype mode is not just a visual sandbox. It is the moment where the UX is al
 
 ### Mode 2: Connected Mode (Real Connectors via Power Platform)
 
-Once you've built the UI and want to connect to real data, switch to connected mode. This runs Vite and `pac code run` side by side.
+Once you've built the UI and want to connect to real data, switch to connected mode. This runs Vite and the Power Apps local host side by side.
 
 **Prerequisites for connected mode:**
-- PAC auth profiles created (see `00-environment-setup.instructions.md`)
-- At least one data source added via `pac code add-data-source`
-- TypeScript SDK refreshed by `pac code add-data-source`
-- Active connection to the target environment: `pac auth select --name "Dev"`
+- Local CLI user signed in (see `00-environment-setup.instructions.md`)
+- Data sources generated via `pacaf-pa app add data-source` and adapted behind providers
+- `power.config.json` matches the intended app/environment
+- Active account verified separately: `npm run pa -- auth status --json`
 
 ```bash
-# Start both Vite dev server and PAC Code runtime
+# Start both Vite dev server and Power Apps local host
 npm run dev
 ```
 
-This runs `concurrently "vite --port 3000" "pac code run"`:
+This runs the `concurrently --kill-others-on-fail` command shown above:
 - **Vite** (`http://localhost:3000`): Serves your React app with HMR
-- **`pac code run`**: Starts the Power Apps runtime proxy that handles connector calls, auth context, and platform integration
+- **`pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000`**: Starts only the Power Apps local host, not another Vite server
 
-Open `http://localhost:3000` in your browser. The app loads from Vite, and connector calls route through the `pac code run` proxy transparently.
+Use the local play URL printed by the Power Apps CLI for connected validation. Vite assets come from `http://localhost:3000`; the Power Apps local host uses port 8080. Do not conflate the two ports.
 
 ### Vite Environment Variables
 
@@ -586,11 +554,11 @@ The scaffold's `package.json` declares both `tailwindcss` and `@tailwindcss/vite
 | Phase | Command | What's Running | Data Source |
 |-------|---------|---------------|-------------|
 | Prototyping | `npm run dev:local` | Vite only | Mock data |
-| Integration | `npm run dev` | Vite + `pac code run` | Real connectors |
+| Integration | `npm run dev` | Vite 3000 + `pa app run --config-only` host 8080 | Real connectors |
 | Testing | `npm run test` | Vitest | Mock data via MSW |
 | E2E Testing | `npm run test:e2e` | Vite + Playwright | Mock data |
 | Production Build | `npm run build` | `tsc` + Vite build | N/A (static output) |
-| Deploy | `npm run deploy` | Build + `pac code push -s "<SolutionUniqueName>"` | N/A |
+| Deploy | `npm run deploy` | Guarded build + local `pa app push --solution-id <GUID>` | N/A |
 
 ### Troubleshooting Local Development
 
@@ -601,9 +569,10 @@ lsof -ti:3000 | xargs kill -9
 npm run dev:local
 ```
 
-**`pac code run` fails to start:**
-- Verify auth: `pac org who` (should show org info, no popup)
-- Check PAC version: avoid v2.3.2 (known bug — see `00-environment-setup.instructions.md`)
+**Power Apps local host fails to start:**
+- Verify separate CLI auth: `npm run pa -- auth status --json`
+- Check the exact local CLI version with `npm run pa -- --version`; restore from the lockfile if missing
+- Check both ports and retain `--config-only`; never start a second Vite server
 - Ensure `power.config.json` exists next to `package.json`
 
 **HMR not working (changes not reflected):**
@@ -611,7 +580,7 @@ npm run dev:local
 - Clear the Vite cache: `rm -rf node_modules/.vite && npm run dev:local`
 
 **Mock data shape doesn't match real data:**
-- Re-run `pac code add-data-source` for the affected table or connector to refresh TypeScript models
+- Run `npm run pa -- app refresh data-source --name "<data-source-name>"` to refresh TypeScript models
 - Compare `src/generated/models/` types against your mock data
 - Remember: choice/picklist fields are **integers** (100000000), not strings
 

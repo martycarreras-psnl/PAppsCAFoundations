@@ -15,6 +15,11 @@
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: pacaf-patch-datasources\nRepair legacy generated datasource parameters and enforce hash routing. --help makes no changes.');
+  process.exit(0);
+}
+
 const PROJECT_DIR = process.cwd();
 const DS_INFO_PATH = join(PROJECT_DIR, '.power', 'schemas', 'appschemas', 'dataSourcesInfo.ts');
 

@@ -96,7 +96,7 @@ export default {
           id: 'USER_SIGN_IN_METHOD',
           type: 'select',
           label: 'Sign-in method',
-          help: 'This opens a one-time interactive sign-in so the PAC CLI can run commands (pac code init, pac code push, etc.) against your environment. Your browser or a device code will authenticate you — no passwords are stored.',
+          help: 'This signs in PAC for environment verification and solution ALM/admin. Code Apps use a separate Power Apps CLI sign-in during scaffold; PAC profiles do not authenticate pa.',
           defaultValue: 'deviceCode',
           options: [
             { value: 'deviceCode', label: 'Device code — most reliable' },

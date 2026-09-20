@@ -12,9 +12,9 @@ This is a **Power Apps Code App template repository**. Every project built from 
 
 - Bundled with Vite
 - Written in TypeScript + React 18 + Fluent UI v9
-- Deployed via `pac code push` to a Dataverse-enabled Power Platform environment
+- Deployed via `pacaf-deploy --target dev` (guarded local `pa app push`) to a Dataverse-enabled Power Platform environment
 - Authenticated by Microsoft Entra ID at runtime through the Power Platform host
-- Bound to data through Power Platform **connectors** and/or **Dataverse tables** using `pac code add-data-source`
+- Bound to data through Power Platform **connectors** and/or **Dataverse tables** using `pacaf-pa app add data-source`
 
 The deliverable is always a Code App. Not a standalone SPA. Not a generic React app.
 
@@ -60,7 +60,7 @@ npx @pacaf/wizard-ux@latest
 
 This opens a guided UI at `http://127.0.0.1:5174` in the browser. It is the default and only supported setup experience for all users — no flags, no extra arguments needed.
 
-Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, auth profile, `pac code init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
+Do not attempt to manually scaffold a Code App by hand. The wizard handles publisher, solution, App Registration, separate CLI authentication, `pa app init`, and the initial smoke tests in the correct order. Skipping it produces apps that cannot be deployed.
 
 ### Consumer vs. monorepo source contributor
 
@@ -80,7 +80,7 @@ Without these, source-tree invocations crash with `Cannot find package 'fastify'
 These are enforced by the detailed instruction files but must be respected even before those files load:
 
 1. **Solution-first.** Every Code App lives inside a dedicated Power Platform solution from day one. Never use the default solution.
-2. **`src/generated/` is read-only.** Files there are produced by `pac code add-data-source`. Never edit them. Wrap them in provider adapters under `src/services/`.
+2. **`src/generated/` is read-only.** Files there are produced by `pacaf-pa app add data-source` / `app refresh data-source`. Never edit them. Wrap them in provider adapters under `src/services/`.
 3. **Three-layer architecture.** Components render, hooks orchestrate, services/providers expose contracts, generated services stay behind adapters. Components never call generated services directly.
 4. **Port 3000 for local dev.** The Power Apps SDK requires it. Do not change the Vite port.
 5. **Relative asset base for production builds.** `vite.config.ts` must set `base: './'` for `command === 'build'`, or the deployed app will 404 assets inside the Power Apps iframe.
@@ -105,9 +105,9 @@ For Dataverse schema provisioning, data operations, solution lifecycle, and envi
 | Environment admin (bulk delete, settings, security roles) | **Dataverse-skills plugin** (`dv-admin`, `dv-security`) |
 | Business units, owner teams, Entra security groups, role mappings | **This repo** (`07b`) — plugin gap; agent drives the plugin's Python SDK + `az ad group` |
 | Business planning workflow (00a → 00b → 00c → 00d) | **This repo** |
-| Planning artifact (`dataverse/planning-payload.json`) — re-runnable source of truth | **This repo** (no `pacaf-validate`/`pacaf-generate`/`pacaf-register` scripts; the agent reads the payload and drives the plugin + PAC CLI directly) |
-| Code App scaffold (`pac code init`, Vite, Fluent UI) | **This repo** |
-| Connector adapter pattern & `pac code add-data-source` | **This repo** |
+| Planning artifact (`dataverse/planning-payload.json`) — re-runnable source of truth | **This repo** (no `pacaf-validate`/`pacaf-generate`/`pacaf-register` scripts; the agent drives Dataverse-skills, local `pa` bindings, and PAC ALM according to the boundary below) |
+| Code App scaffold (`pa app init`, Vite, Fluent UI) | **This repo** |
+| Connector adapter pattern & local `pa app add data-source` | **This repo** |
 | Form field metadata pattern (`DataverseFieldLabel`) | **This repo** |
 | Deployment settings & CI/CD | **This repo** |
 
@@ -123,7 +123,7 @@ Example: `.../connections/shared_service-now/f8e0094f.../details` → API ID = `
 
 Pass directly to `/add-connector`. Works for any connector, known or unknown.
 
-### When the Code Apps plugin is installed The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pac code add-data-source` registration to generate TypeScript services.
+### When the Code Apps plugin is installed The planning workflow in this repo (00a → 00c → planning-payload.json) feeds *into* the plugin's execution — the agent uses `dv-metadata` to provision the schema described by the planning artifact, then returns to this repo's `pacaf-pa app add data-source` registration to generate TypeScript services.
 
 ### Organizational structure & security (plugin gap)
 
@@ -152,10 +152,10 @@ For Code App scaffolding, deployment, and connector binding, this template **req
 
 | Responsibility | Owner |
 |---|---|
-| New Code App scaffold (`pac code init`, Vite, Fluent UI wiring) | **Code Apps plugin** (`/create-code-app`) |
-| Build and deploy (`pac code push`) | **Code Apps plugin** (`/deploy`) |
+| New Code App scaffold (`pa app init`, Vite, Fluent UI wiring) | **Code Apps plugin** (`/create-code-app`), via the PACAF wizard |
+| Build and deploy (`pacaf-deploy --target dev`) | **Code Apps plugin** (`/deploy`), with PACAF target guards |
 | Connector routing — pick the right skill for what the user needs | **Code Apps plugin** (`/add-datasource`) |
-| Add Dataverse tables as a data source | **Code Apps plugin** (`/add-dataverse`) drives `pac code add-data-source -a dataverse -t <table>` |
+| Add Dataverse tables as a data source | **Code Apps plugin** (`/add-dataverse`) drives `pacaf-pa app add data-source --connector dataverse --table <table>` |
 | Add SharePoint, Teams, Excel, OneDrive, Office 365, ADO connectors | **Code Apps plugin** (`/add-sharepoint`, `/add-teams`, `/add-excel`, `/add-onedrive`, `/add-office365`, `/add-azuredevops`) |
 | Add any other Power Platform connector | **Code Apps plugin** (`/add-connector`) |
 | List existing connections to get connection IDs | **Code Apps plugin** (`/list-connections`) |
@@ -166,9 +166,25 @@ For Code App scaffolding, deployment, and connector binding, this template **req
 | Deployment pipeline, CI/CD, solution promotion | **This repo** (`04-deployment.instructions.md`) |
 | Security patterns | **This repo** (`06-security.instructions.md`) |
 
-### CLI compatibility note
+### CLI responsibility boundary
 
-This repo standardizes on the PAC CLI (`pac code push`, `pac code add-data-source`) — confirmed as the authoritative CLI by the plugin's own documentation linking to the [Power Apps CLI Reference](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/code). If a plugin skill emits a command in a different form (e.g. `npx power-apps push`), substitute the PAC CLI equivalent per this repo's custom instruction. Never introduce a second CLI tool into the project.
+Use the **project-local, exact-pinned `@microsoft/power-apps-cli@1.0.2`** for Code App initialization, local host, publish, and data-source generation. The runtime SDK is a separate package, `@microsoft/power-apps@1.4.0`. Invoke the local CLI through `pacaf-pa <group> <command>` (from npm scripts, `npm run pa -- …` when that script exists, `pnpm exec pacaf-pa …`, or `npm exec --no -- pacaf-pa …`); it must fail if the pinned local executable is absent. Existing-consumer migration does not add a `pa` script automatically. Never use bare `npx pa`, a global CLI, `PAC_BIN` redirection, or guessed legacy `power-apps` aliases.
+
+Keep **PAC** for solution export/import/pack/unpack and environment/admin work. Dataverse-skills remains responsible for schema, data, security, and solution operations through its documented tools. PAC auth profiles do **not** authenticate `pa`; use local `pa auth login/status/switch` separately.
+
+Translate plugin examples to the verified [grouped CLI commands](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/reference/cli), not back to obsolete `pac code`. Connector mappings and exact flags live in `02-connectors.instructions.md`; deployment guards and authentication in `04-deployment.instructions.md`.
+
+Deploy through `pacaf-deploy --target dev`, with durable `.power-apps-targets.json` identities. The general runner refuses `app push`; only the guarded helper publishes. Pass a **solution GUID**, not a unique name, to the underlying `pa app push --solution-id`. Never append `--environment-id` to push or reinitialize an existing app to change its target. SPN publishing is opt-in with an expected target `spnClientId`, only for an already-published app with environment access and maker-granted edit access; never grant permissions automatically.
+
+**User-auth environment evidence:** CLI 1.0.2 `auth status` exposes home-account identity, not the token's resource tenant; even home-tenant equality is insufficient. Guarded user publishing/first creation requires separate explicit Azure CLI login and a read-only fixed-cloud Global Discovery Service query matching `EnvironmentId`, `TenantId`, and `Url` to the durable target. This verifies the environment's tenant independently, not the opaque `pa` token's tenant. Missing discovery access/rows fail closed; no auto-login, cache inspection, home-account inference, or unguarded fallback. Explicit-tenant SPN updates remain existing-app-only.
+
+Connected dev runs separate Vite (3000) and `pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000` processes with companion shutdown. Keep mock-only dev, HashRouter, relative production assets, the prebuild safeguards, and metadata-backed form labels unchanged. Existing apps migrate locally via `pacaf-migrate-pa --check/--apply/--rollback`; see [MIGRATION.md](MIGRATION.md).
+
+Downstream policy customizations belong in declared `.pacaf/policy-overlays.json` whole-file replacements, not untracked edits to shipped guidance. Review and merge new upstream rules into replacement sources when updating; overlays must not restore obsolete PAC-only instructions. Sync/update failures must be surfaced, never reported as successful. See the policy section in [MIGRATION.md](MIGRATION.md#preserve-downstream-policy-across-updates).
+
+Existing PAC-script Code Apps must complete the explicit local CLI migration before receiving this policy via sync/update. The gate requires the exact local CLI devDependency and no legacy PAC Code App lifecycle scripts; fresh empty scaffolds may receive bootstrap guidance. Never use a force option to conceal a scripts/policy mismatch.
+
+The only exceptional local-policy route is an explicitly reviewed `codeAppCliPolicy: "reviewed-local"` overlay manifest covering **every shipped new-CLI-policy-bearing file**, including canonical, native, and root guidance. A partial overlay is not sufficient; see the installed instruction-package README. This does not bypass deployment identity or permission guards.
 
 ### Scaffolding override — wizard takes precedence
 
@@ -196,7 +212,7 @@ Invoke the appropriate skill **before** writing any connector-binding or deploym
 | Add any other connector | `/add-connector` |
 | Get connection IDs | `/list-connections` |
 
-Do **not** hand-roll connector registration steps when the plugin is installed. The skills know the correct `pac code add-data-source` flags, connection ID format, and generated-service adapter pattern for each connector type.
+Do **not** hand-roll connector registration steps when the plugin is installed. Use the skills for connector selection and adapter patterns, applying the local grouped CLI mappings above when a skill shows legacy syntax.
 
 ### When the plugin is NOT installed
 

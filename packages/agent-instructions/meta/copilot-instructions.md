@@ -19,59 +19,36 @@ Whenever the user is describing an app idea, business problem, workflow, scope, 
 
 Full protocol — including PACAF-specific ADR triggers, the `CONTEXT.md` format, and integration with the 00a → 00b → 00c → 00d phases — lives in `.github/instructions/00e-grill-and-document.instructions.md`. Read it whenever a planning conversation starts; do not skip to implementation while the business narrative is still unstable.
 
-## CLI Command
+## CLI boundary
 
-Use the following command to initialize an app:
+Use the PACAF wizard for new projects, never manually reinitialize an existing app. Code App operations use exact-pinned local `@microsoft/power-apps-cli@1.0.2` via `pacaf-pa`, separate from runtime SDK `@microsoft/power-apps@1.4.0`. PAC remains for solution ALM/admin; Dataverse-skills ownership is unchanged. Auth caches are separate.
 
-```bash
-pac code init -n <app name> -env <environmentId>
-```
-
-**Example:**
+The following are npm-script/local-bin command shapes, not global executables or download-on-demand commands. Never use bare `npx pa`.
 
 ```bash
-pac code init -n "Asset Tracker" -env "0aa4969d-c8e7-e0a7-9bf8-6925c5922de3"
+# Wizard initialization only
+pacaf-pa app init --display-name "Asset Tracker" --environment-id "<environment-id>"
+
+# After planning and invoking the matching Code Apps plugin skill
+pacaf-pa app add data-source --connector shared_office365users --connection-id "<connection-id>"
+pacaf-pa app add data-source --connector shared_sql --connection-id "<connection-id>" --table "[dbo].[MobileDeviceInventory]" --dataset "<server>,<database>"
+pacaf-pa app add data-source --connector dataverse --table "<logical-table-name>"
+pacaf-pa app refresh data-source --name "<data-source-name>"
+pacaf-pa app remove data-source --connector "<connector-id>" --name "<data-source-name>"
+
+# Non-mutating checks, then guarded build and publish
+pacaf-deploy --target dev --preflight
+pacaf-deploy --target dev
 ```
 
-Use the following command to add a data source:
+`pacaf-deploy` validates `.power-apps-targets.json` against `power.config.json` and the selected account/tenant, builds, then publishes with a solution **GUID**. Never use a solution unique name as `--solution-id`, append `--environment-id` to push, or bypass target checks. SPN updates require explicit opt-in plus an existing published app with environment access and maker-granted edit access. No automatic permission grants.
 
-```bash
-pac code add-data-source -a <apiId> -c <connectionId>
-```
+CLI 1.0.2 user status does **not** prove the resource tenant; even home-account equality is insufficient. User publish/first creation requires separate explicit Azure CLI login and read-only fixed-cloud Global Discovery Service evidence matching environment ID, tenant, and URL. Missing evidence fails closed, with no auto-login or unguarded fallback. Offline preflight makes no Azure/auth calls.
 
-**Example:**
-
-```bash
-pac code add-data-source -a "shared_office365users" -c "aa35d97110f747a49205461cbfcf8558"
-```
-
-If additional parameters such as table and dataset are required, use:
-
-```bash
-pac code add-data-source -a <apiId> -c <connectionId> -t <tableName> -d <datasetName>
-```
-
-**Example:**
-
-```bash
-pac code add-data-source -a "shared_sql" -c "12767db082494ab482618ce5703fe6e9" -t "[dbo].[MobileDeviceInventory]" -d "paconnectivitysql0425.database.windows.net,paruntimedb"
-```
-
-Use the following command to publish an app:
-
-```bash
-npm run build
-pac code push
-```
-
-**Example:**
-
-```bash
-pac code push
-```
+Connected dev uses separate Vite (3000) and local host (8080) processes: `pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000`, with companion shutdown. Keep mock-only development, HashRouter, relative production assets, and metadata-backed form labels. See `01-scaffold`, `02-connectors`, and `04-deployment` for full contracts.
 
 ## Using Model and Service
 
-- Read the files under src\Models and src\Services folder for data binding.
-- Read the files under .power\schemas folder for other schema reference.
+- Read generated models/services under `src/generated/` and metadata under `.power/schemas/`; verify actual generated paths after registration. Generated files are read-only.
+- Wrap generated services in `src/services/` providers; hooks orchestrate and components render. Use `DataverseFieldLabel` and live metadata validation for editable Dataverse fields.
 # Power SDK Instructions End

@@ -26,7 +26,10 @@ npx pacaf-update
 
 - This is a Power Apps Code App. Do not suggest Vercel/Netlify/Azure-SWA hosting, alternative frameworks, or CSS libraries other than Fluent UI v9.
 - Port 3000 for local dev (Power Apps SDK requirement).
-- `src/generated/` is read-only — produced by `pac code add-data-source`.
+- `src/generated/` is read-only — produced by pinned local `pa app add data-source` / refresh.
+- Use local `pacaf-pa` for Code App operations and `pacaf-deploy --target dev` for guarded publishing. PAC stays for ALM/admin; auth is separate. Never bare `npx pa`, reinitialize an existing app, or grant SPN edit access automatically.
+- CLI 1.0.2 home-account identity is not resource-tenant proof. User publish/first creation requires separate explicit Azure CLI login and matching read-only GDS environment/tenant/URL evidence; no auto-login or unguarded fallback.
+- Connected dev uses Vite 3000 plus `pa app run --config-only --port 8080 --local-app-url http://localhost:3000` with companion shutdown. Preserve mock-only dev, HashRouter, relative production assets, and metadata-backed form labels.
 - Solution-first: every Code App lives in a dedicated Power Platform solution from day one.
 - Use the connector adapter pattern in `src/services/` to wrap generated services.
 

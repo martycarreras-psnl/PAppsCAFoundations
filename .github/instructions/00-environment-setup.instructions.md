@@ -12,7 +12,31 @@ This is the first file a team lead reads. Developers read it to understand how a
 
 Without this setup, every `pac solution export`, `pac solution import`, and `pac org who` triggers an interactive browser window asking the developer to sign in. This breaks CI/CD entirely (no browser in a pipeline) and creates friction for developers who deploy multiple times a day. The fix is a Service Principal (App Registration) that authenticates non-interactively using a client ID and secret.
 
-> **Critical SPN limitation for `pac code` commands:** All `pac code` subcommands (`pac code push`, `pac code add-data-source`, `pac code run`) require a **user** auth profile — the Power Platform BAP checkAccess API rejects service principal tokens for these operations. SPN auth works for everything else (`pac org who`, `pac solution export/import`, `pac auth list`, etc.). **This is a one-time setup:** create a user profile once with `pac auth create --name <profile> --environment <url> --deviceCode`, and all subsequent `pac code` commands work silently — the cached refresh token auto-renews (~90 days). The wizard handles this automatically by creating a repo-scoped user profile when needed.
+> **Two separate CLI authentication contexts:** PAC profiles below serve solution ALM/admin and Dataverse-skills operations; they do not sign the local Power Apps CLI in. Code Apps use pinned `@microsoft/power-apps-cli` through `pacaf-pa`. User sign-in is the default; SPN updates to existing published apps are opt-in and require environment access plus maker-granted app edit access. See the separate setup below and `04-deployment.instructions.md`. Do not carry the legacy PAC Code App SPN restriction over to `pa`.
+
+## Code App authentication (separate from PAC)
+
+After restoring the pinned local CLI through the project's lockfile:
+
+```bash
+npm run pa -- auth login --account maker@contoso.com
+npm run pa -- auth status --json
+# Select an already signed-in account if necessary:
+npm run pa -- auth switch --account maker@contoso.com
+npm run deploy -- --preflight
+```
+
+The `pa` npm script runs `pacaf-pa`; no global executable or bare `npx pa` is permitted. Validate account/tenant and the durable `.power-apps-targets.json` against `power.config.json`. `pac auth select` and `pac org who` only verify PAC, not Code App deployment.
+
+CLI 1.0.2 status exposes `activeAccount.username` and `activeAccount.homeAccountId`, not the token's resource tenant. Even home-tenant equality is not tenant evidence. User publishing therefore requires **separate, explicit Azure CLI login** with discovery access to the target (`az login --allow-no-subscriptions --tenant "<expected-tenant-id>"`). The helper makes a read-only `az rest` call to its fixed cloud-specific Global Discovery Service endpoint and matches `EnvironmentId`, `TenantId`, and `Url` to the target.
+
+Azure CLI is a prerequisite **for user publishing**, not for mock development, offline preflight, or the explicit-tenant SPN update path. Verify installation with `az version`; if unavailable, direct the user to the [official Azure CLI installation guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli). Do not install system tools or initiate Azure login automatically.
+
+This independently verifies the environment's tenant, not the opaque `pa` token's tenant. There is no automatic login or fallback to home-account inference. Missing GDS rows (including disabled-user, security-group, or delegated-admin visibility restrictions) fail closed; resolve authorized access rather than bypassing the guard. Offline preflight does not invoke Azure CLI or authenticate.
+
+For explicitly authorized SPN updates, record the expected Entra application/client ID as `spnClientId` in the selected target. Inject matching `PA_CLI_USE_SP_AUTH=true`, `PA_CLI_SP_CLIENT_ID`, `PA_CLI_SP_CLIENT_SECRET`, and `PA_CLI_SP_TENANT_ID` through a secret store, then use `npm run deploy -- --auth spn`. These are **not** aliases for `PP_*`; do not assume PAC profile credentials or encrypted `.env.local` strings will work as `pa` credentials. Never expose them as `VITE_*`, print their values, or place secrets in target metadata.
+
+The app must already be published and shared for **edit** by a maker with the SPN's **Enterprise Application object ID** (not the App Registration object ID or client ID). Sharing is a separately authorized one-time step, never an automatic fix, migration operation, CI step, or SPN self-grant. Initial creation stays on user auth. See `04-deployment.instructions.md` for the guarded workflow and exact sharing command.
 
 ## Recommended package manager: pnpm
 
@@ -237,8 +261,8 @@ Any command wrapped with `op run --env-file=.env --` will have its `op://` refer
 # Run any command with secrets injected — secrets never touch disk
 op run --env-file=.env -- pac org who
 
-# Deploy with secrets injected
-op run --env-file=.env -- pac code push -s "YourSolutionUniqueName"
+# Code App deployment uses separate pa auth and target guards
+npm run deploy
 
 # Export a solution with secrets injected
 op run --env-file=.env -- pac solution export --path ./solution.zip --name YourSolution
@@ -265,7 +289,8 @@ Add npm scripts that use it:
 {
   "scripts": {
     "pac": "pacaf-pac",
-    "deploy": "npm run build && pacaf-pac-safe --target dev --profile-type user --mutating code push",
+    "pa": "pacaf-pa",
+    "deploy": "pacaf-deploy --target dev",
     "solution:export": "pacaf-pac solution export --name YourSolutionName --path ./solution/solution-unmanaged.zip --managed false --overwrite",
     "solution:import": "pacaf-pac solution import --path ./solution/solution-managed.zip"
   }
@@ -275,7 +300,7 @@ Add npm scripts that use it:
 Now developers can run:
 
 ```bash
-npm run deploy                    # Build + deploy, secrets injected automatically
+npm run deploy                    # Guarded publish; separate Azure login/GDS access required in user mode
 npm run pac -- org who            # Any pac command with secrets
 npm run pac -- auth list          # Check auth profiles
 npm run solution:export           # Export the unmanaged solution from dev
@@ -340,7 +365,7 @@ For teams that are deeply invested in the Azure ecosystem and cannot distribute 
 
 Note: Unlike 1Password's `op run`, `az keyvault` exports the secrets into your shell environment where they persist. Consider wrapping this in a subshell to limit exposure:
 ```bash
-( source <(az keyvault ...) && pac code push )
+( source <(az keyvault ...) && pac solution list )
 ```
 
 ### Option D: Per-Developer App Registrations (Maximum Isolation)
@@ -368,10 +393,10 @@ op run --env-file=.env -- pac auth create --name "Prod" --environment $PP_ENV_PR
 # After profiles are created, these work WITHOUT op run:
 pac auth select --name "Dev"
 pac org who
-pac code push
+pac solution list
 ```
 
-Once profiles exist, daily commands (`pac code push`, `pac solution export`, etc.) work without `op run`. You only need `op run` again when profiles are recreated — for example, after secret rotation or on a new machine.
+Once PAC profiles exist, daily ALM commands (`pac solution list`, `pac solution export`, etc.) work without `op run`. You only need `op run` again when profiles are recreated — for example, after secret rotation or on a new machine. Code App `pa` authentication is independent.
 
 **Strategy 2: Use `op run` for every command (maximum security)**
 
@@ -380,7 +405,7 @@ If your security policy requires that credentials never persist in PAC CLI's pro
 ```bash
 # Every command is wrapped — secrets exist only for the duration of the command
 op run --env-file=.env -- pac org who
-op run --env-file=.env -- pac code push
+op run --env-file=.env -- pac solution list
 op run --env-file=.env -- pac solution export --path ./solution.zip --name YourSolution
 ```
 
@@ -485,7 +510,7 @@ rm ./test-export.zip
 
 If any of these prompt a browser window, the auth profile was not created correctly. Re-run `pac auth create` with the `--applicationId`, `--clientSecret`, and `--tenant` flags.
 
-> **Note:** This SPN verification covers `pac solution` and `pac org` commands. `pac code push` requires a **user** auth profile (not SPN) — see the callout at the top of this file. Create the profile once; after that, pushes work silently via cached refresh token. The wizard creates this profile automatically during steps 7–9.
+> **Note:** This SPN verification covers `pac solution` and `pac org` commands only. Verify the separate Power Apps CLI account with `npm run pa -- auth status --json` and use `npm run deploy -- --preflight` before Code App publishing.
 
 ## Client Secret Rotation
 
@@ -519,7 +544,8 @@ Client secrets expire. Plan for rotation:
 - [ ] Developer runs `npm install`
 - [ ] Developer runs `npm run setup:auth` (1Password prompts for biometric, then creates all profiles)
 - [ ] Developer verifies with `pac org who` — no browser popup
-- [ ] Developer runs `npm run dev` — ready to code
+- [ ] Developer signs into the separate local Power Apps CLI (`npm run pa -- auth login`) and verifies account/tenant
+- [ ] Developer runs `npm run dev` — ready to code (or `npm run dev:local` without platform authentication)
 
 **If using `.env.local`:**
 
@@ -529,17 +555,18 @@ Client secrets expire. Plan for rotation:
 - [ ] Developer runs `npm install`
 - [ ] Developer runs `npm run setup:auth` (creates all profiles from `.env.local`)
 - [ ] Developer verifies with `pac org who` — no browser popup
-- [ ] Developer runs `npm run dev` — ready to code
+- [ ] Developer signs into the separate local Power Apps CLI (`npm run pa -- auth login`) and verifies account/tenant
+- [ ] Developer runs `npm run dev` — ready to code (or `npm run dev:local` without platform authentication)
 
 ## Troubleshooting
 
 ### General PAC CLI Issues
 
-**"pac code push fails with 'does not have permission to access' or checkAccess error"**
-→ This means you’re using an SPN (Application) auth profile. All `pac code` commands require a user profile. Create one once: `pac auth create --name <profile> --environment <url> --deviceCode`, select it, and retry. After this one-time setup, subsequent pushes work with no sign-in prompt.
+**"Code App publish fails with permission denied"**
+→ Verify target and separate `pa` account/tenant first. For opt-in SPN mode, verify both environment access and maker-granted app edit access on the existing app. Do not grant access automatically, create a new app, or silently fall back to user auth.
 
-**"pac auth create succeeded but pac code push still opens a browser"**
-→ You may have multiple auth profiles and the wrong one is active. Run `pac auth list` and select the correct repo-scoped profile.
+**"pac auth create succeeded but the Code App CLI still asks me to sign in"**
+→ The CLIs have separate auth state. Run `npm run pa -- auth login --account <maker-email>`, then `auth status --json`. PAC profile selection cannot choose the `pa` account.
 
 **"The application with identifier 'xxx' was not found in the directory"**
 → The App Registration exists but isn't registered as an Application User in the target Power Platform environment. Complete Step 1, substep 6 for that environment.

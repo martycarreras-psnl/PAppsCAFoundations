@@ -20,19 +20,21 @@ Terms are grouped by the part of the stack they belong to.
 
 ## Code Apps specifically
 
-**Code App** — A Power Apps app whose UI is hand-written code (React + Vite + TypeScript in this template) instead of the Power Apps canvas designer. It deploys via `pac code push`, runs inside a Power Platform-provided iframe, and uses Power Platform connectors for all data access.
+**Code App** — A Power Apps app whose UI is hand-written code (React + Vite + TypeScript in this template) instead of the Power Apps canvas designer. It deploys through guarded local `pa app push`, runs inside a Power Platform-provided iframe, and uses Power Platform connectors for all data access.
 
-**`pac code init`** — One-time command that registers a new Code App in the active solution and generates `power.config.json`.
+**`pa app init`** — Initializes local Code App metadata using `--display-name` and `--environment-id`. The wizard invokes it through the pinned local CLI; it does not select an "active solution." Never reinitialize an existing app as a migration step.
 
-**`pac code push`** — Builds nothing itself. Uploads the contents of `./dist/` (produced by `npm run build`) to the environment and publishes the app. Idempotent — re-running overwrites.
+**`pacaf-deploy` / `pa app push`** — The PACAF helper validates target/auth, builds, and publishes through the local CLI with `--solution-id <GUID>`. Push alone does not build. Updates preserve the existing app ID; initial creation needs explicit `--allow-create` in user mode.
 
-**`pac code add-data-source`** — Registers a connector or Dataverse table with the Code App. Writes a connection reference into the solution and generates strongly-typed TypeScript service classes and models into `src/generated/`.
+**`pa app add data-source`** — Registers a connector or Dataverse table and generates TypeScript services/models. Uses `--connector`, `--connection-id`, `--table`, and `--dataset`; solution-aware bindings use `--connection-ref` plus `--solution-id <GUID>`. Refresh uses `app refresh data-source --name`.
 
-**`pac code run`** — Runs the local Power Platform proxy that wires `npm run dev` on port 3000 to real Power Platform connectors with the developer's auth context. Required for local dev against real data.
+**`pa app run`** — Starts the Power Apps local host on port 8080. PACAF runs it with `--config-only --port 8080 --local-app-url http://localhost:3000` beside a separate Vite server on 3000, with companion shutdown. Mock-only dev does not need it.
 
-**`power.config.json`** — PAC-generated file at the repo root that records the Code App's environment binding, connection references, and build metadata. Do not hand-edit. The wizard and PAC CLI manage it.
+**`power.config.json`** — CLI-managed app/environment identity, bindings, and build metadata. Preserve it across migration. Push uses its verified environment; do not append `--environment-id` to push.
 
-**`src/generated/`** — Folder produced by `pac code add-data-source`. Contains one service class and matching model types per registered data source. Never edit these files — they are overwritten on every re-registration. Wrap them in provider adapters under `src/services/`.
+**`.power-apps-targets.json`** — Durable, non-secret expected target identities (`version: 1`, named `targets` with environment ID/URL, tenant, account, app ID, solution ID/name). Deployment checks it against the app config rather than relying only on ignored wizard state.
+
+**`src/generated/`** — CLI-generated service classes and model types. Never edit these files — regeneration overwrites them. Verify actual output after CLI changes and wrap services in provider adapters under `src/services/`.
 
 ## Connectors
 
@@ -66,11 +68,17 @@ Terms are grouped by the part of the stack they belong to.
 
 **Application User** — The Dataverse-level record that links an App Registration to an environment and assigns it security roles. Required for SPN auth to work against that environment.
 
-**Client credentials / SPN flow** — Non-interactive authentication using `PP_TENANT_ID`, `PP_APP_ID`, `PP_CLIENT_SECRET`. Works for `pac solution export/import`, `pac org who`, and most operations. **Does not work for `pac code push`, `pac code add-data-source`, or `pac code run`** — the Power Platform BAP checkAccess API rejects SPN tokens for those.
+**Client credentials / SPN flow** — PAC ALM uses `PP_TENANT_ID`, `PP_APP_ID`, `PP_CLIENT_SECRET`. Separately, opted-in Power Apps CLI updates use `PA_CLI_USE_SP_AUTH=true` and `PA_CLI_SP_CLIENT_ID`, `PA_CLI_SP_CLIENT_SECRET`, `PA_CLI_SP_TENANT_ID`. The Code App must already be published, with environment access and maker-granted app edit access. Never enable SPN or grant access automatically.
 
-**Device code flow** — Interactive auth where PAC CLI prints a URL and code, and the user completes login in a browser. Required once per machine for `pac code` commands. The cached refresh token auto-renews for ~90 days.
+**Interactive user sign-in** — The Power Apps CLI uses `pa auth login --account <email>`, `auth status --json`, and `auth switch --account <email>`. It is separate from PAC's browser/device-code sign-in and cached profiles.
 
-**PAC auth profile** — A named credential set stored by PAC CLI on the developer's machine. Created with `pac auth create`, switched with `pac auth select`. This template creates profiles named `PowerPlatform-Dev`, `PowerPlatform-Test`, `PowerPlatform-Prod`.
+**Home-account identity** — CLI 1.0.2 exposes `activeAccount.username` and MSAL `homeAccountId`, not the token's resource tenant. Even equality with the expected home tenant is insufficient: the cached account may acquire a token for another tenant. Use it only for stable account identity.
+
+**Global Discovery Service (GDS)** — Provides authoritative environment discovery. Guarded user publishing requires separate explicit Azure CLI login, then a read-only query to the fixed cloud-specific endpoint matching `EnvironmentId`, `TenantId`, and `Url`. This verifies the environment's tenant independently, not the opaque `pa` token's tenant. Missing rows/access fail closed.
+
+**PAC auth profile** — A named credential set created with `pac auth create` and switched with `pac auth select`. It serves ALM/admin operations, not the separate `pa` account.
+
+**Enterprise Application object ID** — The SPN object identifier a maker uses for `pa app share --principal <id> --access edit`. It is neither the App Registration object ID nor the application/client ID used for authentication.
 
 ## Adjacent concepts
 
@@ -80,12 +88,14 @@ Terms are grouped by the part of the stack they belong to.
 
 **DLP (Data Loss Prevention) policy** — Environment-level rules that restrict which connectors can be combined in the same app. Set by Power Platform admins. If a DLP policy blocks your connector pair, the app will fail at runtime with a connector-unavailable error.
 
-**BAP (Business Application Platform) API** — The Power Platform control plane API that `pac code` commands use for publishing. The API that rejects SPN tokens for `pac code push`.
+**BAP (Business Application Platform) API** — Part of the Power Platform control plane. Historical PAC publishing restrictions must not be generalized to the current Power Apps CLI's documented existing-app SPN update flow.
 
 ## Tools and CLIs
 
-**PAC CLI (`pac`)** — Power Platform CLI. Installed as a .NET global tool. The primary command-line interface for everything in this repo. This template pins version `2.2.1` because `2.3.2` has a known Code App push bug.
+**Power Apps CLI (`pa`)** — `@microsoft/power-apps-cli@1.0.2`, exact-pinned as a local devDependency. Use `pacaf-pa` via npm scripts or the verified local binary, never bare `npx pa`. Separate from runtime SDK `@microsoft/power-apps@1.4.0`.
+
+**PAC CLI (`pac`)** — Power Platform CLI, retained for solution export/import/pack/unpack and environment/admin operations. It is not the Code App lifecycle CLI.
 
 **1Password CLI (`op`)** — Optional credential manager. Resolves `op://vault/item/field` references in `.env` at runtime so secrets never touch disk. Recommended but not required — `.env.template` is the alternative.
 
-**`pac connection list`** — Lists connections in the currently selected environment. Use this to discover existing Connection IDs instead of asking users to hunt them down in the portal.
+**`pa connection list`** — Lists connections for the verified app environment. Invoke through `npm run pa -- connection list --json` when selecting Code App bindings; do not assume a PAC-selected environment establishes the `pa` target.

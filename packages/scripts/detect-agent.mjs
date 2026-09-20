@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /**
  * scripts/detect-agent.mjs — Cross-platform coding-agent detection.
@@ -97,7 +99,11 @@ export function agentChoices() {
 }
 
 // CLI mode — print detection result as JSON
-if (process.argv[1] && process.argv[1].endsWith('detect-agent.mjs')) {
-  const result = detectAgent();
-  console.log(JSON.stringify(result, null, 2));
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log('Usage: pacaf-detect-agent\nPrint coding-agent detection from environment variables as JSON.');
+  } else {
+    const result = detectAgent();
+    console.log(JSON.stringify(result, null, 2));
+  }
 }

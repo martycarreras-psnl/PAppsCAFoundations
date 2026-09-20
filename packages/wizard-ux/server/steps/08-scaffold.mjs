@@ -9,6 +9,7 @@ const PACKAGE_DIR = resolve(__dirname, '..', '..', '..');
 const SCAFFOLD = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'scaffold-foundations.mjs')).href);
 const SHELL = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'shell.mjs')).href);
 const PAC_TARGET = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'pac-target.mjs')).href);
+const CODE_APP = await import(pathToFileURL(resolve(PACKAGE_DIR, 'wizard', 'lib', 'code-app-target.mjs')).href);
 
 function makeFoundationLogger(log) {
   return {
@@ -61,15 +62,10 @@ function runFile(log, file, args, opts = {}) {
       resolvePromise(false);
     });
     child.on('close', (code) => {
-      // pnpm v11 exits non-zero on ERR_PNPM_IGNORED_BUILDS even when the build
-      // scripts are pre-approved in package.json — the install itself still
-      // completed. Treat that specific case as success so it doesn't surface a
-      // false failure. Any other non-zero exit is a real failure.
-      if (code !== 0 && opts.tolerateIgnoredBuilds && /ERR_PNPM_IGNORED_BUILDS/.test(output)) {
-        log.info('Note: pnpm deferred some optional build scripts (ERR_PNPM_IGNORED_BUILDS). Dependencies installed successfully; this is safe to ignore.');
-        resolvePromise(true);
-        return;
+      if (opts.installOperation && /ignored build scripts|allow-scripts|not yet covered by allowScripts|ERR_PNPM_IGNORED_BUILDS/i.test(output)) {
+        log.warn(CODE_APP.PA_AUTH_BUILD_GUIDANCE);
       }
+      if (code !== 0 && opts.authOperation) log.fail(CODE_APP.codeAppAuthFailure(output));
       resolvePromise(code === 0);
     });
   });
@@ -110,19 +106,24 @@ async function runInstall(log, { stage, label, projectDir, pnpm, mode, packages 
   // When scaffolding into a pnpm workspace root (pnpm-workspace.yaml present),
   // `pnpm add` aborts with ERR_PNPM_ADDING_TO_ROOT unless -w is passed. See
   // issue #76.
-  const rootFlag = pnpm && workspaceRoot ? ['-w'] : [];
-  const baseArgs = pnpm
-    ? (mode === 'base' ? ['install'] : mode === 'dev' ? ['add', '-D', ...rootFlag, ...packages] : ['add', ...rootFlag, ...packages])
-    : (mode === 'base' ? ['install'] : mode === 'dev' ? ['install', '-D', ...packages] : ['install', ...packages]);
+  const passes = mode === 'base' ? [['install']]
+    : SCAFFOLD.dependencyInstallPasses({ pnpm, dev: mode === 'dev', workspaceRoot, packages });
   // Freshness of the first-party @pacaf/* packages is guaranteed by pinning
   // their exact latest version at spec-build time (see
   // SCAFFOLD.freshDevPackageSpecs / resolveFirstPartyLatest), NOT by a
   // package-manager flag. `--prefer-online` is npm-only — pnpm aborts on it —
   // so it must never be passed to the actual install. See issue #81 follow-up.
-  const noisyArgs = pnpm
-    ? ['--reporter=append-only', ...baseArgs]
-    : ['--loglevel=http', '--no-audit', '--no-fund', ...baseArgs];
-  return runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv(), tolerateIgnoredBuilds: Boolean(pnpm) });
+  for (const args of passes) {
+    const noisyArgs = pnpm
+      ? ['--reporter=append-only', ...args]
+      : ['--loglevel=http', '--no-audit', '--no-fund', ...args];
+    if (!await runFile(log, bin, noisyArgs, { cwd: projectDir, env: installEnv(), installOperation: true })) return false;
+  }
+  if (mode !== 'base') {
+    SCAFFOLD.restoreDependencySpecs(projectDir, packages, { dev: mode === 'dev' });
+    if (!await runFile(log, bin, SCAFFOLD.dependencyLockfileArgs(pnpm), { cwd: projectDir, env: installEnv(), installOperation: true })) return false;
+  }
+  return true;
 }
 
 function toolCommand(name) {
@@ -184,7 +185,7 @@ A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeSc
 
 \`\`\`bash
 npm install
-npm run dev:local
+npm run dev:mock
 npm run prototype:seed
 npm run dev
 \`\`\`
@@ -192,8 +193,11 @@ npm run dev
 ## Build and Deploy
 
 \`\`\`bash
-npm run build
-pac code push
+npm run pa -- auth login
+npm run pa -- auth status --json
+az login --tenant <resource-tenant-id>
+npm run deploy -- --preflight
+npm run deploy
 \`\`\`
 
 ## Power Platform
@@ -207,7 +211,12 @@ pac code push
 |-------------|-----|
 ${envRows}
 
-Connector binding is intentionally not part of setup. Build the prototype first with mock data (\`npm run dev:local\`), settle the planning payload, then bind real data with the Code Apps plugin (\`/add-datasource\`) or \`pac code add-data-source\`.
+Commit \`.power-apps-targets.json\` with the environment, tenant/account, app ID and solution GUID/name. First publishing requires explicit \`npm run deploy -- --allow-create\`. The deployment helper builds before publishing. Existing app configuration is never reinitialized.
+
+Power Apps CLI authentication is separate from PAC profiles. Connected development runs Vite on port 3000 and the Power Apps local host on port 8080; mock development needs no sign-in.
+User initialization/publishing additionally requires separate Azure CLI sign-in with Global Discovery access. The read-only check must match environment ID, resource tenant and organization URL; PA \`homeAccountId\` is not resource-tenant proof. Disabled users, security-group exclusions, or delegated-admin access can return no rows: the guard stops without auto-login, permission grants, or an unguarded-push fallback.
+
+Connector binding is intentionally not part of setup. Build the prototype first with mock data (\`npm run dev:mock\`), settle the planning payload, then bind real data with the Code Apps plugin (\`/add-datasource\`) or \`npm run pa -- app add data-source\`. Retain PAC for solution ALM/admin.
 `, 'utf-8');
 }
 
@@ -224,6 +233,28 @@ export default {
     const existingOrigin = SHELL.run('git remote get-url origin', { cwd: rootDefault }) || '';
     const needsRemote = !existingOrigin || /PAppsCAFoundations/i.test(existingOrigin);
     return [
+      {
+        id: 'PA_ACCOUNT',
+        type: 'text',
+        label: 'Power Apps CLI account email',
+        help: 'Select the account that will initialize and publish this app. It is independent of PAC profiles. Separate Azure CLI sign-in and Global Discovery access are also required to verify the selected environment resource tenant.',
+        defaultValue: state.PA_ACCOUNT || '',
+        required: true,
+      },
+      {
+        id: 'PA_LOGIN',
+        type: 'confirm',
+        label: 'Sign in to Power Apps CLI through the browser',
+        help: 'This is separate from PAC and Azure CLI sign-in. Leave off only if npm run pa -- auth status --json shows the intended active account. The wizard never signs in Azure CLI for you.',
+        defaultValue: true,
+      },
+      {
+        id: 'ALLOW_NEW_CODE_APP',
+        type: 'confirm',
+        label: 'Allow initializing an unpublished Code App target',
+        help: 'Required for a new app. Existing power.config.json is always preserved. First publishing still requires separate create consent.',
+        defaultValue: false,
+      },
       {
         id: 'PROJECT_DIR',
         type: 'text',
@@ -271,6 +302,8 @@ export default {
     const appName = state.APP_NAME || 'Power Apps Code App';
     const projectDir = resolve(String(answers.PROJECT_DIR || process.cwd()).trim());
     const foundationLogger = makeFoundationLogger(log);
+    const paAccount = String(answers.PA_ACCOUNT || '').trim();
+    if (!/^[^\s@]+@[^\s@]+$/.test(paAccount)) throw new Error('Enter the intended Power Apps CLI account email.');
 
     if (existsSync(projectDir) && readdirSync(projectDir).length > 0 && answers.CONTINUE_NONEMPTY !== true) {
       throw new Error(`${projectDir} is not empty. Confirm that you want to continue, or choose a different path.`);
@@ -323,21 +356,21 @@ export default {
     if (await runInstall(log, { stage: '1/3', label: 'Installing base dependencies', projectDir, pnpm, mode: 'base', workspaceRoot })) {
       log.ok('[1/3] Base dependencies installed');
     } else {
-      log.warn('[1/3] Base dependency install reported errors; continuing to merge required packages.');
+      throw new Error(`[1/3] Base dependency install failed. ${CODE_APP.PA_AUTH_BUILD_GUIDANCE}`);
     }
 
     const prodPkgs = SCAFFOLD.packageSpecs(SCAFFOLD.REQUIRED_RUNTIME_PACKAGES);
     if (await runInstall(log, { stage: '2/3', label: 'Installing runtime packages (React, Fluent UI, TanStack Query, SDK)', projectDir, pnpm, mode: 'prod', packages: prodPkgs, workspaceRoot })) {
       log.ok('[2/3] Runtime packages installed');
     } else {
-      log.warn('[2/3] Some runtime packages failed to install.');
+      throw new Error(`[2/3] Runtime dependency install failed. ${CODE_APP.PA_AUTH_BUILD_GUIDANCE}`);
     }
 
     const devPkgs = SCAFFOLD.freshDevPackageSpecs();
     if (await runInstall(log, { stage: '3/3', label: 'Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)', projectDir, pnpm, mode: 'dev', packages: devPkgs, workspaceRoot })) {
       log.ok('[3/3] Dev packages installed');
     } else {
-      log.warn('[3/3] Some dev packages failed to install.');
+      throw new Error(`[3/3] Dev dependency install failed. ${CODE_APP.PA_AUTH_BUILD_GUIDANCE}`);
     }
 
     SCAFFOLD.writeConfig(projectDir, foundationLogger);
@@ -354,49 +387,40 @@ export default {
     SCAFFOLD.writeStarterFiles(projectDir, appName, foundationLogger);
     SCAFFOLD.copyFoundationFiles(PACKAGE_DIR, projectDir, foundationLogger, { publisherPrefix: state.PUBLISHER_PREFIX });
 
+    let recordedTarget;
     const pac = SHELL.pacPath();
     if (pac) {
-      log.info('Registering Code App in Power Platform...');
+      const paEnv = CODE_APP.codeAppUserEnv();
+      log.info('Verifying environment with PAC; Code Apps use a separate Power Apps CLI account.');
       const isUserAuth = (state.AUTH_PROFILE_TYPE || 'user') === 'user';
       const credentialValues = isUserAuth ? null : resolveCredentialValues(state);
-      try {
-        verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: false, requirePowerConfigTarget: false });
-      } catch (error) {
-        throw new Error(`${error.message}\n\npac code init requires the repo-scoped interactive PAC profile. Return to Step 4, enable user profile creation, complete browser/device sign-in, then retry Step 8.`);
-      }
-      const powerConfigPath = join(projectDir, 'power.config.json');
-      let skipInit = false;
-      if (existsSync(powerConfigPath)) {
-        const existing = PAC_TARGET.loadPowerConfigInfo(powerConfigPath);
-        const whoOut = SHELL.runSafe(pac, ['org', 'who']);
-        const whoInfo = whoOut ? PAC_TARGET.parsePacOrgWho(whoOut) : null;
-        if (existing.environmentId && whoInfo?.environmentId && existing.environmentId === whoInfo.environmentId.toLowerCase()) {
-          skipInit = true;
-          log.ok('power.config.json already matches active environment; skipping pac code init');
-        } else {
-          const quarantinePath = PAC_TARGET.quarantinePowerConfig(powerConfigPath);
-          log.warn(`Quarantined stale power.config.json at ${quarantinePath}`);
-        }
-      }
-      if (!skipInit) {
-        const initOk = await runFile(log, pac, [
-          'code', 'init',
-          '--displayName', appName,
-          '--buildPath', './dist',
-          '--fileEntryPoint', 'index.html',
-        ], { cwd: projectDir });
-        if (!initOk) throw new Error('pac code init failed. Check the live output above, then retry this step.');
-        if (!existsSync(powerConfigPath)) throw new Error('pac code init completed without creating power.config.json. Check the PAC output above, then retry Step 8 after resolving that PAC error.');
-        const repair = PAC_TARGET.repairPowerConfigDisplayNames(powerConfigPath);
-        if (repair.changed) log.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
-      }
-      verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: 'user', requirePowerConfig: true, requirePowerConfigTarget: true });
-      log.ok('power.config.json created and verified');
+      const verification = verifyPacTarget({ pac, projectDir, state, credentialValues, profileType: isUserAuth ? 'user' : 'spn', requirePowerConfig: false, requirePowerConfigTarget: false });
+      const environmentId = verification.whoInfo.environmentId;
+      const existing = CODE_APP.readExistingCodeApp(projectDir, environmentId);
+      log.info('Verifying environment ID, resource tenant and organization URL through read-only Global Discovery. This requires separate Azure CLI sign-in; no login or permission changes are automated.');
+      CODE_APP.verifyCodeAppResourceTenant({
+        environmentId, environmentUrl: verification.whoInfo.url, tenantId: state.PP_TENANT_ID, cloud: CODE_APP.codeAppCloud(existing || {}),
+      }, { root: projectDir, env: paEnv });
+      const allowCreate = answers.ALLOW_NEW_CODE_APP === true;
+      if (!existing?.appId && !allowCreate) throw new Error('Confirm initialization of an unpublished Code App target before continuing.');
+      const pa = CODE_APP.localCodeAppTool(projectDir);
+      if (answers.PA_LOGIN === true && !await runFile(log, pa, ['auth', 'login', '--account', paAccount], { cwd: projectDir, env: paEnv, authOperation: true })) throw new Error(`Power Apps CLI sign-in failed. ${CODE_APP.PA_AUTH_BUILD_GUIDANCE}`);
+      const authStatus = CODE_APP.parseCodeAppAuthStatus(SHELL.runSafeCapture(pa, ['auth', 'status', '--json'], { cwd: projectDir, env: paEnv }));
+      CODE_APP.codeAppAccount(authStatus, state.PP_TENANT_ID, paAccount);
+      if (!existing && !await runFile(log, pa, CODE_APP.codeAppInitArgs(appName, environmentId), { cwd: projectDir, env: paEnv })) throw new Error('pa app init failed.');
+      if (existing) log.ok('Existing power.config.json preserved; initialization skipped.');
+      const solutions = JSON.parse(SHELL.runSafe(pa, ['solution', 'list', '--json'], { cwd: projectDir, env: paEnv }) || 'null');
+      recordedTarget = CODE_APP.persistCodeAppTarget({
+        projectDir, targetKey: state.WIZARD_TARGET_ENV || 'dev',
+        environmentId, environmentUrl: verification.whoInfo.url, tenantId: state.PP_TENANT_ID,
+        authStatus, solutions, solutionId: state.SOLUTION_ID, solutionName: state.SOLUTION_UNIQUE_NAME, allowCreate,
+      });
+      log.ok('Power Apps target saved to .power-apps-targets.json. Commit this non-secret deployment identity.');
     } else {
-      log.warn('PAC CLI not found; skipping pac code init.');
+      throw new Error('PAC CLI is required to verify the selected environment before initializing with pa.');
     }
 
-    log.info('Dataverse is bound at the environment level. Other connectors are not part of setup — add them after prototype validation with /add-datasource or pac code add-data-source.');
+    log.info('Dataverse is bound at the environment level. Add connectors after prototype validation with /add-datasource or npm run pa -- app add data-source.');
 
     log.info('Running smoke tests...');
     if (await runCommand(log, 'npm run test:smoke', { cwd: projectDir })) log.ok('Smoke tests passed');
@@ -444,6 +468,8 @@ export default {
     return {
       stateUpdate: {
         PROJECT_DIR: projectDir,
+        SOLUTION_ID: recordedTarget.solutionId,
+        PA_ACCOUNT: recordedTarget.account,
         GIT_REMOTE: finalRemoteUrl || state.GIT_REMOTE || '',
       },
       completedStep: 8,

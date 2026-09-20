@@ -8,6 +8,8 @@ Copilot loads them automatically as you edit matching files. Other agents read t
 
 They are a reference set, not a tutorial.
 
+**CLI boundary:** Code App lifecycle and bindings use the pinned local Power Apps CLI via `pacaf-pa`; deployment uses `pacaf-deploy`. PAC remains for solution ALM/admin and Dataverse-skills ownership is unchanged. See `01-scaffold`, `02-connectors`, `04-deployment`, and [MIGRATION.md](../../MIGRATION.md) for exact mappings, separate auth, durable targets, and rollback.
+
 If you are a human opening this folder for the first time, do this instead:
 
 1. Go back to [../../README.md](../../README.md) and run the wizard (`npx @pacaf/wizard-ux@latest`)

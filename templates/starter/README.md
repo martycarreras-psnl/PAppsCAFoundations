@@ -19,9 +19,10 @@ If every line prints a version number with no errors, you're ready to run the wi
 | Node.js | Runs the wizard and all build tooling (installs npm) | v20+ |
 | Git | Version control; the wizard commits scaffolded files | 2.x+ |
 | .NET SDK | Required by the PAC CLI | 8.x+ |
-| PAC CLI | Registers and deploys the Code App to Power Platform (`dotnet tool install -g Microsoft.PowerApps.CLI.Tool`) | latest |
+| PAC CLI | Solution ALM/admin and Dataverse tooling (`dotnet tool install -g Microsoft.PowerApps.CLI.Tool`) | Team-tested version |
 | Python 3 | Recommended — powers the Dataverse-skills plugin | 3.x+ |
 | GitHub CLI (optional) | Convenience for repo/PR/auth from the terminal | 2.x+ |
+| Azure CLI (user publishing only) | Read-only Global Discovery Service environment/tenant verification after separate explicit login; not required for mocks/offline preflight/SPN updates | [Official install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
 
 **Install notes**
 
@@ -47,7 +48,24 @@ Run the setup wizard. It scaffolds the Code App, configures auth, provisions the
 npx @pacaf/wizard-ux@latest
 ```
 
-That's it. The wizard handles `pnpm install`, `pac code init`, dependency selection, and the first smoke test. No `wizard/`, `scripts/`, or `docs/` directory is copied into your repo — those are kept centrally and updated via `npx pacaf-update`.
+That's it. The wizard handles dependency installation, local `pa app init`, and the first smoke test. It installs exact-pinned `@microsoft/power-apps-cli@1.0.2` separately from runtime SDK `@microsoft/power-apps@1.4.0`. No `wizard/`, `scripts/`, or `docs/` directory is copied into your repo — those are kept centrally and updated via `npx pacaf-update`.
+
+### Working after setup
+
+```bash
+npm run dev:local                 # mock-only Vite, no platform auth needed
+npm run pa -- auth login          # separate from PAC auth
+npm run pa -- auth status --json
+npm run dev                       # Vite 3000 + Power Apps local host 8080
+npm run deploy -- --preflight      # non-mutating target validation
+npm run deploy                    # guarded entry point; user mode needs Azure login/GDS evidence
+```
+
+The local host uses `--config-only` and companion shutdown, so it cannot start a second Vite process. Deploy uses `.power-apps-targets.json` plus the preserved `power.config.json`, not just ignored wizard state. Initial creation requires an explicit `--allow-create`; SPN updates require separate opt-in and pre-existing maker-granted edit access. Never use bare `npx pa`, bypass target checks, or grant permissions automatically.
+
+**User-publish prerequisite:** CLI 1.0.2 home-account identity cannot prove the resource tenant. Separately sign into Azure CLI (`az login --allow-no-subscriptions --tenant "<expected-tenant-id>"`) with Global Discovery Service access. User publish/first creation verifies environment ID, tenant, and URL via a read-only fixed-cloud GDS query. Missing rows/access fail closed; there is no auto-login or unguarded fallback. Offline preflight makes no Azure/auth calls.
+
+Already have a PAC-created app? Follow the [Code App CLI migration and rollback guide](https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/MIGRATION.md); do not rerun init or recreate bindings.
 
 ## What this template gives you
 

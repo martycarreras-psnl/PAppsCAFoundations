@@ -52,7 +52,7 @@ export const REQUIRED_RUNTIME_PACKAGES = {
   '@fluentui/react-icons': '^2.0.270',
   '@tanstack/react-query': '^5.62.0',
   'react-router-dom': '^7.1.0',
-  '@microsoft/power-apps': '^1.0.3',
+  '@microsoft/power-apps': '1.4.0',
   concurrently: '^9.1.0',
 };
 
@@ -73,6 +73,7 @@ export const PNPM_ALLOWED_BUILD_DEPENDENCIES = [
 // Devs deps are computed dynamically so forks can rebrand the @pacaf scope.
 export function buildRequiredDevPackages(config = loadPacafConfig()) {
   return {
+    '@microsoft/power-apps-cli': '1.0.2',
     // Pin the first-party packages to the `latest` dist-tag rather than a
     // `^3.0.0` caret. With a warm pnpm store, a caret range lets pnpm resolve
     // to a previously-cached 3.x version instead of re-querying the registry,
@@ -117,23 +118,16 @@ const REMOVED_DEV_PACKAGES = [
 // Standard scripts written by the wizard. All references to legacy
 // in-repo helper scripts (node scripts/foo.mjs) are now <prefix>-* bins
 // provided by the scripts package.
-function buildRequiredScripts(config = loadPacafConfig(), solutionUniqueName = '') {
+export function buildRequiredScripts(config = loadPacafConfig()) {
   const crossPlatformDevLocal = IS_WIN
     ? 'set VITE_USE_MOCK=true && vite --port 3000'
     : 'VITE_USE_MOCK=true vite --port 3000';
 
   const b = (suffix) => binName(suffix, config);
 
-  // Bake the solution UNIQUE name into the deploy command so `npm run deploy`
-  // associates the Code App with its solution on first push (issue #81). When
-  // the name is unknown at scaffold time, pac-safe falls back to
-  // PP_SOLUTION_UNIQUE_NAME / wizard state and refuses a bare push.
-  const solutionArg = solutionUniqueName
-    ? ` --solution-name "${solutionUniqueName}"`
-    : '';
-
   return {
-    dev: 'concurrently "vite --port 3000" "pac code run"',
+    dev: `concurrently --kill-others-on-fail "vite --port 3000 --strictPort" "${b('pa')} app run --config-only --port 8080 --local-app-url http://localhost:3000"`,
+    'dev:mock': crossPlatformDevLocal,
     'dev:local': crossPlatformDevLocal,
     'prototype:seed': `${b('seed')} dataverse/planning-payload.json`,
     typecheck: 'tsc --noEmit',
@@ -148,7 +142,8 @@ function buildRequiredScripts(config = loadPacafConfig(), solutionUniqueName = '
     'test:e2e': 'playwright test',
     'setup:auth': b('setup-auth'),
     pac: b('pac'),
-    deploy: `npm run build && ${b('pac-safe')} --target dev --profile-type user --mutating${solutionArg} code push`,
+    pa: b('pa'),
+    deploy: `${b('deploy')} --target dev`,
     'sync:foundations': b('update'),
     'sync:foundations:check': `${b('update')} --check`,
   };
@@ -156,6 +151,39 @@ function buildRequiredScripts(config = loadPacafConfig(), solutionUniqueName = '
 
 export function packageSpecs(packages) {
   return Object.entries(packages).map(([name, version]) => `${name}@${version}`);
+}
+
+export function dependencyInstallArgs({ pnpm = false, dev = false, workspaceRoot = false, packages = [], exact = false } = {}) {
+  return [pnpm ? 'add' : 'install', ...(exact ? ['--save-exact'] : []), ...(dev ? ['-D'] : []),
+    ...(pnpm && workspaceRoot ? ['-w'] : []), ...packages];
+}
+
+export function dependencyInstallPasses(options = {}) {
+  const isPinnedPowerApps = (spec) => /^@microsoft\/power-apps(?:-cli)?@/.test(spec);
+  const packages = options.packages || [];
+  const ordinary = packages.filter((spec) => !isPinnedPowerApps(spec));
+  const pinned = packages.filter(isPinnedPowerApps);
+  return [
+    ...(ordinary.length ? [dependencyInstallArgs({ ...options, packages: ordinary })] : []),
+    ...(pinned.length ? [dependencyInstallArgs({ ...options, packages: pinned, exact: true })] : []),
+  ];
+}
+
+export function restoreDependencySpecs(dir, specs, { dev = false } = {}) {
+  const path = join(dir, 'package.json');
+  const pkg = JSON.parse(readFileSync(path, 'utf8'));
+  const section = dev ? 'devDependencies' : 'dependencies';
+  pkg[section] ||= {};
+  for (const spec of specs) {
+    const separator = spec.lastIndexOf('@');
+    if (separator <= 0) throw new Error(`Expected a versioned dependency spec: ${spec}`);
+    pkg[section][spec.slice(0, separator)] = spec.slice(separator + 1);
+  }
+  writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+export function dependencyLockfileArgs(pnpm = false) {
+  return ['install', pnpm ? '--lockfile-only' : '--package-lock-only'];
 }
 
 // Resolve the EXACT newest published version of the first-party @pacaf/* dev
@@ -282,6 +310,7 @@ export function createMinimalProject(dir, appName, solutionUniqueName = '') {
     private: true,
     version: '1.0.0',
     type: 'module',
+    engines: { node: '^22.0.0 || ^24.0.0' },
     dependencies: REQUIRED_RUNTIME_PACKAGES,
     devDependencies: REQUIRED_DEV_PACKAGES,
     scripts: buildRequiredScripts(loadPacafConfig(), solutionUniqueName),
@@ -334,7 +363,7 @@ export default defineConfig(({ command }) => ({
   // literal CSS @import and silently produces an empty stylesheet. The app
   // will render but every element will be unstyled. See issue #48.
   plugins: [react(), tailwindcss()],
-  server: { port: 3000 },
+  server: { port: 3000, strictPort: true },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
@@ -878,7 +907,7 @@ function NewTablesSteps() {
       <StepItem
         number={5}
         title="Connect and deploy"
-        description="Once the prototype validates, provision the Dataverse schema, register data sources with pac code add-data-source, swap mock providers for real ones, and deploy with pac code push."
+        description="Once the prototype validates, provision the Dataverse schema, register data sources with npm run pa -- app add data-source, swap mock providers for real ones, and deploy with npm run deploy."
         agentPrompt="The prototype looks good. Provision the Dataverse schema from the planning payload, register the data sources, and help me deploy."
       />
 
@@ -940,7 +969,7 @@ function ExistingTablesSteps() {
       <StepItem
         number={4}
         title="Register data sources and prototype"
-        description="Register your existing tables with pac code add-data-source to generate TypeScript services. Then scaffold a prototype backed by real data — you get a working app against your actual schema immediately."
+        description="Register your existing tables with npm run pa -- app add data-source to generate TypeScript services. Then scaffold a prototype backed by real data — you get a working app against your actual schema immediately."
         agentPrompt="Register my existing Dataverse tables as data sources and scaffold a prototype using the generated services. Show me real data from my environment."
       />
 
@@ -948,7 +977,7 @@ function ExistingTablesSteps() {
         number={5}
         title="Iterate and deploy"
         description="Refine the UI, add any new tables the grilling process identified, and deploy. Each iteration follows the same loop — plan any changes, grill the plan, prototype, connect, deploy."
-        agentPrompt="The prototype is working. Help me refine the UI and deploy to my environment with pac code push."
+        agentPrompt="The prototype is working. Help me refine the UI, verify .power-apps-targets.json and the separate Power Apps CLI account, then deploy with npm run deploy."
       />
 
       <Divider className={styles.divider} />

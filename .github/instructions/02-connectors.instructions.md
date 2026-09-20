@@ -32,9 +32,9 @@ These connectors have official support and documented patterns for Code Apps:
 
 ## Adding a Data Source
 
-**Solution reminder:** Every connector you add creates a **connection reference** in your Power Platform solution. Make sure your Code App's solution is active before running these commands. If you're also creating Dataverse tables for the connector to use, create those tables from within the solution context. See `01-scaffold.instructions.md` for the full solution-first rules.
+**Solution reminder:** Verify the app/environment and solution GUID before binding. There is no implicit "active solution" inherited from PAC auth. Reuse solution-aware connection references when required; keep their environment association. Dataverse tables still belong to the approved solution. See `01-scaffold.instructions.md`.
 
-**Planning reminder:** Do not use `pac code add-data-source` as a discovery tool for figuring out what your app should connect to. The connector strategy should follow a refined business scope and, for Dataverse, an approved schema plan.
+**Planning reminder:** Do not use `pa app add data-source` as a discovery tool for figuring out what your app should connect to. The connector strategy should follow a refined business scope and, for Dataverse, an approved schema plan.
 
 ### Recommended Timing
 
@@ -47,7 +47,7 @@ Do not ask for connection IDs during the initial scaffold if the app is still in
 
 ### Use Code Apps plugin skills first (required)
 
-Before running any `pac code add-data-source` command, invoke the appropriate Code Apps plugin skill. The skills know the correct flags, connection ID format, and generated-service adapter pattern for each connector type. See `AGENTS.md` → "Power Apps Code Apps Skills Plugin Integration" for the full routing table.
+Before running any `pacaf-pa app add data-source` command, invoke the appropriate Code Apps plugin skill. Use it for connector-specific patterns and apply the grouped, pinned local CLI mappings below if its examples still show legacy syntax. See `AGENTS.md` → "Power Apps Code Apps Skills Plugin Integration" for the full routing table.
 
 | Connector | Invoke |
 |---|---|
@@ -80,26 +80,38 @@ https://make.powerapps.com/environments/f9b87f8b-0abf-e629-affb-b13195d1ed14/con
 - **API ID**: `shared_service-now` (segment immediately after `connections/`)
 - **Connection ID**: `f8e0094f415946b984e2eb42bf943e46` (segment after the API ID)
 
-Use these values directly with `/add-connector -a shared_service-now -c f8e0094f415946b984e2eb42bf943e46`. This works for any connector — known or unknown — that the user can navigate to in the Maker Portal. Zero follow-up questions needed.
+Pass these values to `/add-connector`, then use `--connector shared_service-now --connection-id f8e0094f415946b984e2eb42bf943e46` in the local CLI. Also verify the URL's environment matches `power.config.json`; never reuse a connection from another environment.
 
-### Via PAC CLI (executed by plugin skills)
+### Via the pinned local Power Apps CLI (executed by plugin skills)
 
 The plugin skills drive these commands on your behalf. Shown here for reference:
 
 ```bash
 # Dataverse tables
-pac code add-data-source -a dataverse -t <logical_table_name>
+npm run pa -- app add data-source --connector dataverse --table "<logical-table-name>"
 
 # Non-Dataverse connectors
-pac code add-data-source -a <connector_api_id> -c <connection_id>
+npm run pa -- app add data-source --connector "<connector-api-id>" --connection-id "<connection-id>"
+
+# Tabular connector (SQL example; dataset syntax is connector-specific)
+npm run pa -- app add data-source --connector shared_sql --connection-id "<connection-id>" --table "[dbo].[Example]" --dataset "<server>,<database>"
+
+# Reuse a solution-aware reference: GUID, not the solution unique name
+npm run pa -- app add data-source --connector "<connector-api-id>" --connection-ref "<reference-logical-name>" --solution-id "<solution-guid>"
+
+# Refresh/remove by the actual registered data-source name
+npm run pa -- app refresh data-source --name "<data-source-name>"
+npm run pa -- app remove data-source --connector "<connector-api-id>" --name "<data-source-name>"
 ```
 
-> **Dataverse tables are owned by the Dataverse-skills plugin.** Provision the table first via the plugin's **dv-metadata** skill (see `07-dataverse-schema.instructions.md`), then register it as a Code App data source. The Code Apps plugin's **`/add-dataverse`** skill drives the `pac code add-data-source -a dataverse -t <table>` registration and regenerates `src/generated/**`.
+The `pa` script invokes `pacaf-pa`, which resolves exact-pinned local `@microsoft/power-apps-cli@1.0.2`. Never use bare `npx pa` or guess PAC short-flag equivalents. Verified mappings: `-a` → `--connector`, `-c` → `--connection-id`, `-t` → `--table`, `-d` → `--dataset`; connection references use `--connection-ref` plus `--solution-id <GUID>`. Removal may use `--force` only after the removal is explicitly authorized. CLI details: [Microsoft reference](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/reference/cli).
+
+> **Dataverse tables are owned by the Dataverse-skills plugin.** Provision the table first via **dv-metadata** (see `07-dataverse-schema.instructions.md`), then register it through **`/add-dataverse`** using `pacaf-pa app add data-source --connector dataverse --table <table>`. This generates the Code App's service layer; it does not replace schema provisioning.
 
 When a developer is ready to bind a non-Dataverse connector, first try to discover existing connections in the environment:
 
 ```bash
-pac connection list
+npm run pa -- connection list --json
 ```
 
 Filter the output to the connector API ID such as `shared_office365users` or `shared_sharepointonline`, then present the discovered connections and let the developer choose one. If no matching connection exists, instruct the developer to create it in Power Apps Maker Portal → Data → Connections, then re-scan. Only fall back to pasted Connection IDs when discovery is not possible.
@@ -110,12 +122,12 @@ This creates files in `src/generated/`:
 
 ### What Happens Under the Hood
 
-When you run `pac code add-data-source`, the CLI:
+When you run `pa app add data-source`, the CLI:
 1. Registers the connector in `power.config.json`
 2. Scaffolds connection reference metadata
 3. Prepares the connector for consent flow at runtime
 
-As part of `pac code add-data-source`, the CLI:
+As part of `pa app add data-source`, the CLI:
 1. Reads the connector's OpenAPI definition
 2. Generates strongly-typed TypeScript service classes and model interfaces
 3. Places everything under `src/generated/`
@@ -137,7 +149,7 @@ This keeps the mock-to-real swap localized and prevents generated connector shap
 
 ### The Golden Rule: Never Edit Generated Files
 
-Generated files will be overwritten the next time connector output is refreshed by `pac code add-data-source`. Instead:
+Generated files will be overwritten by `pa app add data-source` / `pa app refresh data-source`. Instead:
 
 **Adapt services behind repository contracts:**
 
@@ -213,7 +225,7 @@ HTTP 400 Bad Request
 }
 ```
 
-The app compiles cleanly, `pac code add-data-source` succeeds, the app deploys, and every list view comes back **empty**. Writes appear to succeed from the user's perspective because mutations error in the network layer but TanStack Query's optimistic update still renders the in-flight value.
+The app compiles cleanly, data-source generation succeeds, the app deploys, and every list view comes back **empty**. Writes appear to succeed from the user's perspective because mutations error in the network layer but TanStack Query's optimistic update still renders the in-flight value.
 
 **Required setup:** add the environment URL to `.env` (the same value as `PP_ENV_DEV` from `00-before-you-start.instructions.md`, no trailing slash):
 
@@ -367,7 +379,7 @@ export function useUserPhoto(userId: string) {
 For custom APIs, start by defining your OpenAPI spec and registering it as a custom connector in Power Platform. Then add it to your Code App:
 
 ```bash
-pac code add-data-source  # Select your custom connector from the list
+npm run pa -- app add data-source --connector "<custom-connector-id>" --connection-id "<connection-id>"
 ```
 
 The generated service will have methods matching your API's operations. Wrap them with hooks just like built-in connectors.

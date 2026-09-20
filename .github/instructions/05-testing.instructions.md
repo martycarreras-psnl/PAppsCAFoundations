@@ -63,6 +63,14 @@ When validating the real Code App experience:
 - Use the **Power Apps local-play URL** emitted by the runtime, not bare `http://localhost:*`
 - If Microsoft login is required, stop and ask the user to complete sign-in manually before proceeding
 
+## CLI migration evidence
+
+For tooling migrations, additionally verify mock-only dev without platform auth, the separate Vite 3000/local-host 8080 topology (`--config-only` and companion shutdown), and guarded deployment preflight without sign-in or publishing. Negative target/auth/build tests must never reach push.
+
+Controlled connected tests must exercise one Dataverse table and one non-Dataverse connector with the pinned CLI/SDK. Inspect generated paths; validate existing provider adapters and live `getMetadata` registration, string/numeric `RequiredLevel` mapping, `DataverseFieldLabel`, and required-field submit guards. Keep HashRouter and relative asset-base checks independently of any legacy generated-parameters repair. Fixture or mocked tests are not proof of live connector/SPN publishing; report unperformed integration checks explicitly.
+
+The optional published `@pacaf/scripts/tests/integration-pa.mjs` harness defaults to offline validation. Its `--execute` phases require an existing disposable app and exact environment/app confirmations. Connector generation/build and guarded publish results do **not** establish runtime/provider/metadata-form acceptance. See [MIGRATION.md](../../MIGRATION.md#optional-controlled-integration-harness) for the plan schema and explicit execution flow.
+
 ## Testing Stack
 
 | Layer | Tool | Purpose |
@@ -498,7 +506,7 @@ test.describe('Responsive Layout', () => {
 - Accessibility basics (correct roles, labels, keyboard navigation)
 
 ### Do not test:
-- Generated files (`src/generated/`) — these are produced by PAC CLI and are the CLI's responsibility
+- Generated files (`src/generated/`) — these are produced by the Power Apps CLI; validate integration contracts without editing generated code
 - Fluent UI component internals — trust the library
 - Simple pass-through components with no logic
 - TypeScript types (the compiler already validates these)

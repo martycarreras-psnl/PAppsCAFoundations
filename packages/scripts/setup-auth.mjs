@@ -4,14 +4,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
-import { decrypt, isEncrypted } from '../wizard/lib/crypto.mjs';
-import { loadState } from '../wizard/lib/state.mjs';
+import { decrypt, isEncrypted } from './lib/crypto.mjs';
+import { loadState } from './lib/state.mjs';
 import {
   buildPacProfileName,
   getWizardStateSnapshot,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
-} from '../wizard/lib/pac-target.mjs';
+} from './lib/pac-target.mjs';
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: pacaf-setup-auth\nCreate and verify PAC auth profiles for solution ALM/admin using project-local .wizard-state.json and .env.local or 1Password credentials. Power Apps CLI authentication is separate (pa auth login/status).');
+  process.exit(0);
+}
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -188,10 +193,8 @@ console.log('');
 console.log('Daily usage:');
 console.log('  SPN profiles are ready for pac solution export/import and pac org who.');
 console.log('');
-console.log('  ⚠ pac code push requires user (interactive) auth — SPN is rejected.');
-console.log('  The wizard creates a user profile automatically during steps 7-9.');
-console.log('  Or create one manually:');
-console.log('    pac auth create --name <profile> --environment <url> --deviceCode');
+console.log('  Power Apps Code App operations use separate pa auth login/status authentication.');
+console.log('  These PAC profiles do not sign you into the Power Apps CLI.');
 if (use1Password) {
   console.log('');
   console.log('  Re-run this script after secret rotation.');

@@ -12,4 +12,5 @@ For the full agent support matrix and verification steps, see [docs/agent-suppor
 - `AGENTS.md` (imported above) contains the root architectural contract shared by all coding agents.
 - `src/generated/` is read-only. Never edit files there.
 - Port 3000 is required for local dev. Do not change it.
+- Code App operations use the exact-pinned local `@microsoft/power-apps-cli` via `pacaf-pa`; deploy through `pacaf-deploy --target dev`. PAC remains for ALM/admin, with separate authentication. Follow the responsibility boundary in `AGENTS.md`, not legacy PAC-only plugin examples.
 - This is a Power Apps Code App. Do not suggest non-Power-Platform deployment targets, alternative frameworks, or CSS libraries other than Fluent UI v9.

@@ -73,7 +73,7 @@ The planning artifact is the handoff between planning and execution. Once it exi
 
 1. **Discover first.** Run the existing-schema / OOB-first decision flow in `07a-existing-schema-discovery.instructions.md` (backed by the plugin's `dv-query` `list_tables` / `describe_table`). Resolve every Pause Moment before creating anything.
 2. **Provision with `dv-metadata`.** Walk the `tables`, `relationships`, and option-set entries in `dataverse/planning-payload.json` and create them through `dv-metadata`, in the golden sequence below. Confirm the solution at the start of the session so every artifact lands in your solution (not the Default Solution).
-3. **Register Dataverse data sources** for the Code App via the **add-dataverse** skill plus `pac code add-data-source -a dataverse -t <table>`, which regenerates `src/generated/**` for each table.
+3. **Register Dataverse data sources** for the Code App via the **add-dataverse** skill plus `pacaf-pa app add data-source --connector dataverse --table <table>`, which regenerates `src/generated/**` for each table using the pinned local CLI.
 
 The planning artifact remains the re-runnable source of truth: it records every naming decision and lets you re-provision a fresh environment by replaying the same `dv-metadata` calls. There is no separate `pacaf-validate` / `pacaf-generate` / `pacaf-register` step — the agent reads the plan and drives the plugin. The reserved-name and reserved-column guards (below) are enforced by agent reasoning during provisioning, not by a script.
 
@@ -115,11 +115,11 @@ Every schema bootstrap script must follow this exact order. Reversing any step c
 5. Lookup Columns / Relationships (referencing tables created in step 2)
 6. Security Role — "<App Name> Collaborator" with Collaborator-level privileges on all custom tables
 7. PublishAllXml (makes ALL schema changes visible to the runtime)
-8. pac code add-data-source -a dataverse -t <table> (registers each table)
-9. Generated connector output refreshes as each `pac code add-data-source` command completes
+8. pacaf-pa app add data-source --connector dataverse --table <table> (registers each table)
+9. Generated connector output refreshes as each `pa app add data-source` command completes
 ```
 
-Skipping step 7 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pac code add-data-source` until published.
+Skipping step 7 is the most common cause of "column not found" or "table not found" errors — Dataverse metadata API creates artifacts in an unpublished state. They exist in the metadata but are invisible to the runtime, OData, and `pa app add data-source` until published.
 
 Skipping step 6 means users with only Basic User cannot access your custom tables — Dataverse denies access by default on new custom entities.
 
@@ -290,7 +290,7 @@ When creating a Picklist column via the Web API, bind it to the global option se
 
 ### Never hardcode integer values in React code
 
-The PAC CLI generates TypeScript models from your Dataverse schema in `src/generated/models/`. These generated files contain `as const` objects mapping integer values to string labels. Always import and use these — never write raw numbers like `100000002` in your components.
+The Power Apps CLI generates TypeScript models from your Dataverse schema in `src/generated/models/`. These generated files contain `as const` objects mapping integer values to string labels. Always import and use these — never write raw numbers like `100000002` in your components.
 
 **The generated pattern (do not edit these files manually):**
 
@@ -672,7 +672,7 @@ pac solution check --path ./solution/solution-unmanaged.zip --outputDirectory ./
 
 ## Publishing and Registration
 
-Schema changes created via the Web API are **not visible** to apps, connectors, or `pac code add-data-source` until they're published. This is the most commonly missed step.
+Schema changes created via the Web API are **not visible** to apps, connectors, or `pa app add data-source` until they're published. This is the most commonly missed step.
 
 ### Step 1: Publish all customizations
 
@@ -699,8 +699,8 @@ After publishing, register each table with your Code App so the TypeScript SDK i
 
 ```bash
 # For each table your app needs:
-~/.dotnet/tools/pac code add-data-source -a dataverse -t agtpo_project
-~/.dotnet/tools/pac code add-data-source -a dataverse -t agtpo_agentidea
+npm run pa -- app add data-source --connector dataverse --table agtpo_project
+npm run pa -- app add data-source --connector dataverse --table agtpo_agentidea
 # ... one command per table
 
 # Generated files in src/generated/ refresh during each add-data-source run
@@ -711,12 +711,12 @@ This creates/updates:
 - `src/generated/models/<Table>Model.ts` — TypeScript interfaces
 - `.power/schemas/` — schema metadata
 
-**Never edit files in `src/generated/`** — they're regenerated when `pac code add-data-source` refreshes connector output.
+**Never edit files in `src/generated/`** — they're regenerated by `pa app add data-source` / `app refresh data-source`. Verify actual output paths and provider contracts. Register each table's `getMetadata` in `fieldMetadataServiceRegistry` and preserve `DataverseFieldLabel`, required-level handling, and metadata-driven submit validation (`09-form-field-pattern.instructions.md`).
 
 ### Step 3: Install/update the SDK package
 
 ```bash
-npm install @microsoft/power-apps@^1.0.3
+npm install --save-exact @microsoft/power-apps@1.4.0
 ```
 
 ### Complete bootstrap sequence
@@ -729,10 +729,10 @@ The agent uses the planning artifact (`dataverse/planning-payload.json`) to driv
 2. Provision via `dv-metadata`: Create global option sets, tables, columns, relationships (the plugin handles idempotency and propagation delays)
 3. Create security role via `dv-security` or `dv-metadata`
 4. Publish: The plugin calls `PublishAllXml` automatically after metadata changes
-5. Register data sources: `pac code add-data-source -a dataverse -t <table>` for each provisioned table (driven by the add-dataverse skill)
-6. Install SDK: `npm install @microsoft/power-apps@^1.0.3`
+5. Register data sources: `pacaf-pa app add data-source --connector dataverse --table <table>` for each provisioned table (driven by the add-dataverse skill)
+6. Restore the pinned SDK (`@microsoft/power-apps@1.4.0`) using the existing package manager and lockfile; install only if absent
 
-There is no `pacaf-validate` / `pacaf-generate` / `pacaf-register` step — the planning payload is the re-runnable source of truth and the agent drives the plugin + PAC CLI directly.
+There is no `pacaf-validate` / `pacaf-generate` / `pacaf-register` step — the planning payload is the re-runnable source of truth. Dataverse-skills still owns schema/data, PAC owns ALM/admin, and the pinned local Power Apps CLI owns Code App bindings.
 
 **Without the plugin (fallback):**
 
@@ -744,7 +744,7 @@ After completing the schema phase, return all of the following:
 
 1. **Actions performed** — option sets, tables, columns, relationships, roles, publish, data-source registration
 2. **Artifacts updated** — schema plan file, setup scripts, generated SDK files
-3. **Validation result** — publish succeeded, `pac code add-data-source` succeeded, and generated connector output is current
+3. **Validation result** — metadata publish succeeded, `pa app add data-source` succeeded, and generated connector output is current
 4. **Generated plan artifacts** — `provision-tables.plan.json`, `provision-relationships.plan.json`, and `register-datasources.plan.json` are current for the checked-in planning payload
 4. **Next phase recommendation** — connector integration or UI implementation
 
@@ -787,7 +787,7 @@ Before writing any setup script or creating any schema manually, answer these qu
 
 **Publishing & Registration:**
 - [ ] Does the script call `PublishAllXml` after all schema changes (including the security role)?
-- [ ] Is `pac code add-data-source -a dataverse -t <table>` run for every table the app needs?
+- [ ] Is `pacaf-pa app add data-source --connector dataverse --table <table>` run for every table the app needs?
 - [ ] Is generated connector output current after adding data sources?
 - [ ] Is the setup script idempotent (safe to re-run on an environment that already has the schema)?
 - [ ] Are generated TypeScript types regenerated after any schema change?

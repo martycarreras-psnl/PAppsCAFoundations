@@ -26,27 +26,20 @@ Deployment is the final phase in the delivery sequence:
 
 If testing is incomplete, stop and complete `05-testing.instructions.md` first.
 
-## CLI Strategy — Current Default vs Evaluation Track
+## CLI Strategy — Explicit Responsibility Split
 
-Foundations currently uses **PAC CLI** as the default execution path because it aligns with the repo's existing wizard, user memory, and service-principal auth setup:
+Code App init, local host, publish, and connector generation use exact-pinned **project-local `@microsoft/power-apps-cli@1.0.2`**, through `pacaf-pa`. The runtime SDK is separately pinned to `@microsoft/power-apps@1.4.0`. Never run bare `npx pa`, download a CLI during deploy, redirect `PAC_BIN`, or infer aliases from old flat `power-apps` commands.
 
-- `pac code init`
-- `pac code add-data-source`
-- `pac code push`
+**PAC remains the solution ALM/admin CLI.** Its auth profiles and `pacaf-setup-auth` are separate from `pa auth login/status/switch`. Dataverse-skills responsibilities are unchanged. Preserve the configured registry/CFS mirror, lockfile, package manager, and dependency-build allowlist.
 
-The npm CLI (`npx power-apps`) is a valid evaluation track and may replace parts of the PAC workflow later, but it is **not** the default in Foundations yet.
-
-When documenting or implementing new automation:
-- Keep PAC CLI as the default unless a repo-wide migration decision has been made
-- If you mention `npx power-apps`, label it as an evaluation or future migration path
-- Do not mix PAC and npm CLI commands in the same canonical flow without explaining why
+Command mappings were checked against Microsoft's [CLI reference](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/reference/cli), [environment variables](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/reference/environment-variables), and [SPN publishing guide](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/use-service-principal) on 2026-09-19. `--config-only` is additionally verified by CLI 1.0.2 help (it is not listed in the public run-parameter table).
 
 ## Deployment Model Overview
 
-Code Apps deploy through the Power Platform CLI (`pac code push`), which packages your built web app and publishes it to a Dataverse environment. The app runs on Power Platform infrastructure with Microsoft Entra ID authentication handled automatically.
+Code Apps deploy through `pacaf-deploy`, which validates the target, builds, and invokes the local `pa app push --solution-id <solution-guid>`. The app runs on Power Platform infrastructure with Microsoft Entra ID authentication handled automatically at runtime.
 
 ```
-Local Dev (port 3000)  →  Build (Vite)  →  pac code push  →  Dataverse Environment
+Local Dev (port 3000)  →  Guarded build/publish  →  Power Platform Environment
                                                                     ↓
                                                            Power Apps URL
 ```
@@ -62,12 +55,13 @@ Feature Branch → PR → CI (build + lint + test) → Merge to main → Deploy 
 ## Local Development
 
 ```bash
-# Start dev server + PAC Code Run simultaneously
+# Start dev server + Power Apps local host simultaneously
 npm run dev
 
 # This runs concurrently:
 #   - Vite dev server on port 3000 (HMR, fast refresh)
-#   - PAC Code Run (proxies connector calls through Power Platform)
+#   - pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000
+# concurrently --kill-others-on-fail ensures either failure stops its companion.
 ```
 
 Port 3000 is required — the Power Apps SDK will not function on any other port during local development.
@@ -78,7 +72,7 @@ Port 3000 is required — the Power Apps SDK will not function on any other port
 # Type-check then build with Vite
 npm run build
 
-# Output goes to dist/ — this is what pac code push uploads
+# Output goes to dist/ — this is what pa app push uploads
 ```
 
 The build must produce a clean `dist/` folder with no TypeScript errors. The CI pipeline enforces this.
@@ -89,7 +83,7 @@ Before any deployment, record all of the following:
 
 1. Build result: `npm run build` passed
 2. Test result: unit tests and the required E2E / production validation checks passed
-3. Environment confirmation: `pac org who` or equivalent environment check matches the target
+3. Target confirmation: `.power-apps-targets.json`, `power.config.json`, and separate `pa` account/tenant checks match; `pac org who` alone is insufficient
 4. Scope summary: what changed in schema, connectors, or UI
 
 If any item is missing, do not deploy.
@@ -98,34 +92,62 @@ If any item is missing, do not deploy.
 
 For quick iteration during development, deploy directly from your machine.
 
-> **SPN auth does not work for `pac code push`.** The BAP checkAccess API rejects service principal tokens. You need a **user** auth profile instead. The wizard creates one automatically during steps 7–9. **This is a one-time setup** — after the initial device-code sign-in, PAC CLI caches a refresh token that auto-renews (~90 days), so subsequent pushes work silently with no browser prompt.
+Persist target identity in **`.power-apps-targets.json`**, not just ignored wizard state. This is non-secret structural configuration; never put credentials in it:
 
-> **Always push with `-s "<SolutionUniqueName>"` — and get it right on the FIRST push.** A bare `pac code push` creates the Code App **outside** any solution. The failure is silent: PAC prints `App pushed successfully` even though the app never becomes a solution component. The Dataverse `canvasapps` record is created only on the first push, so a later `-s` re-push will **not** retroactively associate an app that was first pushed without it — recovery requires deleting and re-pushing with `-s` from a clean state. The value of `-s` must be the solution's **unique** name (e.g. `AIPMO`), never the friendly display name (e.g. `AI PMO`); a display name is accepted but silently no-ops. Resolve and verify the unique name with `pac solution list` before pushing.
-
-```bash
-# One-time: create a user auth profile for your dev environment
-pac auth create --name pp-myrepo-d-u-abcd1234 --environment https://your-org-dev.crm.dynamics.com --deviceCode
-
-# Select the user profile (NOT the SPN profile)
-pac auth select --name pp-myrepo-d-u-abcd1234
-
-# Verify you're connected to the right environment
-pac org who
-
-# Confirm the solution UNIQUE name (the left-hand "Unique Name" column, not the friendly name)
-pac solution list
-
-# Build and deploy — pass the solution UNIQUE name so the app lands in the solution
-npm run build
-pac code push -s "YourSolutionUniqueName"
-
-# Verify the app is actually a solution component (do not trust the success message):
-# export the solution and confirm the Code App appears in customizations.xml, or query
-# /api/data/v9.2/solutioncomponents?$filter=_solutionid_value eq <solutionGuid>
-pac solution export --name YourSolutionUniqueName --path ./out.zip --overwrite
+```json
+{
+  "version": 1,
+  "targets": {
+    "dev": {
+      "environmentId": "<environment-id>",
+      "environmentUrl": "https://your-org-dev.crm.dynamics.com",
+      "cloud": "public",
+      "tenantId": "<tenant-guid>",
+      "account": "maker@contoso.com",
+      "appId": "<existing-code-app-guid>",
+      "solutionId": "<solution-guid>",
+      "solutionName": "YourSolutionUniqueName"
+    }
+  }
+}
 ```
 
-The SPN profile you created during initial setup is still used for `pac solution export/import`, `pac org who`, and other non-`pac code` operations. Keep both profiles — switch between them as needed.
+Replace placeholders with verified identities before deploying. Environment IDs may be UUIDs or `Default-<UUID>`. `cloud` defaults to `public`. CLI cloud → config `region` mappings are `public` → `prod`, `usgov` → `gccmoderate`, `usgovhigh` → `gcchigh`, `usgovdod` → `dod`, and `china` → `mooncake`; reject a conflicting cloud/config rather than silently retargeting. Preserve the existing app/environment and bindings. The solution GUID is for `pa`; the unique name is for PAC ALM. Do not confuse the Code App `appId` with an Entra client ID.
+
+CLI 1.0.2 `auth status --json` returns `{success: true, signedIn, activeAccount: {username, homeAccountId}, accounts: [{username, homeAccountId, isActive}]}` (with `activeAccount: null` when absent), **not resource-tenant evidence**. A matching `username` or home-tenant suffix is insufficient: a cached account can have home tenant A while acquiring a token for resource tenant B, even when the expected tenant equals A.
+
+**User publishing requires independent Global Discovery Service (GDS) evidence.** Sign into **Azure CLI separately and explicitly**, using an account with discovery access to the intended environment. The helper performs read-only `az rest` against its fixed, cloud-specific GDS URL/resource and requires the returned `EnvironmentId`, `TenantId`, and `Url` to match the durable target. It never auto-logs in, accepts a caller-selected discovery endpoint, or falls back to an unguarded push.
+
+This verifies the **environment's resource tenant**, not the opaque tenant of a `pa` access token. `pa` status verifies the expected username and stable home-account identity only; never use its tenant suffix as tenant evidence or inspect credential caches. PAC profiles, `pa` login, and Azure CLI login are three distinct contexts.
+
+GDS may omit environments for disabled users, security-group restrictions, or delegated-administrator visibility limitations. Missing/ambiguous rows, missing Azure login, discovery failures, or mismatched fields must fail closed. Resolve authorized discovery access; do not fall back to home-account inference, manually edit identities, or bypass the helper. Explicit-tenant SPN updates remain an existing-app-only alternative after their own permission prerequisites.
+
+```bash
+# Restore dependencies from the chosen lockfile first; do not install during deploy.
+# Separate interactive sign-in (never inferred from PAC profiles)
+npm run pa -- auth login --account maker@contoso.com
+npm run pa -- auth status --json
+# If another signed-in account is active:
+npm run pa -- auth switch --account maker@contoso.com
+# Separately, user-authorized Azure CLI sign-in for read-only GDS evidence:
+az login --allow-no-subscriptions --tenant "<expected-tenant-id>"
+
+# Non-mutating validation: no login, build, publish, or permission changes
+npm run deploy -- --preflight
+
+# Guarded publish; verifies pa identity plus independent GDS target evidence
+npm run deploy
+```
+
+`deploy` must call `pacaf-deploy --target dev`. Offline `--preflight` requires the pinned local CLI installed, but does not build, invoke Azure CLI, inspect ambient auth, or contact the cloud. Real deployment builds with the project's package manager, checks relative HTML assets and routing, then verifies the selected auth mode, independent GDS evidence in user mode, and the solution lookup. CLI 1.0.2 `solution list --json` returns `{success: true, items: [{solutionid, uniquename, friendlyname, …}]}`, **not a raw array**; the guard must match GUID **and unique name**, not the friendly name.
+
+The helper fails closed on missing/malformed or mismatched environment, URL, tenant/account, app ID, solution GUID/name, config, or conflicting ambient `PA_CLI_*` overrides, and revalidates configuration before spawning push. Do not bypass a rejection by patching identities to whichever environment happens to be active. The general `pacaf-pa` runner refuses `app push` and directs callers to the guarded deploy helper.
+
+**Never append `--environment-id` to `pa app push`.** CLI 1.0.2 gets it from verified `power.config.json`; the init command's environment flag is not a push flag. Never supply arbitrary push overrides through the helper.
+
+For an explicitly authorized first creation, use `pacaf-deploy --target dev --auth user --allow-create`, with an empty `appId` (`""`) in the target and an uncreated app config. Separate Azure CLI/GDS evidence is required just as for user-mode updates. After successful first push, the helper persists the app ID written to config; verify solution membership separately. Default deploy must not accidentally create a replacement. Never run `pa app init` as a migration or wrong-target recovery step.
+
+PAC profiles remain for `pac solution export/import`, `pac org who`, and admin work; neither CLI's sign-in authenticates the other.
 
 This manual flow is acceptable for personal dev environments only. Test and production deployments must go through CI/CD.
 
@@ -178,7 +200,39 @@ jobs:
 
 This pipeline exports the unmanaged solution from dev, bumps the version, and commits the refreshed source back to the repo. Promotion to test and production is handled by **Power Platform Pipelines** (managed deployments configured in the admin center) — not by this GitHub pipeline.
 
-> **Why not `pac code push` in CI/CD?** The BAP checkAccess API rejects SPN tokens for `pac code push`. Solution export sidesteps this entirely because the Code App is embedded inside the solution. Push to dev locally (user profile, one-time setup), then let the pipeline export and version-track the result.
+Solution export remains the default promotion path. An optional SPN job may update an **already-published** dev Code App before export, but only after explicit setup below. This is not enabled by migration and is not permission bootstrap.
+
+### Optional SPN update of an existing app
+
+An authorized maker must grant the SPN environment access **and** app edit access beforehand. Environment roles alone do not grant app edit. The principal passed to sharing is the **Enterprise Application object ID**, not the App Registration object ID or application/client ID.
+
+After explicit human authorization, the maker may run the following once from the verified existing app directory, with SPN mode disabled:
+
+```bash
+npm run pa -- auth login --account maker@contoso.com
+npm run pa -- auth status --json
+npm run pa -- app share --principal "<enterprise-application-object-id>" --access edit
+```
+
+**Never run share automatically**, during migration, in the publish job, or as an SPN self-grant. Missing permission must fail with an actionable message, not trigger a grant or user-auth fallback.
+
+For opted-in recurring updates, inject these variables through the CI secret store (never `VITE_*`, source files, logs, command-line secrets, or browser bundles):
+
+```yaml
+# Add only after environment access and maker-granted edit access are verified.
+# npm ci / pnpm install --frozen-lockfile must have restored the pinned local CLI.
+- name: Update existing dev Code App
+  run: npm run deploy -- --auth spn
+  env:
+    PA_CLI_USE_SP_AUTH: 'true'
+    PA_CLI_SP_CLIENT_ID: ${{ secrets.PA_CLI_SP_CLIENT_ID }}
+    PA_CLI_SP_CLIENT_SECRET: ${{ secrets.PA_CLI_SP_CLIENT_SECRET }}
+    PA_CLI_SP_TENANT_ID: ${{ secrets.PA_CLI_SP_TENANT_ID }}
+```
+
+The helper builds then uses `pa app push --solution-id <GUID> --non-interactive`. SPN mode requires a persisted existing app ID **and `spnClientId` in the selected target**, matching `PA_CLI_SP_CLIENT_ID`; this is the Entra application/client ID, not the Code App's `appId` or the sharing object ID. SPN mode never permits `--allow-create`. `PA_CLI_SP_TENANT_ID` must match the target. `CI=true` can select SPN behavior in the upstream CLI, so never rely on ambient CI state to choose auth: specify `--auth spn`, or use explicitly guarded user mode. PAC's `PP_*` credentials and profiles do not automatically configure `PA_CLI_*`.
+
+### PAC solution export pipeline
 
 ```yaml
 # .github/workflows/deploy.yml
@@ -306,7 +360,7 @@ Maintain at least three environments:
 
 | Environment | Purpose | Deployment |
 |-------------|---------|------------|
-| **Development** | Day-to-day coding, experimentation | `pac code push -s "<SolutionUniqueName>"` (user profile, silent) |
+| **Development** | Day-to-day coding, experimentation | `pacaf-deploy --target dev` (user by default; SPN updates opt-in) |
 | **Test/QA** | Validation, UAT, stakeholder demos | Power Platform Pipelines (managed) |
 | **Production** | End users | Power Platform Pipelines (managed, with approval) |
 
@@ -341,7 +395,7 @@ The default solution is unmanageable. If anything your Code App touches is in th
 
 Your solution contains two categories of artifacts:
 
-**1. The Code App itself** — your React/TypeScript application, deployed via `pac code push`. This is the "code" side.
+**1. The Code App itself** — your React/TypeScript application, deployed via guarded `pacaf-deploy`. This is the "code" side.
 
 **2. Platform artifacts** — everything in Dataverse that the Code App depends on:
 
@@ -482,9 +536,8 @@ git commit -m "Export solution with updated ProjectTask table schema"
 The standard deployment cycle:
 
 ```bash
-# Step 1: Push the Code App to dev (user profile — one-time setup, silent after)
-npm run build
-pac code push -s "YourSolutionUniqueName"
+# Step 1: Validate, build and push the Code App to dev (separate pa user auth)
+npm run deploy
 
 # Step 2: Export the full solution from dev (SPN profile)
 pac solution export --path ./solution/solution-unmanaged.zip --name YourSolutionName --managed false --overwrite

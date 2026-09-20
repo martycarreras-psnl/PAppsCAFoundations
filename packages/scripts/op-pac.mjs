@@ -5,6 +5,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 
+if (process.argv[2] === '--help' || process.argv[2] === '-h') {
+  console.log('Usage: pacaf-pac <pac command...>\nRun PAC with 1Password references from .env. Use PAC for solution ALM/admin; Power Apps CLI authentication is separate.');
+  process.exit(0);
+}
+
 function fail(message) {
   console.error(`ERROR: ${message}`);
   process.exit(1);

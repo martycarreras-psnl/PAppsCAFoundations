@@ -6,6 +6,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
+if (args.includes('--help') || args.includes('-h')) {
+  console.log('Usage: pacaf-migrate-thin [--dry-run]\nArchive legacy in-tree tooling and switch to published Foundations packages.');
+  process.exit(0);
+}
 const dryRun = args.includes('--dry-run');
 
 const LEGACY_DIRS = ['wizard', 'wizard-ux', 'scripts', 'docs'];

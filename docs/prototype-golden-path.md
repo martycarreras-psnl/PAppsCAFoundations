@@ -115,10 +115,10 @@ If the planning payload's `orgStructure` section defines data-isolation boundari
 After schema provisioning is complete, register each table with the Code App via the add-dataverse skill, which drives:
 
 ```bash
-pac code add-data-source -a dataverse -t <logical_table_name>
+npm run pa -- app add data-source --connector dataverse --table "<logical-table-name>"
 ```
 
-This is the point where `src/generated/**` becomes available.
+This uses the pinned local Power Apps CLI, not PAC. This is the point where `src/generated/**` becomes available. Verify generated paths and preserve the provider and live metadata-backed form-label contracts.
 
 ### 9. Implement the real provider adapters
 

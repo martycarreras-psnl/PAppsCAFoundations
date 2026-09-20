@@ -4,12 +4,12 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { homedir, platform } from 'node:os';
 import fs from 'node:fs';
-import { loadState, getRootDir } from '../wizard/lib/state.mjs';
+import { loadState, getRootDir } from './lib/state.mjs';
 import {
   getWizardStateSnapshot,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
-} from '../wizard/lib/pac-target.mjs';
+} from './lib/pac-target.mjs';
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -44,6 +44,10 @@ function resolvePacBin() {
 }
 
 const args = process.argv.slice(2);
+if (args[0] === '--help' || args[0] === '-h') {
+  console.log('Usage: pacaf-pac-safe [--target dev|test|prod] [--cwd DIR] [--profile-type spn|user] [--mutating] <pac command...>\nPAC ALM/admin wrapper; legacy code push remains supported. Use pacaf-deploy for Power Apps CLI publishing.');
+  process.exit(0);
+}
 let targetKey = 'dev';
 let profileType = 'spn';
 let mutating = false;
@@ -101,7 +105,7 @@ if (isCodePush) {
 
   const hasSolutionFlag = pacArgs.some((a) => a === '-s' || a === '--solutionName');
   if (!hasSolutionFlag) {
-    const loadedForSolution = loadState();
+    const loadedForSolution = loadState(cwd);
     const resolvedSolution =
       solutionName ||
       process.env.PP_SOLUTION_UNIQUE_NAME ||
@@ -124,7 +128,7 @@ if (!pacBin) {
   fail('pac CLI not found. Install it or set PAC_BIN.');
 }
 
-const loadedState = loadState();
+const loadedState = loadState(cwd);
 const rootDir = getRootDir();
 const opBin = resolveCommand('op', 'OP_BIN');
 const credentialValues = resolveCredentialValues({ rootDir, opBin });

@@ -204,7 +204,7 @@ pac org who       # prints the connected org URL and user
 
 ## You're done
 
-When Step 7 returns real tables, the agent can provision and query Dataverse. From here, the normal PACAF flow takes over: plan the schema (00a → 00c), then let the agent use `dv-metadata` to create tables and this repo's `pac code add-data-source` to generate the TypeScript services.
+When Step 7 returns real tables, the agent can provision and query Dataverse. From here, the normal PACAF flow takes over: plan the schema (00a → 00c), then let the agent use `dv-metadata` to create tables and the Code Apps plugin with local `pacaf-pa app add data-source --connector dataverse --table <table>` to generate TypeScript services. Dataverse-skills and PAC ALM authentication remain unchanged; the Power Apps CLI has separate auth.
 
 ## Keeping this guide authoritative
 

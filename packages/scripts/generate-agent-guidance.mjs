@@ -14,6 +14,11 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: pacaf-generate-agent-guidance [--check]\nGenerate or verify projections from agent-guidance.config.json. Set PACAF_REPO_ROOT for a custom source root.');
+  process.exit(0);
+}
+
 // In the monorepo this script lives at packages/scripts/. The canonical
 // .github/instructions/ tree lives at the repo root, which is two levels up.
 // Allow PACAF_REPO_ROOT to override for tests / non-standard layouts.

@@ -339,10 +339,10 @@ All Code App scaffolding, deployment, and connector-binding work in this templat
 Fire it whenever **any** of these are true:
 
 - The user asks to scaffold, create, or initialize a new Code App.
-- The user asks to build and deploy (`pac code push` or equivalent).
+- The user asks to build and deploy (`pacaf-deploy` / local `pa app push`).
 - The user asks to add a data source, connector, or data binding of any kind (Dataverse, SharePoint, Teams, SQL, Excel, OneDrive, Office 365, Azure DevOps, or any other connector).
 - The user asks to list connections or get a connection ID.
-- A connector registration command (`pac code add-data-source`) fails or the user asks why generated files weren't created.
+- A connector registration command (`pacaf-pa app add data-source`) fails or the user asks why generated files weren't created.
 
 This gate does **not** fire for planning phases (00a–00e), TypeScript/React component work inside `src/`, or reading and discussing existing code.
 
@@ -394,7 +394,7 @@ hand-editing config files is unsupported and fragile.
 Plugin README: https://github.com/microsoft/power-platform-skills/tree/main/plugins/code-apps
 ```
 
-Then **stop**. Do not attempt to hand-roll `pac code add-data-source` steps, manually scaffold connector files, or work around the missing plugin. The plugin is the supported path.
+Then **stop**. Do not attempt to hand-roll `pa app add data-source` steps, manually scaffold connector files, or work around the missing plugin. The plugin is the supported path; apply this repo's local pinned CLI mappings when skill examples use legacy syntax.
 
 ### Scaffolding override — wizard takes precedence over plugin degit
 

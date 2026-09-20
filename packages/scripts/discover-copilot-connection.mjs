@@ -7,6 +7,11 @@ import { homedir, platform } from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: pacaf-discover-connection\nInteractively discover a Microsoft Copilot Studio connection using PAC.');
+  process.exit(0);
+}
+
 const COPILOT_API_ID = 'shared_microsoftcopilotstudio';
 const MAX_RETRIES = 5;
 

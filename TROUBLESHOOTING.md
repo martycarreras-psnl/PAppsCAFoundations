@@ -4,29 +4,39 @@ Common issues and their solutions, organized by symptom.
 
 ---
 
-## PAC CLI
+## Code App CLI and PAC
 
-### `pac code push` fails with "TypeError: Cannot read properties of undefined"
+### An old `pac code` workflow fails
 
-**Cause:** PAC CLI v2.3.2 has a known bug.
+Current Code App operations use exact-pinned local `@microsoft/power-apps-cli` via `pacaf-pa`, not global PAC. Follow [MIGRATION.md](MIGRATION.md) for `pacaf-migrate-pa --check/--apply/--rollback`. Do not downgrade global PAC, point `PAC_BIN` at `pa`, or delete/reinitialize an existing app. PAC remains for solution ALM/admin.
 
-**Fix:** Downgrade to v2.2.1:
+### The local Power Apps CLI is missing
+
+Restore dependencies from the project's existing lockfile using the approved registry. Verify with `npm run pa -- --version`. Never use bare `npx pa` or an unpinned/global fallback.
+
+### Code App publish fails with auth/permission error
+
+PAC and `pa` have separate auth. In user mode:
+
 ```bash
-dotnet tool uninstall -g Microsoft.PowerApps.CLI.Tool
-dotnet tool install -g Microsoft.PowerApps.CLI.Tool --version 2.2.1
+npm run pa -- auth login --account "<expected-maker-email>"
+npm run pa -- auth status --json
+npm run deploy -- --preflight
 ```
 
-### `pac code push` fails with auth/permission error
+For opted-in SPN updates, verify the **existing** app ID, environment access, and prior maker-granted **edit** access. Sharing uses the Enterprise Application object ID, not the App Registration object ID/client ID. Inject `PA_CLI_USE_SP_AUTH=true` and the three `PA_CLI_SP_*` credentials via a secret store. Never grant access automatically, create a replacement app, or fall back to another identity.
 
-**Cause:** All `pac code` subcommands (`push`, `add-data-source`, `run`) require a **user** auth profile. The BAP checkAccess API rejects service principal (SPN) tokens.
+### Deployment target validation fails
 
-**Fix:** Create a user profile once:
-```bash
-~/.dotnet/tools/pac auth create --name my-dev-profile --environment https://your-org-dev.crm.dynamics.com --deviceCode
-```
-Follow the device-code prompt in your browser. After this one-time setup, `pac code push` works silently — the cached refresh token auto-renews (~90 days).
+Compare `.power-apps-targets.json` with the intended cloud app and `power.config.json`. Verify environment ID/URL, tenant/account, app ID, and solution GUID/unique name. Resolve conflicting ambient `PA_CLI_*` settings deliberately; never change identity merely to bypass a guard. `pa app push` uses the config's environment, not an appended `--environment-id`.
 
-SPN auth still works for `pac solution export/import`, `pac org who`, etc.
+CLI 1.0.2 status has no resource-tenant property. `activeAccount.username` and `homeAccountId` cannot prove which tenant supplies the token, **even when the home-tenant suffix equals the expected tenant**. Guarded user publishing therefore requires separate explicit Azure CLI login and matching read-only Global Discovery Service evidence for the environment ID, tenant, and URL. This verifies the environment's tenant independently, not the opaque `pa` token's tenant.
+
+Sign into Azure CLI deliberately (`az login --allow-no-subscriptions --tenant "<expected-tenant-id>"`) using an account with target discovery access. Disabled users, security-group restrictions, and delegated-admin visibility can cause missing GDS rows. Missing/ambiguous evidence fails closed: resolve authorized access, never fall back to home-account inference or manual unguarded push. Offline preflight makes no Azure/auth calls. Do not inspect token caches or rewrite tenant IDs to force a match.
+
+### Connected dev starts twice or hangs after one process exits
+
+Keep separate Vite 3000 and local-host 8080 processes with `concurrently --kill-others-on-fail`. The host command must be `pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000`; without `--config-only`, CLI 1.0.2 also starts the app dev command and can recurse. Mock-only `npm run dev:local` remains independent of auth.
 
 ### `pac org who` shows the wrong environment
 
@@ -137,7 +147,7 @@ az ad app show --id <your-app-id>
 
 ## Connections & Connectors
 
-### "Connection not found" when running `pac code add-data-source`
+### "Connection not found" when adding a Code App data source
 
 **Cause:** The connection must exist in the environment before the connector reference can be created.
 
@@ -145,13 +155,13 @@ az ad app show --id <your-app-id>
 1. Go to [make.powerapps.com](https://make.powerapps.com) → select the target environment
 2. Navigate to Connections → New connection
 3. Create the required connection (e.g., Dataverse, Office 365 Users)
-4. Re-run the `pac code add-data-source` command
+4. Verify the URL's environment and use `npm run pa -- app add data-source --connector "<connector-id>" --connection-id "<connection-id>"` (plus `--table`/`--dataset` where required)
 
 ### Connector registration fails for some tables but not others
 
-**Cause:** Transient PAC CLI errors or table names that don't match the Dataverse schema.
+**Cause:** Transient connector/CLI errors, unpublished metadata, or logical table names that don't match the Dataverse schema.
 
-**Fix:** The registration script now collects failures and continues. Check the error summary at the end, fix the issues, and re-run for the failed tables only.
+**Fix:** Check the failing command's output, verify schema publication through Dataverse-skills, and retry only the failed bindings using the Code Apps plugin with local `pa app add data-source`. For an existing binding, use `app refresh data-source --name "<name>"`. Never edit generated files.
 
 ---
 
@@ -192,7 +202,7 @@ Current scaffold includes this automatically.
 
 ### Deployed app shows a 404 on first load (or the moment you navigate)
 
-**Symptom:** `pac code push` reports success, but opening `https://apps.powerapps.com/play/e/<env>/app/<app>/...` returns a 404 page, or the app loads fine until you navigate to a non-index route and then 404s.
+**Symptom:** Publishing reports success, but opening `https://apps.powerapps.com/play/e/<env>/app/<app>/...` returns a 404 page, or the app loads fine until you navigate to a non-index route and then 404s.
 
 **Cause:** `src/main.tsx` (or `src/router.tsx`) is using `react-router-dom`'s `BrowserRouter` / `createBrowserRouter`. The Power Apps host owns the URL path, so any non-root path the router pushes into history does not resolve to a static asset and `index.html` is served from the wrong base. Only the fragment (`#/...`) is reliably owned by the iframe.
 
@@ -208,7 +218,7 @@ Current scaffold includes this automatically.
 +        </HashRouter>
 ```
 
-Rebuild and `pac code push`. Routes now resolve as `…/play/e/<env>/app/<app>/#/<route>` and the deployed app stops 404-ing. The current scaffold uses `HashRouter` automatically, and `npm run build` fails loudly if `main.tsx` / `router.tsx` is still importing `BrowserRouter` / `createBrowserRouter` (see `packages/scripts/patch-datasources-info.mjs` and issue #47).
+Validate, then run `npm run deploy` for guarded rebuild/publish. Routes resolve as `…/play/e/<env>/app/<app>/#/<route>`. The current scaffold uses `HashRouter`, and `npm run build` fails if `main.tsx` / `router.tsx` still imports `BrowserRouter` / `createBrowserRouter` (see `packages/scripts/patch-datasources-info.mjs` and issue #47). Keep relative production `base: './'` too.
 
 ### `npm run build` fails with "Code App routing guard FAILED" — but my code already uses `HashRouter`
 
@@ -296,14 +306,9 @@ node wizard/index.mjs --reset
 
 ### `power.config.json` points to wrong environment after re-running wizard
 
-**Cause:** A stale `power.config.json` from a previous run doesn't match the current PAC auth profile.
+**Cause:** Project identity and the selected target disagree. A PAC profile is not proof of the correct Code App target.
 
-**Fix:** The wizard now detects this and quarantines the stale file before re-running `pac code init`. If you need to fix it manually:
-```bash
-rm power.config.json
-~/.dotnet/tools/pac auth select --name <correct-profile>
-~/.dotnet/tools/pac code init --displayName "Your App" --buildPath "./dist" --fileEntryPoint "index.html"
-```
+**Fix:** Stop before any mutation. Compare the existing cloud app identity, `power.config.json`, and durable `.power-apps-targets.json`; restore the correct project/config from version control if needed. Verify separate `pa` account/tenant. **Do not delete config, quarantine identity, reinitialize, or create a replacement app** as migration/recovery. A genuinely new app needs a separately authorized scaffold.
 
 ### "Could not finalize the auth profile" at the Environments step
 
@@ -335,9 +340,9 @@ Note: `pac auth select --index <n>` does **not** repair the dual-active flag —
 
 ## Solution & Deployment
 
-### How to recover from a failed `pac code push`
+### How to recover from a failed Code App publish
 
-`pac code push` is idempotent — re-running it overwrites the previous upload. Just fix the issue and push again.
+Inspect the failure, verify the existing app ID and target metadata, and fix the actual cause. Then rerun guarded `npm run deploy`; it rebuilds before updating the same app. Never use `--allow-create` to bypass missing identity on an existing app. Local tooling rollback (`pacaf-migrate-pa --rollback`) is separate from cloud rollback.
 
 ### How to rollback a bad solution import
 
@@ -349,7 +354,7 @@ Note: `pac auth select --index <n>` does **not** repair the dual-active flag —
 
 ### Solution export shows no changes
 
-**Cause:** `pac code push` was done but the solution wasn't re-exported.
+**Cause:** The Code App was updated but its containing solution wasn't re-exported.
 
 **Fix:** After pushing code changes, always re-export the solution. Agent-driven export is owned by the Dataverse-skills plugin's `dv-solution` skill; to export directly, use the native PAC CLI:
 ```bash

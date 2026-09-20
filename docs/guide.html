@@ -778,7 +778,7 @@
 │   │   ├── <span class="file">01-scaffold.instructions.md</span>     <span class="comment"># Project structure & stack</span>
 │   │   ├── <span class="file">02-connectors.instructions.md</span>   <span class="comment"># Dataverse, SQL, O365, Custom APIs</span>
 │   │   ├── <span class="file">03-components.instructions.md</span>   <span class="comment"># React + Fluent UI v9 patterns</span>
-│   │   ├── <span class="file">04-deployment.instructions.md</span>   <span class="comment"># CI/CD, pac code push, ALM</span>
+│   │   ├── <span class="file">04-deployment.instructions.md</span>   <span class="comment"># guarded pa publish, PAC ALM</span>
 │   │   ├── <span class="file">05-testing.instructions.md</span>      <span class="comment"># Vitest, Playwright, MSW</span>
 │   │   ├── <span class="file">06-security.instructions.md</span>     <span class="comment"># Auth, secrets, DLP</span>
 │   │   ├── <span class="file">07-dataverse-schema.instructions.md</span> <span class="comment"># Tables, columns, option sets</span>
@@ -874,8 +874,9 @@
             <tr><td>Bundler</td><td>Vite</td><td>5.x</td><td>Fast HMR; official templates use Vite</td></tr>
             <tr><td>Server State</td><td>TanStack Query</td><td>v5</td><td>Caching, deduplication, background refresh for connectors</td></tr>
             <tr><td>Routing</td><td>React Router</td><td>v6</td><td>Nested layouts, data loaders</td></tr>
-            <tr><td>Power Apps SDK</td><td><code>@microsoft/power-apps</code></td><td>^1.0.3</td><td>Connector access, auth context</td></tr>
-            <tr><td>CLI</td><td>PAC CLI</td><td>latest (not 2.3.2)</td><td>Scaffold, add data sources, deploy</td></tr>
+            <tr><td>Power Apps SDK</td><td><code>@microsoft/power-apps</code></td><td>1.4.0 (exact)</td><td>Connector access, auth context</td></tr>
+            <tr><td>Code App CLI</td><td>Local <code>@microsoft/power-apps-cli</code></td><td>1.0.2 (exact)</td><td>Init, local host, data sources, publish via PACAF guards</td></tr>
+            <tr><td>ALM/admin CLI</td><td>PAC</td><td>Team-tested</td><td>Solution export/import and environment administration; separate auth</td></tr>
             <tr><td>Editor</td><td>VS Code / Cursor</td><td>Latest</td><td>Or any editor with coding-agent support</td></tr>
             <tr><td>Coding Agent</td><td>Copilot / Claude / Cursor / Codex</td><td>—</td><td>Any LLM-backed agent reads the repo's native guidance</td></tr>
           </tbody>
@@ -954,13 +955,13 @@
     <!-- Enable Code Apps -->
     <section class="section" id="enable-code-apps">
       <h2 class="section-title">⚠️ Enable Code Apps in Your Environment</h2>
-      <p class="section-subtitle">This is a prerequisite. Without it, <code>pac code push</code> will fail with "does not allow this operation for this Code app."</p>
+      <p class="section-subtitle">Enable Code Apps in the intended environment before publishing.</p>
 
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
         <div>
           <strong>You MUST do this before your first push.</strong> Code Apps are disabled by default in Power Platform environments.
-          If you skip this step, the first <code>pac code push</code> will fail even with correct auth.
+          If you skip this step, publishing can fail even with correct authentication.
         </div>
       </div>
 
@@ -983,9 +984,9 @@
         </div>
       </div>
 
-      <h4>Auth for <code>pac code push</code></h4>
-      <p><code>pac code push</code> requires a <strong>user</strong> auth profile — the BAP checkAccess API rejects SPN tokens. <strong>This is a one-time setup:</strong> create a user profile via device-code sign-in, and all subsequent pushes work silently. PAC CLI caches a refresh token that auto-renews (~90 days).</p>
-      <p>For <strong>CI/CD to test/production</strong>, use <strong>solution export/import</strong> instead of <code>pac code push</code>. Solution export and import both accept SPN auth and deploy the Code App, tables, connection references, and security roles as one atomic unit. See the deployment instructions for the full pipeline.</p>
+      <h4>Separate Code App and ALM authentication</h4>
+      <p>Use <code>npm run pa -- auth login</code> and <code>auth status --json</code> for the pinned local Power Apps CLI. PAC profiles do not sign it in. <code>npm run deploy</code> invokes <code>pacaf-deploy --target dev</code>, validates durable target identities, builds, and publishes with a solution GUID.</p>
+      <p>CLI 1.0.2 user status/home-account equality cannot prove the resource tenant. User publishing and first creation require separate explicit Azure CLI login with Global Discovery Service access: the helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing rows/access fail closed, with no auto-login. SPN updates are opt-in for existing apps with environment and maker-granted edit access; never grant permissions automatically. See <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/MIGRATION.md">migration and rollback guidance</a>.</p>
     </section>
 
     <section class="section" id="wizard-overview">
@@ -1073,19 +1074,19 @@
             <span class="accordion-tag tag-automated">Automated</span>
           </button>
           <div class="accordion-body"><div class="accordion-content">
-            <p>The wizard checks for required tools and offers to install missing ones:</p>
+            <p>The wizard checks for required tools. Install missing system prerequisites yourself before continuing:</p>
             <ul>
               <li><strong>Editor</strong> — VS Code (<a href="https://code.visualstudio.com/" target="_blank" rel="noopener">Install</a>), Cursor, or any editor with coding-agent support</li>
               <li><strong>Coding Agent</strong> — GitHub Copilot, Claude Code, Cursor, Codex, or another LLM-backed agent (see below)</li>
-              <li><strong>Node.js 20+</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener">Install</a></li>
+              <li><strong>Node.js 22 or 24 LTS</strong> — <a href="https://nodejs.org/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>Git</strong> — <a href="https://git-scm.com/" target="_blank" rel="noopener">Install</a></li>
               <li><strong>.NET SDK</strong> — <a href="https://dotnet.microsoft.com/download" target="_blank" rel="noopener">Install</a></li>
-              <li><strong>PAC CLI</strong> — The wizard will install it automatically via <code>dotnet tool install -g Microsoft.PowerApps.CLI.Tool</code> if missing</li>
+              <li><strong>PAC CLI</strong> — Install for solution ALM/admin using the <a href="prerequisite-setup.md">prerequisite guide</a>; the project-local Power Apps CLI handles Code App operations</li>
               <li><strong>1Password CLI</strong> (optional) — <a href="https://developer.1password.com/docs/cli/get-started" target="_blank" rel="noopener">Install</a></li>
             </ul>
             <div class="callout callout-info" style="margin-top:8px; font-size:13px;">
               <span class="callout-icon">💡</span>
-              <div><strong>Tip:</strong> Once your editor and coding agent are set up, you can ask the agent to install the remaining prerequisites (Node.js, Git, .NET SDK, PAC CLI) for you — it can run the install commands directly in the integrated terminal.</div>
+              <div><strong>Tip:</strong> Your coding agent can verify tools and explain missing prerequisites, but system installation, administrator prompts, and PATH repair require your action. Follow the prerequisite guide, reopen your terminal, then retry verification.</div>
             </div>
             <div class="callout callout-info" style="margin-top:8px; font-size:13px;">
               <span class="callout-icon">📖</span>
@@ -1097,7 +1098,7 @@
             </div>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
-              <div>PAC CLI version <strong>2.3.2</strong> has a known bug that breaks <code>pac code push</code>. The wizard detects this and helps you downgrade.</div>
+              <div>Code App operations use the exact-pinned local Power Apps CLI, not global PAC. Preserve the package manager, approved registry, and lockfile; never use bare <code>npx pa</code> or downgrade global tools to repair Code App publishing.</div>
             </div>
           </div></div>
         </div>
@@ -1213,7 +1214,7 @@
             </ul>
             <div class="callout callout-success">
               <span class="callout-icon">✅</span>
-              <div>After this step, all <code>pac</code> commands work without any browser popup. SPN auth is used for Dataverse API calls, publisher/solution creation, and CI/CD (solution export/import). <strong><code>pac code</code> commands (push, add-data-source) need a user profile</strong> — created once via the wizard (one-time sign-in, then silent). The wizard handles this automatically in the later connected-mode steps.</div>
+              <div>PAC authentication supports Dataverse and solution ALM. The local Power Apps CLI has a separate user sign-in for Code App operations. SPN Code App updates are a separately opted-in existing-app flow, not an automatic consequence of creating a PAC profile.</div>
             </div>
           </div></div>
         </div>
@@ -1299,7 +1300,7 @@
               <li>Copies all instruction files and agent-native guidance (<code>.claude/rules/</code>, <code>.cursor/rules/</code>, nested <code>AGENTS.md</code>) from the foundations repo</li>
               <li>Includes the narrative-first planning instructions so you can refine the business scope before hardening schema and connector choices</li>
               <li>Seeds prototype contracts, mock providers, and <code>dataverse/prototype-feedback.md</code> from the planning payload</li>
-              <li>Runs <code>pac code init</code> to register the app in Power Platform</li>
+              <li>Runs local <code>pa app init --display-name … --environment-id …</code> to initialize metadata; preserves existing apps without reinitialization</li>
               <li>Defers connector setup by default so the team can prototype before binding real systems</li>
               <li>Initializes Git repo, detects or prompts for remote URL, makes initial commit</li>
               <li>Generates a project-specific README (replaces the template README)</li>
@@ -1319,7 +1320,7 @@ npx @pacaf/wizard-ux@latest</pre>
             <div class="callout callout-danger">
               <span class="callout-icon">🚨</span>
               <div>
-                <strong><code>pac code</code> commands need a user auth profile</strong> (not SPN). The wizard detects SPN auth and automatically switches to a user profile before running <code>pac code add-data-source</code>. This user profile only needs to be created once — subsequent calls work silently.
+                <strong>Code App binding uses the separate Power Apps CLI account.</strong> Invoke the appropriate Code Apps skill and use the pinned local grouped commands. PAC profile selection does not select the <code>pa</code> account.
                 <p style="margin-top:8px;">When you do re-run connector setup, the wizard first tries <code>pac connection list</code>, filters to the selected connector API ID, and lets you choose from discovered connections. Manual Connection ID entry is only the fallback.</p>
               </div>
             </div>
@@ -1366,7 +1367,7 @@ npx @pacaf/wizard-ux@latest</pre>
             </div>
             <div class="callout callout-warn">
               <span class="callout-icon">⚠️</span>
-              <div>This step uses a user auth profile for <code>pac code add-data-source</code>. The wizard switches from SPN automatically when needed. If the profile already exists, no sign-in is required.</div>
+              <div>Binding is deferred until planning/prototype validation. Use the Code Apps plugin and local <code>pa app add data-source</code>; verify the account and environment independently of PAC auth.</div>
             </div>
           </div></div>
         </div>
@@ -1503,7 +1504,7 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
       <blockquote style="margin: var(--s3) 0; padding: var(--s3); border-left: 3px solid var(--green); background: #dff6dd; font-style: italic;">
         "Looks good. Provision the Dataverse schema, generate the connectors, and deploy to my dev environment."
       </blockquote>
-      <p>Your agent will then drive schema provisioning (often via the <a href="#ref-dataverse-plugin">Dataverse-skills plugin</a>), rerun the wizard's connector-binding step, and run <code>pnpm build</code> + <code>pac code push</code>.</p>
+      <p>Your agent will drive schema provisioning through the <a href="#ref-dataverse-plugin">Dataverse-skills plugin</a>, bind connectors through the Code Apps plugin and local CLI, then use <code>npm run deploy</code> for guarded build and publish.</p>
 
       <div class="callout callout-info" style="margin-top:var(--s4);">
         <span class="callout-icon">📖</span>
@@ -1571,9 +1572,9 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
 
       <h4 style="margin-top:16px;">Common Connectors</h4>
       <div class="table-wrap"><table>
-        <thead><tr><th>Connector</th><th>API ID (for pac CLI)</th></tr></thead>
+        <thead><tr><th>Connector</th><th>Connector ID (for local pa CLI)</th></tr></thead>
         <tbody>
-          <tr><td>Dataverse</td><td><code>dataverse</code> (uses <code>-t &lt;table&gt;</code> instead of <code>-c</code>)</td></tr>
+          <tr><td>Dataverse</td><td><code>dataverse</code> (uses <code>--table &lt;table&gt;</code>)</td></tr>
           <tr><td>Office 365 Users</td><td><code>shared_office365users</code></td></tr>
           <tr><td>SharePoint</td><td><code>shared_sharepointonline</code></td></tr>
           <tr><td>Office 365 Outlook</td><td><code>shared_office365</code></td></tr>
@@ -1584,24 +1585,21 @@ npm run deploy       ← deploy changes after the app has been registered</pre>
       </table></div>
 
       <h4 style="margin-top:16px;">Adding Data Sources (After Getting Connection IDs)</h4>
-      <p>Preferred path: rerun the wizard when you are ready to connect real data.</p>
-      <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
-npx @pacaf/wizard-ux@latest</pre>
-      <p>The wizard will create the solution-level connection references, try to discover existing environment connections with <code>pac connection list</code>, and let you select one when matches are found.</p>
+      <p>After prototype validation, invoke the matching Code Apps plugin skill. Discover existing connections with <code>npm run pa -- connection list --json</code> in the verified app environment. Do not reinitialize an existing app to bind data.</p>
 
       <pre style="margin-bottom:8px;"><em># Dataverse tables (no connection ID needed):</em>
-pac code add-data-source -a dataverse -t myprefix_project
+npm run pa -- app add data-source --connector dataverse --table myprefix_project
 
 <em># Non-Dataverse connectors (connection ID required):</em>
-pac code add-data-source -a shared_office365users -c 160ffdfd-aff5-4740-86a8-47209c1c608c
-pac code add-data-source -a shared_sharepointonline -c &lt;YOUR_CONNECTION_ID&gt;</pre>
+npm run pa -- app add data-source --connector shared_office365users --connection-id &lt;CONNECTION_ID&gt;
+npm run pa -- app add data-source --connector shared_sharepointonline --connection-id &lt;CONNECTION_ID&gt; --table &lt;LIST&gt; --dataset &lt;SITE&gt;</pre>
 
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
         <div>
-          <strong>Requires a user auth profile</strong> (SPN is not supported for <code>pac code</code> commands). Create one once — it works silently after that:
-          <pre style="margin-top:8px;">pac auth create --name pp-myrepo-d-u-1a2b3c4d --environment https://org-dev.crm.dynamics.com --deviceCode
-pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
+          <strong>Verify the separate Power Apps CLI user account</strong> and the app's environment before binding:
+          <pre style="margin-top:8px;">npm run pa -- auth login --account maker@contoso.com
+npm run pa -- auth status --json</pre>
         </div>
       </div>
 
@@ -1663,7 +1661,7 @@ pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
         <div class="card"><div class="card-body">
           <div class="card-icon" style="background:var(--themeLighterAlt); color:var(--themePrimary);">🔗</div>
           <h3>Connected Mode</h3>
-          <p>Vite + <code>pac code run</code>. Real connector calls through the Power Platform proxy.</p>
+          <p>Vite 3000 + local <code>pa app run --config-only</code> host on 8080. Real connector calls through Power Platform.</p>
           <pre style="margin-top:12px;">npm run dev</pre>
         </div></div>
       </div>
@@ -1674,11 +1672,11 @@ pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
         <tbody>
           <tr><td>Prototyping / UI</td><td><code>npm run dev:local</code></td><td>Vite only</td><td>Mock data</td></tr>
           <tr><td>Refresh prototype assets</td><td><code>npm run prototype:seed</code></td><td>Node script</td><td>Planning payload</td></tr>
-          <tr><td>Integration</td><td><code>npm run dev</code></td><td>Vite + <code>pac code run</code></td><td>Real connectors</td></tr>
+          <tr><td>Integration</td><td><code>npm run dev</code></td><td>Vite 3000 + Power Apps host 8080</td><td>Real connectors</td></tr>
           <tr><td>Unit Tests</td><td><code>npm run test</code></td><td>Vitest</td><td>Mock data (MSW)</td></tr>
           <tr><td>E2E Tests</td><td><code>npm run test:e2e</code></td><td>Vite + Playwright</td><td>Mock data</td></tr>
           <tr><td>Production Build</td><td><code>npm run build</code></td><td><code>tsc</code> + Vite build</td><td>N/A (static)</td></tr>
-          <tr><td>Deploy</td><td><code>npm run deploy</code></td><td>Build + <code>pac code push</code></td><td>N/A</td></tr>
+          <tr><td>Deploy</td><td><code>npm run deploy</code></td><td>Guarded build + local <code>pa app push</code></td><td>N/A</td></tr>
         </tbody>
       </table></div>
 
@@ -1691,7 +1689,7 @@ pac auth select --name pp-myrepo-d-u-1a2b3c4d</pre>
       </div>
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <div><strong>What doesn't:</strong> Real connector calls, <code>PowerProvider</code> context, auth context, connection consent — these require <code>pac code run</code>.</div>
+        <div><strong>What doesn't:</strong> Real connector calls, <code>PowerProvider</code> context, auth context, connection consent — these require the Power Apps local host.</div>
       </div>
 
       <p style="margin-top:12px;">Need the full sequence from planning payload through prototype review to real providers? <a href="prototype-golden-path.md">Open the prototype-first golden path</a>.</p>
@@ -1716,9 +1714,9 @@ export function useProjects() {
 
       <h4 style="margin-top:var(--s5); margin-bottom:var(--s3);">Connected Mode — Prerequisites</h4>
       <ul style="margin-left:20px; margin-bottom:16px; line-height:2;">
-        <li>PAC auth profiles created (<code>pac org who</code> shows org, no popup)</li>
-        <li>Data source added: <code>pac code add-data-source</code></li>
-        <li>At least one data source added with <code>pac code add-data-source</code> so <code>src/generated/</code> exists</li>
+        <li>Separate CLI account verified with <code>npm run pa -- auth status --json</code></li>
+        <li>Data sources added via local <code>pa app add data-source</code>, generated output verified and wrapped in providers</li>
+        <li>Dev script uses <code>concurrently --kill-others-on-fail "vite --port 3000 --strictPort" "pacaf-pa app run --config-only --port 8080 --local-app-url http://localhost:3000"</code> to avoid duplicate dev servers and stop the companion on failure</li>
         <li><code>power.config.json</code> exists next to <code>package.json</code></li>
       </ul>
 
@@ -1758,9 +1756,9 @@ export default defineConfig(({ command }) =&gt; ({
         <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
         <tbody>
           <tr><td>Port 3000 already in use</td><td><code>lsof -ti:3000 | xargs kill -9</code></td></tr>
-          <tr><td><code>pac code run</code> fails</td><td>Check <code>pac org who</code>, avoid PAC v2.3.2, confirm <code>power.config.json</code></td></tr>
+          <tr><td>Power Apps local host fails</td><td>Check separate <code>pa auth status</code>, local CLI pin, ports 3000/8080, <code>--config-only</code>, and <code>power.config.json</code></td></tr>
           <tr><td>HMR not refreshing</td><td>Verify <code>react()</code> plugin in vite.config.ts, clear cache: <code>rm -rf node_modules/.vite</code></td></tr>
-          <tr><td>Mock data shape mismatch</td><td>Re-run <code>pac code add-data-source</code> for the affected table or connector, then compare with <code>src/generated/models/</code></td></tr>
+          <tr><td>Mock data shape mismatch</td><td>Run <code>npm run pa -- app refresh data-source --name &lt;name&gt;</code>, then compare with generated models and provider contracts</td></tr>
         </tbody>
       </table></div>
 
@@ -1782,13 +1780,13 @@ export default defineConfig(({ command }) =&gt; ({
       <pre style="margin-bottom:8px;"><em># Browser wizard — navigate to Step 8:</em>
 npx @pacaf/wizard-ux@latest</pre>
       <pre><em># Dataverse (no connection ID needed):</em>
-pac code add-data-source -a dataverse -t myprefix_project
+npm run pa -- app add data-source --connector dataverse --table myprefix_project
 
 <em># Non-Dataverse connectors (connection ID required — see <a href="#create-connections">Creating Connections</a>):</em>
-pac code add-data-source -a shared_office365users -c &lt;CONNECTION_ID&gt;</pre>
+npm run pa -- app add data-source --connector shared_office365users --connection-id &lt;CONNECTION_ID&gt;</pre>
       <div class="callout callout-danger">
         <span class="callout-icon">🚨</span>
-        <div><strong><code>pac code</code> commands need a user auth profile</strong> (not SPN). Create the profile once, then all subsequent calls work silently. Switch to your repo-scoped user profile for the current environment before running them.</div>
+        <div><strong>Use the pinned local CLI through <code>npm run pa -- …</code>.</strong> PAC authentication does not select the Power Apps CLI account. Verify the account/tenant and app environment before changing bindings.</div>
       </div>
 
       <h4>Wrapping Generated Code with TanStack Query</h4>
@@ -1806,7 +1804,7 @@ export function useProjects() {
 
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <div><strong>Never edit files in <code>src/generated/</code>.</strong> They're auto-generated by the PAC CLI. If you need to extend a type, create a wrapper in <code>src/types/</code>.</div>
+        <div><strong>Never edit files in <code>src/generated/</code>.</strong> They're generated by the Power Apps CLI. Keep provider adapters and live metadata-backed field labels when refreshing.</div>
       </div>
 
       <p>See <code>.github/instructions/02-connectors.instructions.md</code> for full patterns including Dataverse OData queries, pagination, and error handling.</p>
@@ -1830,9 +1828,9 @@ export function useProjects() {
       <h4>Provider Stack (main.tsx)</h4>
       <pre>&lt;QueryClientProvider&gt;
   &lt;FluentProvider theme={webLightTheme}&gt;
-    &lt;BrowserRouter&gt;
+    &lt;HashRouter&gt;
       &lt;App /&gt;
-    &lt;/BrowserRouter&gt;
+    &lt;/HashRouter&gt;
   &lt;/FluentProvider&gt;
 &lt;/QueryClientProvider&gt;</pre>
 
@@ -1852,7 +1850,7 @@ export function useProjects() {
       <h4>Manual Deploy (Dev Only)</h4>
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <div><strong>All pushes require user auth.</strong> <code>pac code push</code> is rejected with SPN auth for both first and subsequent pushes. The wizard creates a user profile automatically. For CI/CD, see <a href="#enable-code-apps">Enable Code Apps</a> and the deployment instructions for workarounds.</div>
+        <div><strong>User publish requires independent environment-tenant evidence.</strong> Explicitly sign into Azure CLI with GDS discovery access. The helper matches environment ID/tenant/URL from its read-only fixed-cloud query; it never infers tenant from <code>homeAccountId</code>. Disabled-user, security-group, or delegated-admin visibility limitations fail closed, not to an unguarded push. SPN updates remain opt-in for existing apps with maker-granted edit access.</div>
       </div>
       <pre>npm run deploy</pre>
 
@@ -1979,7 +1977,7 @@ if (name.length > 200) return 'Max 200 characters';
           <tr><td>Environment admin (bulk delete, settings, roles)</td><td><strong>Dataverse-skills plugin</strong> (<code>dv-admin</code>, <code>dv-security</code>)</td></tr>
           <tr><td>Business planning workflow (00a → 00d)</td><td><strong>This repo</strong></td></tr>
           <tr><td>Code App scaffold, Fluent UI, Vite</td><td><strong>This repo</strong></td></tr>
-          <tr><td>Connector adapter pattern &amp; <code>pac code add-data-source</code></td><td><strong>This repo</strong></td></tr>
+          <tr><td>Connector adapter pattern &amp; local <code>pa app add data-source</code></td><td><strong>This repo</strong></td></tr>
           <tr><td>Form field metadata pattern (<code>DataverseFieldLabel</code>)</td><td><strong>This repo</strong></td></tr>
         </tbody>
       </table></div>
@@ -1995,7 +1993,7 @@ Claude Code:     /plugin install dataverse@claude-plugins-official</pre>
         <li>Plan the business problem (00a → 00c) → <code>dataverse/planning-payload.json</code></li>
         <li>Discover existing schema first → agent uses <code>list_tables</code> / <code>describe_table</code> from the plugin</li>
         <li>Provision schema → agent uses <code>dv-metadata</code> from the plugin</li>
-        <li>Register data sources → <code>pac code add-data-source</code> generates TypeScript SDK</li>
+        <li>Register data sources → local <code>pa app add data-source</code> generates TypeScript services</li>
         <li>Build the UI with generated services, Fluent UI, TanStack Query</li>
       </ol>
 
@@ -2021,7 +2019,7 @@ Claude Code:     /plugin install dataverse@claude-plugins-official</pre>
         <li><strong>Get the agent name</strong> from Channels → Web app → connection string (e.g. <code>cr3e1_customerSupportAgent</code>)</li>
         <li><strong>Create a connection</strong> in <a href="https://make.powerapps.com" target="_blank" rel="noopener">make.powerapps.com</a> → Connections → + New → "Microsoft Copilot Studio"</li>
         <li><strong>Add the data source:</strong>
-          <pre style="margin-top:8px;">pac code add-data-source -a "shared_microsoftcopilotstudio" -c &lt;connectionId&gt;</pre>
+          <pre style="margin-top:8px;">npm run pa -- app add data-source --connector "shared_microsoftcopilotstudio" --connection-id &lt;connectionId&gt;</pre>
         </li>
         <li><strong>Import &amp; call</strong> the generated service in your React code</li>
       </ol>
@@ -2129,7 +2127,7 @@ if (response.data.completed) {
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
           <tr><td><code>npm run dev:local</code></td><td>Prototype with mock data — no auth or Power Platform connection needed</td></tr>
-          <tr><td><code>npm run dev</code></td><td>Connected mode — runs Vite + <code>pac code run</code> concurrently</td></tr>
+          <tr><td><code>npm run dev</code></td><td>Connected mode — separate Vite 3000 + Power Apps host 8080, with <code>--config-only</code> and companion shutdown</td></tr>
           <tr><td><code>npm run build</code></td><td>TypeScript check + Vite production build → <code>dist/</code></td></tr>
           <tr><td><code>npm run test</code></td><td>Run unit tests with Vitest</td></tr>
           <tr><td><code>npm run lint</code></td><td>ESLint check across <code>src/</code></td></tr>
@@ -2140,16 +2138,17 @@ if (response.data.completed) {
       <div class="table-wrap"><table>
         <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
         <tbody>
-          <tr><td><code>pac code push</code></td><td>Upload your built app to Power Platform</td></tr>
-          <tr><td><code>npm run deploy</code></td><td>Shortcut: build + push in one command</td></tr>
+          <tr><td><code>npm run deploy -- --preflight</code></td><td>Non-mutating target validation; no login or publish</td></tr>
+          <tr><td><code>npm run deploy</code></td><td>Guarded target/auth validation, build, and publish</td></tr>
         </tbody>
       </table></div>
       <div class="card" style="margin-top: var(--s3); border-left: 3px solid var(--orange);">
         <div class="card-body">
-          <strong>⚠ SPN auth note:</strong> <code>pac code push</code> requires Power Platform API access that service principal (SPN) auth lacks for first-push and <code>pac code</code> mutation flows. Use the repo-scoped interactive profile for that environment, then push:
-          <pre style="margin-top: var(--s2);">pac auth create --name pp-myrepo-d-u-1a2b3c4d --environment &lt;your-env-url&gt; --deviceCode
-pac auth select --name pp-myrepo-d-u-1a2b3c4d
-pac code push</pre>
+          <strong>Target and auth safety:</strong> <code>.power-apps-targets.json</code> records the environment, tenant/account, existing app ID, solution GUID and unique name. <code>pa</code> uses the GUID; PAC ALM uses the unique name. Do not append <code>--environment-id</code> to push or reinitialize an existing app.
+          <pre style="margin-top: var(--s2);">npm run pa -- auth login --account &lt;maker-email&gt;
+npm run pa -- auth status --json
+npm run deploy</pre>
+          <p>SPN updates require explicit <code>--auth spn</code>, an existing published app, and maker-granted edit access using the Enterprise Application object ID. Inject <code>PA_CLI_USE_SP_AUTH=true</code> and <code>PA_CLI_SP_CLIENT_ID</code>, <code>PA_CLI_SP_CLIENT_SECRET</code>, <code>PA_CLI_SP_TENANT_ID</code> from a secret store. Never grant permissions in migration or recurring deployment.</p>
         </div>
       </div>
 
@@ -2158,9 +2157,10 @@ pac code push</pre>
       <div class="table-wrap"><table>
         <thead><tr><th>Action</th><th>How</th></tr></thead>
         <tbody>
-          <tr><td>Add connectors via wizard</td><td><code>npx @pacaf/wizard-ux@latest</code> → Step 8</td></tr>
-          <tr><td>Add Dataverse table manually</td><td><code>pac code add-data-source -a dataverse -t &lt;table_name&gt;</code></td></tr>
-          <tr><td>Add other connector manually</td><td><code>pac code add-data-source -a &lt;api_id&gt; -c &lt;conn_id&gt;</code></td></tr>
+          <tr><td>Select connector skill</td><td><code>/add-datasource</code> after planning/prototype validation</td></tr>
+          <tr><td>Add Dataverse table</td><td><code>npm run pa -- app add data-source --connector dataverse --table &lt;table_name&gt;</code></td></tr>
+          <tr><td>Add other connector</td><td><code>npm run pa -- app add data-source --connector &lt;api_id&gt; --connection-id &lt;conn_id&gt;</code></td></tr>
+          <tr><td>Reuse connection reference</td><td><code>--connection-ref &lt;logical-name&gt; --solution-id &lt;GUID&gt;</code></td></tr>
           <tr><td>Map references after import</td><td>Power Apps Maker Portal &rarr; Solutions &rarr; Connection References</td></tr>
         </tbody>
       </table></div>
@@ -2169,7 +2169,7 @@ pac code push</pre>
           <strong>How it works:</strong> A <em>connection reference</em> says "this solution uses the Office 365 Users connector." The actual authenticated <em>connection</em> (your credentials) is mapped to the reference per-environment. This means you deploy once and map per-environment — no secrets in the solution.
         </div>
       </div>
-      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);"><code>--apiId</code> (<code>-a</code>) is always required for manual adds — there is no interactive picker in the CLI. The wizard compensates for this by discovering existing environment connections with <code>pac connection list</code> and letting you select one when possible. See the <a href="#connector-ids">Connector IDs</a> table above for common API IDs.</p>
+      <p style="margin-top: var(--s2); font-size: 13px; color: var(--neutralSecondary);">Use <code>--connector</code>, not legacy PAC flags. Tabular connectors use <code>--table</code>/<code>--dataset</code>. Discover connections with <code>npm run pa -- connection list --json</code>, refresh with <code>app refresh data-source --name</code>, and remove with <code>app remove data-source --connector … --name …</code>. See the <a href="#connector-ids">Connector IDs</a> table.</p>
 
       <h3 style="margin-top: var(--s6); margin-bottom: var(--s3); color: var(--themeDark);">Re-running the Wizard</h3>
       <p style="margin-bottom: var(--s2); font-size: 14px;">The wizard stores progress in <code>.wizard-state.json</code> and lets you jump directly to any step from the step navigator.</p>

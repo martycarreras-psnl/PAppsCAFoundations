@@ -384,13 +384,13 @@ This is normal. Homebrew needs admin rights to install into `/usr/local` (Intel 
 
 Make sure you're using the VS Code terminal, not a separate PowerShell or Command Prompt window. If VS Code was open during the install, close and reopen the entire VS Code window (not just the terminal).
 
-### PAC CLI shows a version with a known bug
+### A Code App command fails
 
-If `pac` reports version `2.3.2`, it has a known issue. Downgrade to a stable version:
-
-```
-dotnet tool update -g Microsoft.PowerApps.CLI.Tool --version 2.2.1
-```
+Code App operations now use the project-local pinned Power Apps CLI, not `pac code`.
+Do not downgrade a global PAC installation to work around an old Code App bug.
+PAC remains required for solution ALM/admin. For CLI migration, local dependency
+restoration, and separate authentication checks, see [MIGRATION.md](../MIGRATION.md)
+and [TROUBLESHOOTING.md](../TROUBLESHOOTING.md).
 
 ### I'm behind a corporate proxy
 

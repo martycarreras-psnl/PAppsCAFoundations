@@ -109,9 +109,9 @@ Like the publisher, the solution is **created for you** — not hand-built in th
 - **Setup wizard (default):** The **Solution & Publisher** step detects an existing solution or creates a new one bound to the publisher from Step 3, then writes `SOLUTION_NAME` (and the publisher prefix) into `.env` / `power.config.json`.
 - **Agent-driven Dataverse work:** With the Dataverse-skills plugin installed, ask your agent to detect or create the solution via the **dv-solution** skill, bound to your publisher.
 
-Record the **Solution Unique Name** in the **Project Values** table below — every `pac solution` command and the `-s` flag on `pac code push` uses it.
+Record the **Solution Unique Name** for PAC ALM and the **Solution GUID** for the Power Apps CLI. Persist both, associated with the environment, in `.power-apps-targets.json`; see `04-deployment.instructions.md`.
 
-> The Code App is added to this solution on the first `pac code push` (the Power SDK requires a target solution). You do not need to add it manually.
+> The guarded first publish uses `pa app push --solution-id <solution-guid>`. Use `pacaf-deploy --target dev --allow-create` only when creation is explicitly intended. The unique name is not a valid substitute for the GUID. Never reinitialize an existing app.
 
 ---
 
@@ -153,7 +153,7 @@ For each connector your app uses, in each environment (dev, test, prod):
 | Azure Blob Storage | `shared_azureblob` |
 | HTTP with Entra ID | `shared_webcontents` |
 
-> **You do not need to do this at setup time.** Connector binding is deliberately not part of the setup wizard — it is the last phase of the prototype-first golden path. Most projects reach the end of setup with **zero** connections in the environment, and that is correct. Come back to this step when the planning payload and prototype are stable, then bind connectors with the Code Apps plugin (`/add-datasource`) or `pac code add-data-source`. Both accept a full Maker Portal connection URL and extract the apiId and connection ID for you.
+> **You do not need to do this at setup time.** Connector binding is deliberately the last phase of the prototype-first golden path. Zero connections after setup is correct. Once planning and prototype are stable, invoke the Code Apps plugin (`/add-datasource`), extract connector/connection IDs from the Maker URL, verify its environment, and use the local `pacaf-pa app add data-source --connector … --connection-id …` mapping in `02-connectors.instructions.md`. Do not pass the full URL as a raw CLI connection ID.
 
 ---
 
@@ -203,6 +203,7 @@ CHOICE_VALUE_PREFIX=      # e.g. "100000000" (from publisher creation, Step 3)
 
 SOLUTION_UNIQUE_NAME=     # e.g. "ProjectTracker"
 SOLUTION_DISPLAY_NAME=    # e.g. "Project Tracker"
+SOLUTION_ID=              # solution GUID for pa, not the unique name
 
 PP_ENV_DEV=               # e.g. "https://contoso-dev.crm.dynamics.com"
 PP_ENV_TEST=              # e.g. "https://contoso-test.crm.dynamics.com"

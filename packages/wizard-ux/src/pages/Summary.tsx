@@ -425,7 +425,7 @@ export function Summary() {
             </Body1>
             <Body1>
               <strong>4. Connect.</strong> Only now bind real data — via the Code Apps plugin
-              (<code>/add-datasource</code>) or <code>pac code add-data-source</code>.
+              (<code>/add-datasource</code>) or <code>npm run pa -- app add data-source</code>.
             </Body1>
             <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
               Connector binding is deliberately not a setup step. Dataverse is already bound at the

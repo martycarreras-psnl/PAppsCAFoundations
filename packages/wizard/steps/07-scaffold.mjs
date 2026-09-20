@@ -19,6 +19,8 @@ import {
 import {
   copyFoundationFiles,
   createMinimalProject,
+  dependencyInstallPasses,
+  dependencyLockfileArgs,
   freshDevPackageSpecs,
   isPnpmWorkspaceRoot,
   mergePackageJsonScripts,
@@ -26,19 +28,16 @@ import {
   packageSpecs,
   REQUIRED_DEV_PACKAGES,
   REQUIRED_RUNTIME_PACKAGES,
+  restoreDependencySpecs,
   writeConfig,
   writeStarterFiles,
 } from '../lib/scaffold-foundations.mjs';
 import {
-  buildPacProfileName,
   getWizardStateSnapshot,
-  loadPowerConfigInfo,
-  parsePacOrgWho,
-  quarantinePowerConfig,
-  repairPowerConfigDisplayNames,
   resolveCredentialValues,
   selectAndVerifyPacProfile,
 } from '../lib/pac-target.mjs';
+import { codeAppCloud, codeAppInitArgs, codeAppAccount, codeAppAuthFailure, codeAppUserEnv, localCodeAppTool, PA_AUTH_BUILD_GUIDANCE, parseCodeAppAuthStatus, persistCodeAppTarget, readExistingCodeApp, verifyCodeAppResourceTenant } from '../lib/code-app-target.mjs';
 
 export {
   copyFoundationFiles,
@@ -135,7 +134,6 @@ export default async function stepScaffold() {
   if (pnpmWorkspaceRoot) {
     ui.warn('This is a pnpm workspace root (pnpm-workspace.yaml present) — adding packages with --workspace-root (-w).');
   }
-  const pnpmAddRootFlag = pnpmWorkspaceRoot ? ['-w'] : [];
 
   // Make `npm install` less silent on cold installs (npm suppresses its
   // progress bar in non-TTY mode). `--loglevel=http` prints one line per HTTP
@@ -157,23 +155,29 @@ export default async function stepScaffold() {
 
   ui.line('');
   ui.line('[1/3] Installing base dependencies (typically 30s–3min on a cold cache)…');
-  runSafeLive(installBin, [...npmFlags, 'install'], installOpts) && ui.ok('[1/3] Base dependencies installed');
+  if (!runSafeLive(installBin, [...npmFlags, 'install'], installOpts)) throw new Error(`[1/3] Base dependency install failed. ${PA_AUTH_BUILD_GUIDANCE}`);
+  ui.ok('[1/3] Base dependencies installed');
 
   ui.line('');
   ui.line('[2/3] Installing runtime packages (React, Fluent UI, TanStack Query, SDK)…');
   const prodPkgs = packageSpecs(REQUIRED_RUNTIME_PACKAGES);
-  const installArgs = usePnpm ? ['add', ...pnpmAddRootFlag, ...prodPkgs] : ['install', ...prodPkgs];
-  runSafeLive(installBin, [...npmFlags, ...installArgs], installOpts)
-    ? ui.ok('[2/3] React + Fluent UI + TanStack Query + SDK installed')
-    : ui.warn('[2/3] Some packages failed to install');
+  for (const installArgs of dependencyInstallPasses({ pnpm: usePnpm, workspaceRoot: pnpmWorkspaceRoot, packages: prodPkgs })) {
+    if (!runSafeLive(installBin, [...npmFlags, ...installArgs], installOpts)) throw new Error(`[2/3] Runtime dependency install failed. ${PA_AUTH_BUILD_GUIDANCE}`);
+  }
+  restoreDependencySpecs(projectDir, prodPkgs);
+  if (!runSafeLive(installBin, [...npmFlags, ...dependencyLockfileArgs(usePnpm)], installOpts)) throw new Error('[2/3] Runtime lockfile synchronization failed.');
+  ui.ok('[2/3] React + Fluent UI + TanStack Query + SDK installed');
 
   ui.line('');
   ui.line('[3/3] Installing dev dependencies (Vitest, ESLint, Playwright, @pacaf/scripts)…');
   const devPkgs = freshDevPackageSpecs();
-  const devInstallArgs = usePnpm ? ['add', '-D', ...pnpmAddRootFlag, ...devPkgs] : ['install', '-D', ...devPkgs];
-  runSafeLive(installBin, [...npmFlags, ...devInstallArgs], installOpts)
-    ? ui.ok('[3/3] Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)')
-    : ui.warn('[3/3] Some dev packages failed to install');
+  for (const devInstallArgs of dependencyInstallPasses({ pnpm: usePnpm, dev: true, workspaceRoot: pnpmWorkspaceRoot, packages: devPkgs })) {
+    if (!runSafeLive(installBin, [...npmFlags, ...devInstallArgs], installOpts)) throw new Error(`[3/3] Dev dependency install failed. ${PA_AUTH_BUILD_GUIDANCE}`);
+  }
+  restoreDependencySpecs(projectDir, devPkgs, { dev: true });
+  if (!runSafeLive(installBin, [...npmFlags, ...dependencyLockfileArgs(usePnpm)], installOpts)) throw new Error('[3/3] Dev lockfile synchronization failed.');
+  ui.ok('[3/3] Dev dependencies installed (incl. @pacaf/scripts, @pacaf/agent-instructions)');
+  ui.line(PA_AUTH_BUILD_GUIDANCE);
 
   // ── Config files ──
   writeConfig(projectDir, ui);
@@ -199,82 +203,68 @@ export default async function stepScaffold() {
   // ── Copy instruction files ──
   copyFoundationFiles(ROOT, projectDir, ui, { publisherPrefix: prefix });
 
-  // ── pac code init ──
+  // PAC verifies the Dataverse environment; pa has an independent login.
   ui.line('');
   ui.line('Registering Code App in Power Platform...');
   const pac = pacPath();
   if (pac) {
     try {
-      const credentialValues = resolvePacCredentialValues(ROOT);
-      verifyPacMutationTarget({
+      const paEnv = codeAppUserEnv();
+      const credentialValues = (stateGet('AUTH_PROFILE_TYPE', 'user') === 'user') ? null : resolvePacCredentialValues(ROOT);
+      const verification = verifyPacMutationTarget({
         pac,
         rootDir: ROOT,
         projectDir,
         credentialValues,
-        profileType: 'user',
+        profileType: stateGet('AUTH_PROFILE_TYPE', 'user'),
         requirePowerConfig: false,
         requirePowerConfigTarget: false,
       });
 
-      // ── Pre-quarantine stale power.config.json before pac code init ──
-      const powerConfigPath = join(projectDir, 'power.config.json');
-      let skipInit = false;
-      if (existsSync(powerConfigPath)) {
-        const existing = loadPowerConfigInfo(powerConfigPath);
-        const whoOut = runSafe(pac, ['org', 'who']);
-        const whoInfo = whoOut ? parsePacOrgWho(whoOut) : null;
-        if (existing.environmentId && whoInfo?.environmentId
-            && existing.environmentId === whoInfo.environmentId.toLowerCase()) {
-          ui.ok('power.config.json already exists and matches active environment — skipping pac code init');
-          skipInit = true;
-        } else {
-          const qPath = quarantinePowerConfig(powerConfigPath);
-          ui.warn(`Quarantined stale power.config.json (env ${existing.environmentId || 'unknown'}) at ${qPath}`);
-        }
+      const environmentId = verification.whoInfo.environmentId;
+      const existing = readExistingCodeApp(projectDir, environmentId);
+      ui.line('User initialization requires separate Azure CLI sign-in with environment discovery access.');
+      ui.line('Global Discovery must match the environment ID, resource tenant and organization URL; no sign-in or permission changes are automated.');
+      verifyCodeAppResourceTenant({
+        environmentId, environmentUrl: verification.whoInfo.url, tenantId: stateGet('PP_TENANT_ID'), cloud: codeAppCloud(existing || {}),
+      }, { root: projectDir, env: paEnv });
+      const allowCreate = !existing?.appId && await confirm({ message: 'Initialize an unpublished Code App target? First deployment will require separate create consent.', default: false });
+      if (!existing?.appId && !allowCreate) throw new Error('New Code App initialization was not authorized.');
+      const pa = localCodeAppTool(projectDir);
+      const paAccount = (await input({
+        message: 'Power Apps CLI account email (separate from PAC)',
+        default: stateGet('PA_ACCOUNT', ''),
+        validate: (value) => /^[^\s@]+@[^\s@]+$/.test(value.trim()) || 'Enter the intended Power Apps CLI account email.',
+      })).trim();
+      const login = await confirm({ message: 'Sign in to Power Apps CLI now? This is separate from PAC profiles.', default: true });
+      if (login) {
+        ui.line('Opening the Power Apps CLI browser sign-in. Waiting for authentication to finish...');
+        const loginResult = runSafeCapture(pa, ['auth', 'login', '--account', paAccount], { cwd: projectDir, env: paEnv });
+        if (!loginResult.ok) throw new Error(codeAppAuthFailure(`${loginResult.stdout}\n${loginResult.stderr}`));
       }
-
-      if (!skipInit) {
-        const initResult = runSafeCapture(pac, [
-          'code', 'init',
-          '--displayName', appName,
-          '--buildPath', './dist',
-          '--fileEntryPoint', 'index.html',
-        ], { cwd: projectDir });
-        if (!initResult.ok) {
-          const detail = (initResult.stderr || '').trim();
-          throw new Error(
-            'pac code init failed.' + (detail ? `\n  PAC error: ${detail}` : ' No additional error details available.')
-          );
-        }
-        const repair = repairPowerConfigDisplayNames(powerConfigPath);
-        if (repair.changed) ui.warn(`Repaired quoted display name fields in power.config.json: ${repair.fields.join(', ')}`);
-      }
-
-      verifyPacMutationTarget({
-        pac,
-        rootDir: ROOT,
-        projectDir,
-        credentialValues,
-        profileType: 'user',
-        requirePowerConfig: true,
-        requirePowerConfigTarget: true,
+      const authStatus = parseCodeAppAuthStatus(runSafeCapture(pa, ['auth', 'status', '--json'], { cwd: projectDir, env: paEnv }));
+      codeAppAccount(authStatus, stateGet('PP_TENANT_ID'), paAccount);
+      if (!existing && !runSafeLive(pa, codeAppInitArgs(appName, environmentId), { cwd: projectDir, env: paEnv })) throw new Error('pa app init failed.');
+      if (existing) ui.ok('Existing power.config.json preserved; initialization skipped.');
+      const solutions = JSON.parse(runSafe(pa, ['solution', 'list', '--json'], { cwd: projectDir, env: paEnv }) || 'null');
+      const target = persistCodeAppTarget({
+        projectDir, targetKey: stateGet('WIZARD_TARGET_ENV', 'dev'),
+        environmentId, environmentUrl: verification.whoInfo.url,
+        tenantId: stateGet('PP_TENANT_ID'), authStatus, solutions,
+        solutionId: stateGet('SOLUTION_ID'), solutionName: stateGet('SOLUTION_UNIQUE_NAME'), allowCreate,
       });
-      ui.ok('power.config.json created and verified');
+      stateSet('SOLUTION_ID', target.solutionId);
+      stateSet('PA_ACCOUNT', target.account);
+      ui.ok('Power Apps target saved to .power-apps-targets.json (commit this non-secret deployment identity).');
     } catch (error) {
-      const powerConfigPath = join(projectDir, 'power.config.json');
-      if (existsSync(powerConfigPath)) {
-        const quarantinePath = quarantinePowerConfig(powerConfigPath);
-        ui.warn(`Quarantined invalid power.config.json at ${quarantinePath}`);
-      }
       ui.warn(error.message);
-      ui.warn('pac code init requires the repo-scoped interactive PAC profile. Re-run Step 4, create the user profile, complete browser/device sign-in, then retry Step 7.');
-      ui.warn('pac code init failed. You can run it manually later:');
+      ui.warn('Existing Code App configuration was preserved. Check the selected environment and separate pa account before retrying.');
       ui.line(`  cd ${projectDir}`);
-      ui.line(`  pac code init --displayName "${appName}" --buildPath "./dist" --fileEntryPoint "index.html"`);
+      ui.line('  npm run pa -- auth login');
       process.exit(1);
     }
   } else {
-    ui.warn('PAC CLI not found — skipping pac code init.');
+    throw new Error('PAC CLI is required to verify the selected environment before initializing with pa.');
   }
 
   // ── Connectors & Connection References ──
@@ -285,9 +275,9 @@ export default async function stepScaffold() {
   ui.line('The expected flow is plan → prototype → refine the planning payload → bind real connectors.');
   ui.line('');
   ui.line('Dataverse is already bound at the environment level. When the prototype is');
-  ui.line('stable, bind other connectors with the Code Apps plugin or the PAC CLI:');
+  ui.line('stable, bind other connectors with the Code Apps plugin or project-local Power Apps CLI:');
   ui.line('  /add-datasource            (Code Apps plugin — recommended)');
-  ui.line('  pac code add-data-source -a <connector_api_id> -c <connection_id>');
+  ui.line('  npm run pa -- app add data-source --connector <connector_api_id> --connection-id <connection_id>');
 
   // ── Smoke tests — verify the scaffold is healthy before proceeding ──
   ui.line('');
@@ -396,10 +386,10 @@ A Power Apps Code App built with React, Fluent UI v9, TanStack Query, and TypeSc
 The initial scaffold intentionally does not ask for connection IDs. When you are ready for real data, run:
 
 \`\`\`bash
-node wizard/index.mjs --from 8
+npm run pa -- auth login
 \`\`\`
 
-That later flow can inspect existing environment connections with \`pac connection list\` and let you choose one when matches exist.
+Use the Code Apps plugin's \`/add-datasource\` workflow after the prototype is validated. Power Apps CLI sign-in is separate from PAC auth used for solution ALM.
 
 ### Prerequisites
 
@@ -411,22 +401,29 @@ That later flow can inspect existing environment connections with \`pac connecti
 
 \`\`\`bash
 npm install
-npm run dev:local    # Prototype mode with mock providers
+npm run dev:mock    # Prototype mode with mock providers (no authentication)
 npm run prototype:seed  # Regenerate prototype assets after editing dataverse/planning-payload.json
-npm run dev          # Connected mode (Vite + pac code run)
+npm run dev          # Vite :3000 + Power Apps local host :8080
 \`\`\`
 
 ### Build & Deploy
 
 \`\`\`bash
-npm run build                     # Build to dist/
-~/.dotnet/tools/pac code push     # Deploy to Power Platform
+npm run pa -- auth status --json  # Verify the independent Power Apps CLI account
+az login --tenant <resource-tenant-id> # Separate, explicit Azure CLI sign-in for Global Discovery
+npm run deploy -- --preflight    # Non-mutating target/config check
+npm run deploy                  # Guarded build and publish
 \`\`\`
 
 The app URL after deployment:
 \`https://apps.powerapps.com/play/e/{environmentId}/a/{appId}?hideNavBar=true\`
 
 > The \`?hideNavBar=true\` query string hides the Power Apps "purple bar" by default. See \`.github/instructions/04-deployment.instructions.md\`.
+
+Commit \`.power-apps-targets.json\`: it records the environment, tenant/account, app, and solution GUID/name.
+First publishing requires explicit \`npm run deploy -- --allow-create\`; subsequent publishing preserves the app identity.
+PAC remains the tool for solution ALM/admin. Never reinitialize an existing \`power.config.json\` to migrate tooling.
+User initialization/publishing requires read-only Global Discovery evidence matching the environment ID, resource tenant and organization URL. PA \`homeAccountId\` is not resource-tenant proof. Disabled users, security-group exclusions, or delegated-admin access can produce no discovery rows; the guard then stops without falling back to an unguarded push or granting access.
 
 ## Project Structure
 
@@ -477,10 +474,10 @@ Manual fallback:
 
 \`\`\`bash
 # Add a Dataverse table
-~/.dotnet/tools/pac code add-data-source -a dataverse -t ${publisherPrefix}_tablename
+npm run pa -- app add data-source --connector dataverse --table ${publisherPrefix}_tablename
 
 # Add a non-Dataverse connector once you know the Connection ID
-~/.dotnet/tools/pac code add-data-source -a shared_office365users -c <connection_id>
+npm run pa -- app add data-source --connector shared_office365users --connection-id <connection_id>
 \`\`\`
 
 > **Never edit files in \`src/generated/\`** — PAC refreshes them when connector output is regenerated.
@@ -586,7 +583,7 @@ function readPlannedDataverseTables(projectDir) {
 }
 
 // Dataverse is always bound to a Code App — never optional. When planned tables exist and a
-// verified user PAC profile is available, register them now; otherwise print clear,
+// verified Power Apps CLI account is available, register them now; otherwise print clear,
 // non-optional status. Never prompts for a "Dataverse connection" — there isn't one; the
 // binding is the environment URL captured earlier in the wizard.
 export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canRegister }) {
@@ -597,24 +594,24 @@ export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canR
   if (tables.length === 0) {
     ui.line('No Dataverse tables are planned yet. Once your planning payload defines');
     ui.line('tables, provision them with the Dataverse-skills plugin (dv-metadata),');
-    ui.line('then register each with: pac code add-data-source -a dataverse -t <table>');
+    ui.line('then register each with: npm run pa -- app add data-source --connector dataverse --table <table>');
     return;
   }
   if (!canRegister || !pac) {
     ui.line(`${tables.length} planned Dataverse table(s) found. Provision them with the`);
     ui.line('Dataverse-skills plugin (dv-metadata), then register each with:');
-    ui.line('  pac code add-data-source -a dataverse -t <table>');
+    ui.line('  npm run pa -- app add data-source --connector dataverse --table <table>');
     return;
   }
   for (const table of tables) {
-    const args = ['code', 'add-data-source', '-a', 'dataverse', '-t', table];
-    ui.line(`  Running: pac ${args.join(' ')}`);
+    const args = ['app', 'add', 'data-source', '--connector', 'dataverse', '--table', table];
+    ui.line(`  Running: npm run pa -- ${args.join(' ')}`);
     const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
     if (ok) {
       ui.ok(`Dataverse table ${table} — data source added`);
     } else {
       ui.warn(`Dataverse table ${table} — failed. Try manually:`);
-      ui.line(`    pac code add-data-source -a dataverse -t ${table}`);
+      ui.line(`    npm run pa -- app add data-source --connector dataverse --table ${table}`);
     }
   }
 }
@@ -622,7 +619,7 @@ export function bindDataverse(pac, rootDir, projectDir, credentialValues, { canR
 // No longer part of the setup flow — connector binding is a post-prototype task
 // (see docs/prototype-golden-path.md phase 7). Kept exported so an on-demand
 // "bind connectors" task can reuse it; the supported path is the Code Apps
-// plugin's /add-datasource or `pac code add-data-source`.
+// plugin's /add-datasource or project-local `pa app add data-source`.
 export async function setupConnectors(pac, projectDir) {
   const rootDir = getRootDir();
   const prefix = stateGet('PUBLISHER_PREFIX');
@@ -780,13 +777,10 @@ export async function setupConnectors(pac, projectDir) {
     }
   }
 
-  // ── 4. Add data sources via pac code add-data-source ──
-  //    ALL pac code commands require user (interactive) auth.
-  //    The BAP checkAccess API rejects service principal tokens.
+  // Code App connector registration uses pa, not the PAC ALM profile.
   if (pac) {
     ui.line('');
 
-    // Detect SPN auth and switch to user auth before running any pac code commands
     const authSwitched = await ensureUserAuthForCodeCommands(pac, rootDir, projectDir, credentialValues);
     if (!authSwitched) {
       ui.warn('Cannot add data sources without user auth.');
@@ -839,17 +833,17 @@ export async function setupConnectors(pac, projectDir) {
         }
         if (!connectionId) {
           ui.info(`${connector.name} — skipped`);
-          ui.line(`    Add later: pac code add-data-source -a ${apiId} -c <CONNECTION_ID>`);
+          ui.line(`    Add later: npm run pa -- app add data-source --connector ${apiId} --connection-id <CONNECTION_ID>`);
           continue;
         }
-        const args = ['code', 'add-data-source', '-a', apiId, '-c', connectionId.trim()];
-        ui.line(`  Running: pac ${args.join(' ')}`);
+        const args = ['app', 'add', 'data-source', '--connector', apiId, '--connection-id', connectionId.trim()];
+        ui.line(`  Running: npm run pa -- ${args.join(' ')}`);
         const ok = runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues);
         if (ok) {
           ui.ok(`${connector.name} — data source added`);
         } else {
           ui.warn(`${connector.name} — failed. Try manually:`);
-          ui.line(`    pac code add-data-source -a ${apiId} -c ${connectionId.trim()}`);
+          ui.line(`    npm run pa -- app add data-source --connector ${apiId} --connection-id ${connectionId.trim()}`);
         }
       }
     }
@@ -933,30 +927,28 @@ async function resolveConnectionIdForConnector(pac, apiId, connectorName) {
   }
 }
 
-// ─────────── PAC Code Helpers ───────────
+// ─────────── Code App connector helpers ───────────
 
 const BAP_PERMISSION_RE = /does not have permission to access|checkAccess|HTTP error status: 403/i;
 
 /**
- * Run pac code add-data-source and detect false-positive success.
- * PAC CLI may exit 0 but log a 403 error when SPN auth is active.
+ * Run the project-local Power Apps CLI after validating its independent account.
  * Returns true only if the command succeeded without BAP errors.
  */
 function runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues) {
-  verifyPacMutationTarget({
-    pac,
-    rootDir,
-    projectDir,
-    credentialValues,
-    profileType: 'user',
-    requirePowerConfig: true,
-    requirePowerConfigTarget: true,
-  });
-  const { ok, stderr } = runSafeCapture(pac, args, { cwd: projectDir });
+  const paEnv = codeAppUserEnv();
+  const target = JSON.parse(readFileSync(join(projectDir, '.power-apps-targets.json'), 'utf8')).targets?.[stateGet('WIZARD_TARGET_ENV', 'dev')];
+  if (!target) throw new Error('Record a durable Power Apps target before binding connectors.');
+  verifyCodeAppResourceTenant(target, { root: projectDir, env: paEnv });
+  readExistingCodeApp(projectDir, target.environmentId);
+  const pa = localCodeAppTool(projectDir);
+  const identity = codeAppAccount(parseCodeAppAuthStatus(runSafeCapture(pa, ['auth', 'status', '--json'], { cwd: projectDir, env: paEnv })), target.tenantId);
+  if (identity.account.toLowerCase() !== target.account.toLowerCase()) throw new Error('Power Apps CLI account does not match the recorded target.');
+  const { ok, stderr } = runSafeCapture(pa, args, { cwd: projectDir, env: paEnv });
   if (!ok) return false;
-  // PAC may exit 0 despite 403 — check stderr for BAP rejection
+  // Retain explicit permission-error detection for connector failures.
   if (BAP_PERMISSION_RE.test(stderr)) {
-    ui.warn('PAC reported success but encountered a BAP permission error (403).');
+    ui.warn('Power Apps CLI reported a permission error (403).');
     ui.line('  The data source was NOT actually registered.');
     return false;
   }
@@ -964,72 +956,33 @@ function runPacCodeDataSource(pac, args, rootDir, projectDir, credentialValues) 
 }
 
 /**
- * Detect SPN auth and switch to user auth before pac code commands.
- * ALL pac code commands require user (interactive) auth — the BAP
- * checkAccess API rejects service principal tokens.
+ * PAC profile selection cannot authenticate Code App connector commands.
  */
 async function ensureUserAuthForCodeCommands(pac, rootDir, projectDir, credentialValues) {
+  const paEnv = codeAppUserEnv();
+  const target = JSON.parse(readFileSync(join(projectDir, '.power-apps-targets.json'), 'utf8')).targets?.[stateGet('WIZARD_TARGET_ENV', 'dev')];
+  if (!target) throw new Error('Record a durable Power Apps target before binding connectors.');
+  verifyCodeAppResourceTenant(target, { root: projectDir, env: paEnv });
   try {
-    verifyPacMutationTarget({
-      pac,
-      rootDir,
-      projectDir,
-      credentialValues,
-      profileType: 'user',
-      requirePowerConfig: true,
-      requirePowerConfigTarget: true,
-    });
+    const pa = localCodeAppTool(projectDir);
+    codeAppAccount(parseCodeAppAuthStatus(runSafeCapture(pa, ['auth', 'status', '--json'], { cwd: projectDir, env: paEnv })), target.tenantId, target.account);
     return true;
-  } catch {
-    const proceed = await confirm({ message: 'Create the repo-scoped interactive PAC profile for pac code commands now?', default: true });
+  } catch (error) {
+    ui.warn(error.message);
+    const proceed = await confirm({ message: 'Sign in separately to Power Apps CLI for connector registration?', default: true });
     if (!proceed) return false;
 
-    const wizardState = getWizardStateSnapshot(stateGet);
-    const targetKey = stateGet('WIZARD_TARGET_ENV', 'dev');
-    const targetStateKey = targetKey === 'test' ? 'PP_ENV_TEST' : targetKey === 'prod' ? 'PP_ENV_PROD' : 'PP_ENV_DEV';
-    const targetUrl = wizardState[targetStateKey];
-    const expectedProfileName = buildPacProfileName({
-      rootDir,
-      targetKey,
-      profileType: 'user',
-      url: targetUrl,
-    });
-
-    ui.line('');
-    ui.line(`Creating interactive profile ${expectedProfileName}...`);
-    let createOk = runSafeLive(pac, [
-      'auth', 'create',
-      '--name', expectedProfileName,
-      '--environment', targetUrl,
-    ]);
+    const pa = localCodeAppTool(projectDir);
+    const loginResult = runSafeCapture(pa, ['auth', 'login'], { cwd: projectDir, env: paEnv });
+    const createOk = loginResult.ok;
 
     if (!createOk) {
-      ui.warn('Browser sign-in failed. Trying device code flow...');
-      ui.line('You will see a URL and code — open the URL in any browser and enter the code.');
-      ui.line('');
-      createOk = runSafeLive(pac, [
-        'auth', 'create',
-        '--name', expectedProfileName,
-        '--environment', targetUrl,
-        '--deviceCode',
-      ]);
-    }
-
-    if (!createOk) {
-      ui.warn('Could not establish the repo-scoped interactive PAC profile.');
+      ui.warn(codeAppAuthFailure(`${loginResult.stdout}\n${loginResult.stderr}`));
       return false;
     }
 
     try {
-      verifyPacMutationTarget({
-        pac,
-        rootDir,
-        projectDir,
-        credentialValues,
-        profileType: 'user',
-        requirePowerConfig: true,
-        requirePowerConfigTarget: true,
-      });
+      codeAppAccount(parseCodeAppAuthStatus(runSafeCapture(pa, ['auth', 'status', '--json'], { cwd: projectDir, env: paEnv })), target.tenantId, target.account);
       ui.ok('User auth verified');
       return true;
     } catch (error) {
@@ -1056,9 +1009,8 @@ function verifyPacMutationTarget({ pac, rootDir, projectDir, credentialValues, p
     profileType,
     credentialValues,
     powerConfigPath: join(projectDir, 'power.config.json'),
-    requireCredentialMatch: true,
+    requireCredentialMatch: credentialValues !== null,
     requirePowerConfig,
     requirePowerConfigTarget,
   });
 }
-

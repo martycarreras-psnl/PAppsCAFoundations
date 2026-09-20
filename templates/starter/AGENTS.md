@@ -10,7 +10,7 @@ If this repo has no `src/`, no `power.config.json`, and no `package.json` with a
 npx @pacaf/wizard-ux@latest
 ```
 
-The wizard configures the publisher, solution, App Registration, auth profile, `pac code init`, dependency selection, and the first smoke test in the correct order. **Do not hand-scaffold a Code App** — skipping the wizard produces apps that cannot be deployed.
+The wizard configures the publisher, solution, App Registration, separate CLI authentication, pinned local `pa app init`, dependency selection, and the first smoke test in the correct order. **Do not hand-scaffold or reinitialize an existing Code App.**
 
 ## Load the full agent guidance
 
@@ -26,9 +26,14 @@ This writes the complete `.github/instructions/`, `.claude/rules/`, `.cursor/rul
 
 - This is a Power Apps Code App. Do **not** suggest Vercel / Netlify / Azure Static Web Apps hosting, alternative frameworks (Next.js, Angular, Vue), or CSS libraries other than Fluent UI v9.
 - **Port 3000** for local dev (Power Apps SDK requirement).
-- `src/generated/` is **read-only** — produced by `pac code add-data-source`. Wrap it with adapters in `src/services/`.
+- `src/generated/` is **read-only** — produced by local `pa app add data-source` / refresh. Wrap it with adapters in `src/services/`.
+- Code App lifecycle/bindings use exact-pinned local `@microsoft/power-apps-cli` via `pacaf-pa`, never bare `npx pa`. PAC remains for solution ALM/admin, with separate authentication; Dataverse-skills remains responsible for schema/data.
+- Deploy through `pacaf-deploy --target dev`, validating durable `.power-apps-targets.json` and app config. Solution GUIDs go to `pa`; unique names remain for PAC. SPN updates are opt-in, existing-app-only, with maker-granted edit access. Never grant access automatically.
+- CLI 1.0.2 home-account equality is not resource-tenant proof. User publish/first creation requires separate explicit Azure CLI login and a read-only fixed-cloud GDS query matching environment ID, tenant, and URL. Missing evidence fails closed; never auto-login, infer from home identity, or bypass the guard.
+- Connected dev uses separate Vite 3000 and `pa app run --config-only --port 8080 --local-app-url http://localhost:3000` with companion shutdown; mock-only dev remains standalone.
 - **Solution-first:** every Code App lives in a dedicated Power Platform solution from day one.
 - Use **HashRouter**, never `BrowserRouter` (the Power Apps host owns the URL path).
+- Use relative production assets (`base: './'`) and metadata-backed `DataverseFieldLabel` for editable Dataverse fields.
 - No secrets in source.
 
 For everything else, defer to the instruction files under `.github/instructions/` after running the sync.

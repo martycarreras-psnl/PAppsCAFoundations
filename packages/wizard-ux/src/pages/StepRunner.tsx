@@ -586,15 +586,16 @@ export function StepRunner() {
                 <AgentHelpBanner stepNumber={stepNumber} variant="warning" />
               )}
 
-              {/* Step 7 long-running scaffold notice */}
-              {stepNumber === 7 && isRunning && (
+              {/* Long-running scaffold notice */}
+              {stepNumber === 8 && isRunning && (
                 <MessageBar intent="info">
                   <MessageBarBody>
                     <strong>Scaffolding can take a few minutes.</strong>{' '}
-                    `pac code init` downloads templates, installs npm dependencies, and
-                    initializes the project. Please keep this browser tab open and stay on
+                    The wizard installs dependencies and initializes new projects with
+                    the project-local Power Apps CLI. Existing Code App configuration is preserved.
+                    Please keep this browser tab open and stay on
                     your network — closing the tab, sleeping the machine, or dropping VPN /
-                    Wi-Fi mid-run can interrupt the PAC CLI authentication and leave the
+                    Wi-Fi mid-run can interrupt Power Apps CLI authentication and leave the
                     scaffold in an incomplete state.
                   </MessageBarBody>
                 </MessageBar>
