@@ -75,7 +75,7 @@ Generated projects use `npm run pa -- …` (`pacaf-pa`), never bare `npx pa`, an
 
 Connected development runs Vite on 3000 and the Power Apps local host on 8080 with `--config-only` and companion shutdown. Mock-only development remains standalone. SPN publishing is opt-in for an already-published app with environment access and maker-granted app edit access; migration never grants access.
 
-**User publishing prerequisite:** CLI 1.0.2 status/home-account equality cannot prove the resource tenant. User publish and first creation therefore require separate explicit Azure CLI login with Global Discovery Service access. The helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing discovery rows/access fail closed, with no auto-login or unguarded fallback. Offline preflight does not call Azure or establish cloud readiness.
+**Connected setup and user publishing prerequisite:** CLI 1.0.2 status/home-account equality cannot prove the resource tenant. Connected scaffold initialization, user publish and first creation therefore require separate explicit Azure CLI login with Global Discovery Service access. The helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing discovery rows/access fail closed, with no auto-login or unguarded fallback. Offline preflight does not call Azure or establish cloud readiness.
 
 Existing apps: use the reviewable **[CLI migration/rollback procedure](MIGRATION.md#code-app-cli-migration-pac-code-to-local-pa)**. Do not reinitialize, recreate bindings, switch registries, or upgrade global tools to migrate.
 

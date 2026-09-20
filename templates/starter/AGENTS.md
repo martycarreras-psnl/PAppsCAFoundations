@@ -29,7 +29,7 @@ This writes the complete `.github/instructions/`, `.claude/rules/`, `.cursor/rul
 - `src/generated/` is **read-only** — produced by local `pa app add data-source` / refresh. Wrap it with adapters in `src/services/`.
 - Code App lifecycle/bindings use exact-pinned local `@microsoft/power-apps-cli` via `pacaf-pa`, never bare `npx pa`. PAC remains for solution ALM/admin, with separate authentication; Dataverse-skills remains responsible for schema/data.
 - Deploy through `pacaf-deploy --target dev`, validating durable `.power-apps-targets.json` and app config. Solution GUIDs go to `pa`; unique names remain for PAC. SPN updates are opt-in, existing-app-only, with maker-granted edit access. Never grant access automatically.
-- CLI 1.0.2 home-account equality is not resource-tenant proof. User publish/first creation requires separate explicit Azure CLI login and a read-only fixed-cloud GDS query matching environment ID, tenant, and URL. Missing evidence fails closed; never auto-login, infer from home identity, or bypass the guard.
+- CLI 1.0.2 home-account equality is not resource-tenant proof. Connected scaffold initialization and user publish/first creation require separate explicit Azure CLI login and a read-only fixed-cloud GDS query matching environment ID, tenant, and URL. Missing evidence fails closed; never auto-login, infer from home identity, or bypass the guard.
 - Connected dev uses separate Vite 3000 and `pa app run --config-only --port 8080 --local-app-url http://localhost:3000` with companion shutdown; mock-only dev remains standalone.
 - **Solution-first:** every Code App lives in a dedicated Power Platform solution from day one.
 - Use **HashRouter**, never `BrowserRouter` (the Power Apps host owns the URL path).

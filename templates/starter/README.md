@@ -25,7 +25,7 @@ Then run `python3 --version` on macOS/Linux, or `py -3 --version` on Windows (fa
 | PAC CLI | Solution ALM/admin and Dataverse tooling (`dotnet tool install -g Microsoft.PowerApps.CLI.Tool`) | Team-tested version |
 | Python 3 | Recommended — powers the Dataverse-skills plugin | 3.10+ for the SDK |
 | GitHub CLI (optional) | Convenience for repo/PR/auth from the terminal | 2.x+ |
-| Azure CLI (user publishing only) | Read-only Global Discovery Service environment/tenant verification after separate explicit login; not required for mocks/offline preflight/SPN updates | [Official install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
+| Azure CLI (connected scaffold initialization and user publishing) | Read-only Global Discovery Service environment/tenant verification after separate explicit login; not required for mocks/offline preflight/SPN updates | [Official install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) |
 
 **Install notes**
 
@@ -68,7 +68,7 @@ npm run deploy                    # guarded entry point; user mode needs Azure l
 
 The local host uses `--config-only` and companion shutdown, so it cannot start a second Vite process. Deploy uses `.power-apps-targets.json` plus the preserved `power.config.json`, not just ignored wizard state. Initial creation requires an explicit `--allow-create`; SPN updates require separate opt-in and pre-existing maker-granted edit access. Never use bare `npx pa`, bypass target checks, or grant permissions automatically.
 
-**User-publish prerequisite:** CLI 1.0.2 home-account identity cannot prove the resource tenant. Separately sign into Azure CLI (`az login --allow-no-subscriptions --tenant "<expected-tenant-id>"`) with Global Discovery Service access. User publish/first creation verifies environment ID, tenant, and URL via a read-only fixed-cloud GDS query. Missing rows/access fail closed; there is no auto-login or unguarded fallback. Offline preflight makes no Azure/auth calls.
+**Connected setup and user-publish prerequisite:** CLI 1.0.2 home-account identity cannot prove the resource tenant. Separately sign into Azure CLI (`az login --allow-no-subscriptions --tenant "<expected-tenant-id>"`) with Global Discovery Service access. User publish/first creation verifies environment ID, tenant, and URL via a read-only fixed-cloud GDS query. Missing rows/access fail closed; there is no auto-login or unguarded fallback. Offline preflight makes no Azure/auth calls.
 
 Already have a PAC-created app? Follow the [Code App CLI migration and rollback guide](https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/MIGRATION.md); do not rerun init or recreate bindings.
 

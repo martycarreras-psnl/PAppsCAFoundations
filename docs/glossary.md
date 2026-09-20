@@ -74,7 +74,7 @@ Terms are grouped by the part of the stack they belong to.
 
 **Home-account identity** — CLI 1.0.2 exposes `activeAccount.username` and MSAL `homeAccountId`, not the token's resource tenant. Even equality with the expected home tenant is insufficient: the cached account may acquire a token for another tenant. Use it only for stable account identity.
 
-**Global Discovery Service (GDS)** — Provides authoritative environment discovery. Guarded user publishing requires separate explicit Azure CLI login, then a read-only query to the fixed cloud-specific endpoint matching `EnvironmentId`, `TenantId`, and `Url`. This verifies the environment's tenant independently, not the opaque `pa` token's tenant. Missing rows/access fail closed.
+**Global Discovery Service (GDS)** — Provides authoritative environment discovery. Connected scaffold initialization and guarded user publishing require separate explicit Azure CLI login, then a read-only query to the fixed cloud-specific endpoint matching `EnvironmentId`, `TenantId`, and `Url`. This verifies the environment's tenant independently, not the opaque `pa` token's tenant. Missing rows/access fail closed.
 
 **PAC auth profile** — A named credential set created with `pac auth create` and switched with `pac auth select`. It serves ALM/admin operations, not the separate `pa` account.
 

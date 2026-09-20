@@ -13,6 +13,12 @@ This instruction file governs how new Power Apps Code Apps projects are scaffold
 
 ## Technology Stack (Mandatory)
 
+Connected wizard setup verifies the environment through read-only Global Discovery
+before `pa auth login` or `pa app init`, so it requires a separately authorized Azure
+CLI login with discovery access even if publishing is deferred. This requirement
+does not apply to running an existing project's mock development server, offline
+preflight, or the explicit-tenant SPN update path.
+
 Every Code App uses this exact stack — no substitutions without team lead approval:
 
 | Layer | Choice | Version | Why |

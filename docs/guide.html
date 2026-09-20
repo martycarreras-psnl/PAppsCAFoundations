@@ -986,7 +986,7 @@
 
       <h4>Separate Code App and ALM authentication</h4>
       <p>Use <code>npm run pa -- auth login</code> and <code>auth status --json</code> for the pinned local Power Apps CLI. PAC profiles do not sign it in. <code>npm run deploy</code> invokes <code>pacaf-deploy --target dev</code>, validates durable target identities, builds, and publishes with a solution GUID.</p>
-      <p>CLI 1.0.2 user status/home-account equality cannot prove the resource tenant. User publishing and first creation require separate explicit Azure CLI login with Global Discovery Service access: the helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing rows/access fail closed, with no auto-login. SPN updates are opt-in for existing apps with environment and maker-granted edit access; never grant permissions automatically. See <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/MIGRATION.md">migration and rollback guidance</a>.</p>
+      <p>CLI 1.0.2 user status/home-account equality cannot prove the resource tenant. Connected scaffold initialization, user publishing and first creation require separate explicit Azure CLI login with Global Discovery Service access: the helper's read-only fixed-cloud query must match environment ID, tenant, and URL. Missing rows/access fail closed, with no auto-login. SPN updates are opt-in for existing apps with environment and maker-granted edit access; never grant permissions automatically. See <a href="https://github.com/martycarreras-psnl/PAppsCAFoundations/blob/main/MIGRATION.md">migration and rollback guidance</a>.</p>
     </section>
 
     <section class="section" id="wizard-overview">
@@ -1850,7 +1850,7 @@ export function useProjects() {
       <h4>Manual Deploy (Dev Only)</h4>
       <div class="callout callout-warn">
         <span class="callout-icon">⚠️</span>
-        <div><strong>User publish requires independent environment-tenant evidence.</strong> Explicitly sign into Azure CLI with GDS discovery access. The helper matches environment ID/tenant/URL from its read-only fixed-cloud query; it never infers tenant from <code>homeAccountId</code>. Disabled-user, security-group, or delegated-admin visibility limitations fail closed, not to an unguarded push. SPN updates remain opt-in for existing apps with maker-granted edit access.</div>
+        <div><strong>Connected setup and user publish require independent environment-tenant evidence.</strong> Explicitly sign into Azure CLI with GDS discovery access. The helper matches environment ID/tenant/URL from its read-only fixed-cloud query; it never infers tenant from <code>homeAccountId</code>. Disabled-user, security-group, or delegated-admin visibility limitations fail closed, not to an unguarded push. SPN updates remain opt-in for existing apps with maker-granted edit access.</div>
       </div>
       <pre>npm run deploy</pre>
 
